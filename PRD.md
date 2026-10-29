@@ -44,6 +44,7 @@ Platform: Minecraft 26.3, Fabric only, client only. It works on any server.
 | Placement | Pop at the spot; flying from the hand moves to the roadmap | 2026-10-29 |
 | Drops | All item entities; burst only for block breaks | 2026-10-29 |
 | Mining | A hit pulse on each swing, a hit-stop on the break | 2026-10-29 |
+| Break look | Punch, shrink, chips; mini copies of the block rejected | 2026-10-29 |
 | Name | Snappy Blocks, id `snappy_blocks`, slug `snappy-blocks` | 2026-10-29 |
 
 My calls, open to veto:
@@ -140,10 +141,12 @@ What counts as a break:
 - When 2001 carries air as its data (a door a zombie broke), the client's previous state is the broken block.
 - 2001 with a change to any other state (grass to dirt) does nothing.
 
-Frame 0, crack and hold:
-- The block splits into 4-8 mini copies of itself, at 0.3-0.5 scale, using Having a Blast's ballistic debris.
-- The pieces hold for 1 tick in the break pose (the hit-stop, about 50 ms), then fly for 8-14 ticks and crumble.
-- Vanilla's crumb particles stay.
+Frame 0, punch and shrink (the user's pick 2026-10-29; mini copies of the block were rejected as "the same block
+spawned smaller"):
+- The block holds for 1 tick where it stood (the hit-stop), squashing about its floor by 12%.
+- Then it shrinks away about its centre in 4 ticks, accelerating, while the squash springs back.
+- As the shrink starts, 10 chunky chips cut from its own texture (vanilla terrain particles, 2.2x size, faster) spray
+  outward. Vanilla's crumbs stay.
 
 Choosing the look: within the measured round trip + 4 ticks, the first item entity of age 0 within 0.6 blocks of the
 centre decides it.
@@ -157,18 +160,18 @@ Many drops:
 - Containers fan out 8 stacks at most; the rest pop out plainly.
 - A break claims only as many items as it should drop.
 
-Materials, chosen by the block's sound type:
-- Glass breaks into flat shards.
-- Leaves flutter.
-- Sand and gravel crumble sooner.
-- Wool flies soft, with a short arc.
+Materials, chosen by the block's sound type (M2, on the chips):
+- Glass chips fly flatter and faster.
+- Leaves chips drift.
+- Sand and gravel chips fall sooner.
+- Wool chips fly soft, with a short arc.
 
 Edge cases:
-- Denied break: seen in `syncBlockState`. The pieces rewind into the block over 4 ticks, and no drop is claimed.
+- Denied break: seen in `syncBlockState`. The block grows back over 4 ticks, and no drop is claimed.
 - Budget per tick: full, lite or none, across all bursts. It covers `/fill … destroy`, vein chains and piston
-  arrays. Lite means crumbs and the pull-together only.
+  arrays. Lite means vanilla crumbs and the shrink only.
 - Distance: full effect up to 32 blocks, lite up to 64, nothing beyond.
-- With the particle setting at Minimal: 2 pieces; at Decreased: half.
+- With the particle setting at Minimal: no chips; at Decreased: half.
 
 ### 5.4 Item life
 These are offsets on the render only; the entity's position is never changed.
@@ -316,8 +319,8 @@ Feel check 1 (end of M1, ~3 minutes, Fabric 26.3 profile, a fresh survival world
 3. Mine dirt, stone and an ore: do the pieces and the drop read as one motion?
 4. Break glass and a leaf block.
 Judge: the size of the pop, the hold before the pieces fly, where the drop comes from.
-Tunables: `config/snappy_blocks.json` → `tune`: `pop.start`, `pop.peak`, `pop.ticks`, `burst.hold`, `burst.pieces`,
-`burst.speed`, `burst.lift`, `burst.flight`, `drop.spring`.
+Tunables: `config/snappy_blocks.json` → `tune`: `pop.start`, `pop.peak`, `pop.ticks`, `burst.hold`, `burst.squash`,
+`burst.shrink`, `burst.chips`, `burst.chipSize`, `burst.chipSpeed`, `drop.spring`.
 
 Feel check 2 (end of M3, ~3 minutes, sound on):
 1. Mine 10 coal ore and walk over the drops.

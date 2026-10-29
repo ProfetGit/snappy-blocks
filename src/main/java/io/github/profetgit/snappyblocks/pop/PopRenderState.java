@@ -11,8 +11,8 @@ import net.minecraft.world.level.material.FluidState;
  * around it (no ambient occlusion from neighbours); with the real neighbours the copy is lit exactly like the chunk
  * mesh that takes over from it, so the hand-off shows no shading step.
  */
-final class PopRenderState extends MovingBlockRenderState {
-    ClientLevel level;
+public final class PopRenderState extends MovingBlockRenderState {
+    public ClientLevel level;
 
     @Override
     public BlockState getBlockState(BlockPos pos) {
