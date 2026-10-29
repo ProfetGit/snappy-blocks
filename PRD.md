@@ -111,10 +111,14 @@ Blocks that can't take the hide path:
   without a pop: the copy is drawn with the pack's moving-block program, and these blocks change look when the terrain
   mesh takes over (measured 2026-10-29 with Complementary: worst tile step leaves 41, glowstone 21, glass 18; opaque
   blocks 2-9 against a noise floor of 7).
-- Blocks drawn by a block-entity renderer (chest, bed, sign, banner, skull, shulker box) bulge through a scaled
-  renderer pose.
-- Meshed blocks that have a block entity (furnace, barrel, hopper) take the normal path. The render path decides,
-  not whether there is a block entity.
+- Blocks drawn only by a block-entity renderer, with an empty block model (chest, banner, skull, shulker box), pop
+  through a scaled renderer pose: the full 70-104-100 curve, nothing hidden, no hand-off.
+- Meshed blocks that have a block entity but no renderer (furnace, barrel, hopper) take the hide path.
+- Blocks with both a mesh and a renderer (lectern, enchanting table, campfire) place without a pop: the mesher drops
+  a hidden block's block entity from the section, so the renderer part would vanish while it grows.
+- The render path decides, not whether there is a block entity.
+- Another player's placement has no known clicked face: it grows from the floor. The other half of a bed that arrives
+  from the server while the first half pops joins it, same start and pivot.
 - Both halves of a door or bed animate together.
 - In-place changes only bulge: slab to double slab, candles, sea pickles, snow layers.
 
@@ -126,10 +130,12 @@ Edge cases:
 - Pops overlap freely. Bridging at 10 blocks per second never queues.
 
 ### 5.2 Mining pulse
-- Follows level event 2020: the first hit is local, every later one comes from the server every 4 ticks. Remote
-  miners pulse the same way.
-- Look: an outward pulse to 103% for 2 ticks (the bulge path), and 1-2 chips cut from the block's own texture
-  (solid texels).
+- Follows every hit with a sound (`ClientLevel.addBreakingBlockEffects`): the miner's own first hit, then the
+  server's level event 2020 every 4 ticks. Remote miners pulse the same way. The server echoes the first hit back
+  one round trip later; a hit on a block that is still pulsing is skipped.
+- Look: an outward pulse to 103% for 2 ticks (the bulge path: a copy never below 1.004 over the real block, within
+  24 blocks), and 2 chips cut from the block's own texture, flung out of the hit face.
+- Only opaque blocks without a block entity pulse; under a shader pack, the place pop's material rule applies.
 - The crack overlay follows the pulse.
 - Instant breaks (creative mode, insta-mining) skip the pulse.
 - If mining is cancelled, the block springs back in 3 ticks.
@@ -140,6 +146,8 @@ What counts as a break:
 - Level event 2001, plus the spot turning to air or fluid within 1 tick.
 - When 2001 carries air as its data (a door a zombie broke), the client's previous state is the broken block.
 - 2001 with a change to any other state (grass to dirt) does nothing.
+- Breaks not caused by a player (pistons, golem building, `/setblock destroy`) burst too, inside the same budget. A
+  piston clears a destroyed block's spot on the client before its head moves in, so it bursts.
 
 Frame 0, punch and shrink (the user's pick 2026-10-29; mini copies of the block were rejected as "the same block
 spawned smaller"):
@@ -148,17 +156,17 @@ spawned smaller"):
 - As the shrink starts, 10 chunky chips cut from its own texture (vanilla terrain particles, 2.2x size, faster) spray
   outward. Vanilla's crumbs stay.
 
-Choosing the look: within the measured round trip + 4 ticks, the first item entity of age 0 within 0.6 blocks of the
-centre decides it.
-- The drop is the block's own item (dirt, silk touch): the pieces pull together into the item.
-- The drop is a different item (stone to cobblestone, ore to gem): the item pops out of the centre of the burst.
-- No item arrives in time (creative, glass, `block_drops` off): pieces only.
-- Until the item arrives, the guess is made from the held tool (silk touch) and the block's `asItem()`.
+Drops: items that arrive within the measured round trip + 4 ticks of the break (or up to 2 ticks before it: a
+server sends the drops before the block update) are claimed.
+- The drop, the block's own item or another one, springs out of the centre as the block shrinks into it.
+- No item arrives in time (creative, glass, `block_drops` off): the shrink and chips only.
 
 Many drops:
-- Fortune and multiple drops fan out.
-- Containers fan out 8 stacks at most; the rest pop out plainly.
-- A break claims only as many items as it should drop.
+- A drop is an item that spawns inside the broken block's cube (block drops spawn within 0.25 of the centre, a
+  container's contents anywhere in it).
+- Several drops fan out: each leaves the burst 0.5 tick after the last, on a 0.35-block arc.
+- A burst claims 8 drops at most; the rest of a big container's contents stay vanilla.
+- A block with an empty model (a chest) has nothing to shrink: its drops leave at once, no hold.
 
 Materials, chosen by the block's sound type (M2, on the chips):
 - Glass chips fly flatter and faster.
@@ -168,8 +176,8 @@ Materials, chosen by the block's sound type (M2, on the chips):
 
 Edge cases:
 - Denied break: seen in `syncBlockState`. The block grows back over 4 ticks, and no drop is claimed.
-- Budget per tick: full, lite or none, across all bursts. It covers `/fill … destroy`, vein chains and piston
-  arrays. Lite means vanilla crumbs and the shrink only.
+- Budget per tick, across all bursts: 8 full, then 32 lite, then vanilla only. It covers `/fill … destroy`, vein
+  chains and piston arrays. Lite means vanilla crumbs and the shrink only (drops still claimed).
 - Distance: full effect up to 32 blocks, lite up to 64, nothing beyond.
 - With the particle setting at Minimal: no chips; at Decreased: half.
 

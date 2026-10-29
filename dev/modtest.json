@@ -31,7 +31,12 @@
   "scenes": [
     "smoke",
     "pop",
-    "burst"
+    "burst",
+    "pulse",
+    "drops",
+    "deny",
+    "events",
+    "bepop"
   ],
   "smoke": [
     "smoke"

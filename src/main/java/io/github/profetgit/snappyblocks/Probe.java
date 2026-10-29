@@ -14,6 +14,8 @@ public final class Probe {
 
     public static int placed, placedPredicted, removed, removedPredicted, destroyEvents, hitEvents;
     public static BlockPos lastPlaced, lastRemoved, lastDestroyEvent, lastHitEvent;
+    /** Inside ClientLevel.syncBlockState: the server corrected a prediction (a denied placement or break). */
+    public static boolean syncing;
 
     private Probe() {}
 

@@ -5,7 +5,9 @@ import io.github.profetgit.snappyblocks.Probe;
 import io.github.profetgit.snappyblocks.SnappyBlocks;
 import io.github.profetgit.snappyblocks.burst.Bursts;
 import io.github.profetgit.snappyblocks.pop.Hidden;
+import io.github.profetgit.snappyblocks.burst.Chip;
 import io.github.profetgit.snappyblocks.pop.Pops;
+import io.github.profetgit.snappyblocks.pulse.Pulses;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -61,12 +63,17 @@ final class Scenarios {
             return true;
         }).server(srv -> platform(srv)).waitTicks(40);
         String only = System.getProperty("snappy_blocks.selftest.scenes", "all");
-        for (String name : List.of("smoke", "pop", "burst")) {
+        for (String name : List.of("smoke", "pop", "burst", "pulse", "drops", "deny", "events", "bepop")) {
             if (!only.equals("all") && !Arrays.asList(only.split(",")).contains(name)) continue;
             switch (name) {
                 case "smoke" -> smoke(s);
                 case "pop" -> pop(s);
                 case "burst" -> burst(s);
+                case "pulse" -> pulse(s);
+                case "drops" -> drops(s);
+                case "deny" -> deny(s);
+                case "events" -> events(s);
+                case "bepop" -> bepop(s);
                 default -> {
                 }
             }
@@ -252,6 +259,7 @@ final class Scenarios {
             if (claimed != drops) return "claimed " + claimed + " of " + drops + " drops";
             if (revealed != claimed || dogs > 0) return "revealed " + revealed + " of " + claimed + ", " + dogs + " by watchdog";
             if (Bursts.hiddenDrops() > 0) return Bursts.hiddenDrops() + " drops still hidden";
+            if (Bursts.meshWaits > 0) return Bursts.meshWaits + " bursts started by the watchdog (no remesh within 150 ms)";
             return null;
         });
         BlockPos dirt = new BlockPos(0, Y, -1);
@@ -281,6 +289,300 @@ final class Scenarios {
         });
     }
 
+    /** Holds the attack button on {@code at} until it is gone (or {@code timeout} ticks pass). */
+    static void mine(Script s, BlockPos at, int timeout) {
+        s.run(mc -> {
+            aim(mc, at);
+            SelfTest.attack = true;
+        }).until("mining " + at, timeout, mc -> {
+            aim(mc, at);
+            if (!mc.level.getBlockState(at).isAir()) return false;
+            SelfTest.attack = false;
+            return true;
+        });
+    }
+
+    static void clearArea(MinecraftServer srv) {
+        cmd(srv, "fill -6 " + Y + " -2 6 " + (Y + 3) + " 6 minecraft:air");
+        cmd(srv, "kill @e[type=!player]");
+        cmd(srv, "gamerule send_command_feedback false");
+    }
+
+    /**
+     * PRD §5.2: mining stone by hand pulses on every hit (the first one locally, then the server's 2020s), and the pulse
+     * ends when the block breaks. Frames go to out/frames/pulse.
+     */
+    private static void pulse(Script s) {
+        BlockPos at = new BlockPos(0, Y, 0);
+        int[] base = new int[2];
+        s.server(srv -> {
+            clearArea(srv);
+            cmd(srv, "setblock 0 " + Y + " 0 minecraft:stone");
+            cmd(srv, "tp @p 0.5 " + Y + " -2.0 0 30");
+            cmd(srv, "gamemode survival @p");
+            cmd(srv, "clear @p");
+        }).waitTicks(20).run(mc -> {
+            mc.player.getInventory().setSelectedSlot(8);
+            base[0] = Pulses.started;
+            base[1] = Probe.hitEvents;
+            if (!mc.gui.hud.isHidden()) mc.gui.hud.toggle();
+            SelfTest.startCapture("pulse", 120);
+        }).waitTicks(4);
+        mine(s, at, 400);
+        s.waitTicks(10).check("pulse_hits", mc -> {
+            SelfTest.stopCapture();
+            if (mc.gui.hud.isHidden()) mc.gui.hud.toggle();
+            int pulses = Pulses.started - base[0], hits = Probe.hitEvents - base[1];
+            SnappyBlocks.LOG.info("[selftest] pulse: {} pulses for {} server hits, {} live", pulses, hits, Pulses.active());
+            if (hits < 10) return "only " + hits + " server hits";
+            if (pulses < hits) return pulses + " pulses for " + hits + " hits";
+            if (Pulses.active() > 0) return Pulses.active() + " pulses left after the break";
+            return null;
+        });
+    }
+
+    /**
+     * PRD §5.3 drops and budget: silk touch (the block's own item), fortune (a different item), a chest (its contents
+     * fan out, 8 at most), glass (no drop, glass chips), a creative break (no drop), and a 54-block /fill destroy that the
+     * per-tick budget caps.
+     */
+    private static void drops(Script s) {
+        int[] base = new int[6];
+        Runnable snap = () -> {
+            base[0] = Bursts.started;
+            base[1] = Bursts.claimed;
+            base[2] = Bursts.watchdogs;
+            base[3] = Bursts.lite;
+            base[4] = Bursts.overBudget;
+        };
+        s.server(srv -> {
+            clearArea(srv);
+            cmd(srv, "tp @p 0.5 " + Y + " -2.0 0 30");
+            cmd(srv, "gamemode survival @p");
+            cmd(srv, "clear @p");
+            cmd(srv, "item replace entity @p hotbar.0 with minecraft:diamond_pickaxe[enchantments={silk_touch:1}]");
+            cmd(srv, "item replace entity @p hotbar.1 with minecraft:diamond_pickaxe[enchantments={fortune:3}]");
+            cmd(srv, "setblock -1 " + Y + " 0 minecraft:stone");
+            cmd(srv, "setblock 1 " + Y + " 0 minecraft:diamond_ore");
+        }).waitTicks(20).run(mc -> {
+            mc.player.getInventory().setSelectedSlot(0);
+            snap.run();
+        }).waitTicks(4);
+        mine(s, new BlockPos(-1, Y, 0), 200);
+        s.waitTicks(20).check("drops_silk", mc -> {
+            int bursts = Bursts.started - base[0], claimed = Bursts.claimed - base[1];
+            long stone = mc.level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, mc.player.getBoundingBox().inflate(6),
+                e -> e.getItem().is(net.minecraft.world.item.Items.STONE)).size();
+            if (bursts != 1 || claimed != 1) return bursts + " bursts, " + claimed + " claimed";
+            return stone == 1 ? null : "silk touch dropped " + stone + " stone items";
+        }).run(mc -> {
+            mc.player.getInventory().setSelectedSlot(1);
+            snap.run();
+        }).waitTicks(4);
+        mine(s, new BlockPos(1, Y, 0), 200);
+        s.waitTicks(20).check("drops_fortune", mc -> {
+            int bursts = Bursts.started - base[0], claimed = Bursts.claimed - base[1];
+            return bursts == 1 && claimed == 1 ? null : bursts + " bursts, " + claimed + " claimed";
+        });
+        StringBuilder items = new StringBuilder();
+        String[] kinds = {"apple", "stick", "dirt", "stone", "bone", "string", "feather", "coal", "flint", "clay_ball", "wheat", "bread"};
+        for (int i = 0; i < kinds.length; i++) items.append(i == 0 ? "" : ",").append("{Slot:").append(i).append("b,id:\"minecraft:").append(kinds[i]).append("\",count:1}");
+        s.server(srv -> {
+            cmd(srv, "kill @e[type=item]");
+            cmd(srv, "setblock 0 " + Y + " 1 minecraft:chest{Items:[" + items + "]}");
+            cmd(srv, "setblock 2 " + Y + " 1 minecraft:glass");
+        }).waitTicks(20).run(mc -> {
+            snap.run();
+            Bursts.lastFanSpread = 0;
+            if (!mc.gui.hud.isHidden()) mc.gui.hud.toggle();
+            SelfTest.startCapture("drops", 80);
+        }).server(srv -> cmd(srv, "setblock 0 " + Y + " 1 minecraft:air destroy")).waitTicks(30).check("drops_chest", mc -> {
+            int bursts = Bursts.started - base[0], claimed = Bursts.claimed - base[1], dogs = Bursts.watchdogs - base[2];
+            SnappyBlocks.LOG.info("[selftest] chest: {} bursts, {} claimed, fan {} ticks, {} watchdog", bursts, claimed, Bursts.lastFanSpread, dogs);
+            if (bursts != 1) return bursts + " bursts";
+            if (claimed != 8) return "claimed " + claimed + " of 13 drops (8 expected)";
+            if (Bursts.lastFanSpread < 3) return "fan spread " + Bursts.lastFanSpread + " ticks";
+            return dogs == 0 ? null : dogs + " by watchdog";
+        }).run(mc -> snap.run()).server(srv -> cmd(srv, "setblock 2 " + Y + " 1 minecraft:air destroy")).waitTicks(20).check("drops_glass", mc -> {
+            SelfTest.stopCapture();
+            if (mc.gui.hud.isHidden()) mc.gui.hud.toggle();
+            int bursts = Bursts.started - base[0], claimed = Bursts.claimed - base[1];
+            if (bursts != 1 || claimed != 0) return bursts + " bursts, " + claimed + " claimed";
+            return Bursts.lastMaterial == Chip.Material.GLASS ? null : "chips flew as " + Bursts.lastMaterial;
+        });
+        BlockPos dirt = new BlockPos(0, Y, -1);
+        s.server(srv -> {
+            cmd(srv, "kill @e[type=item]");
+            cmd(srv, "gamemode creative @p");
+            cmd(srv, "setblock 0 " + Y + " -1 minecraft:dirt");
+        }).waitTicks(20).run(mc -> {
+            snap.run();
+            mc.gameMode.startDestroyBlock(dirt, Direction.UP);
+        }).waitTicks(20).check("drops_creative", mc -> {
+            int bursts = Bursts.started - base[0], claimed = Bursts.claimed - base[1];
+            if (!mc.level.getBlockState(dirt).isAir()) return "dirt not broken";
+            return bursts == 1 && claimed == 0 ? null : bursts + " bursts, " + claimed + " claimed";
+        });
+        s.server(srv -> {
+            cmd(srv, "kill @e[type=item]");
+            cmd(srv, "gamemode survival @p");
+            cmd(srv, "fill -4 " + Y + " 3 4 " + (Y + 1) + " 5 minecraft:dirt");
+        }).waitTicks(20).run(mc -> snap.run()).server(srv -> cmd(srv, "fill -4 " + Y + " 3 4 " + (Y + 1) + " 5 minecraft:air destroy")).waitTicks(30)
+            .check("drops_budget", mc -> {
+                int bursts = Bursts.started - base[0], lite = Bursts.lite - base[3], over = Bursts.overBudget - base[4];
+                SnappyBlocks.LOG.info("[selftest] budget: 54 breaks -> {} full, {} lite, {} vanilla only", bursts - lite, lite, over);
+                if (bursts + over != 54) return (bursts + over) + " of 54 breaks seen";
+                if (bursts - lite > 16) return (bursts - lite) + " full bursts (budget 8 per tick)";
+                return lite > 0 ? null : "no lite bursts";
+            }).server(srv -> cmd(srv, "kill @e[type=item]"));
+    }
+
+    /**
+     * PRD §5.1, §5.3 denial: a break the server refuses grows back, a placement the server refuses (outside its world
+     * border) shrinks out. The break: the client is shown dirt where the server has bedrock, so the predicted break is
+     * corrected at its ack (syncBlockState), the same path as a claim plugin's refusal.
+     */
+    private static void deny(Script s) {
+        BlockPos fake = new BlockPos(0, Y, 0);
+        int[] base = new int[4];
+        s.server(srv -> {
+            clearArea(srv);
+            cmd(srv, "setblock 0 " + Y + " 0 minecraft:bedrock");
+            cmd(srv, "tp @p 0.5 " + Y + " -2.0 0 30");
+            cmd(srv, "gamemode survival @p");
+            cmd(srv, "clear @p");
+        }).waitTicks(20).run(mc -> {
+            mc.player.getInventory().setSelectedSlot(8);
+            mc.level.setBlock(fake, Blocks.DIRT.defaultBlockState(), 3);
+            base[0] = Bursts.denied;
+            base[1] = Pops.regrows;
+        }).waitTicks(10);
+        s.run(mc -> {
+            aim(mc, fake);
+            SelfTest.attack = true;
+        }).until("fake dirt to break", 200, mc -> {
+            aim(mc, fake);
+            if (!mc.level.getBlockState(fake).isAir()) return false;
+            SelfTest.attack = false;
+            return true;
+        }).until("the server to put it back", 100, mc -> !mc.level.getBlockState(fake).isAir()).waitTicks(20).check("deny_break", mc -> {
+            int denied = Bursts.denied - base[0], regrows = Pops.regrows - base[1];
+            SnappyBlocks.LOG.info("[selftest] deny break: {} denied, {} regrown, now {}", denied, regrows, mc.level.getBlockState(fake));
+            if (denied != 1 || regrows != 1) return denied + " denied, " + regrows + " regrown";
+            return Pops.active() == 0 && Hidden.isEmpty() ? null : "pop left hidden";
+        });
+        BlockPos against = new BlockPos(5, Y - 1, 0), at = against.above();
+        s.server(srv -> {
+            cmd(srv, "setblock 0 " + Y + " 0 minecraft:air");
+            cmd(srv, "worldborder center 0 0");
+            cmd(srv, "worldborder set 8");
+            cmd(srv, "tp @p 3.5 " + Y + " 0.5 90 40");
+            cmd(srv, "item replace entity @p weapon.mainhand with minecraft:oak_planks 8");
+        }).waitTicks(20).run(mc -> {
+            // the client's border stays wide, so it predicts the placement the server refuses
+            mc.level.getWorldBorder().setSize(5.9999968E7);
+            base[2] = Pops.denied;
+            base[3] = Bursts.fades;
+            mc.gameMode.useItemOn(mc.player, InteractionHand.MAIN_HAND,
+                new BlockHitResult(Vec3.atCenterOf(against).add(0, 0.5, 0), Direction.UP, against, false));
+        }).waitTicks(20).check("deny_place", mc -> {
+            int denied = Pops.denied - base[2], fades = Bursts.fades - base[3];
+            if (!mc.level.getBlockState(at).isAir()) return "the planks stayed: " + mc.level.getBlockState(at);
+            return denied == 1 && fades == 1 ? null : denied + " denied, " + fades + " faded";
+        }).server(srv -> cmd(srv, "worldborder set 59999968"));
+    }
+
+    /**
+     * PRD §5.3 what counts as a break: a sheep's grass-to-dirt (2001, then a change to dirt) never bursts; a golem built
+     * from blocks bursts each block it takes, with nothing claimed; a torch a piston destroys bursts and its drop comes
+     * out of it (the client clears the torch's spot before the piston head moves in).
+     */
+    private static void events(Script s) {
+        int[] base = new int[2];
+        BlockPos grass = new BlockPos(-3, Y - 1, 0);
+        s.server(srv -> {
+            clearArea(srv);
+            cmd(srv, "tp @p 0.5 " + Y + " -3.0 0 30");
+            cmd(srv, "gamemode survival @p");
+            cmd(srv, "setblock -3 " + (Y - 1) + " 0 minecraft:grass_block");
+        }).waitTicks(20).run(mc -> {
+            base[0] = Bursts.started;
+            base[1] = Bursts.claimed;
+        }).server(srv -> {
+            ServerLevel l = srv.overworld();
+            l.levelEvent(2001, grass, net.minecraft.world.level.block.Block.getId(Blocks.GRASS_BLOCK.defaultBlockState()));
+            l.setBlockAndUpdate(grass, Blocks.DIRT.defaultBlockState());
+        }).waitTicks(10).check("events_sheep", mc -> Bursts.started == base[0] ? null : (Bursts.started - base[0]) + " bursts for grass to dirt");
+        s.server(srv -> {
+            cmd(srv, "setblock 0 " + Y + " 2 minecraft:iron_block");
+            cmd(srv, "setblock 0 " + (Y + 1) + " 2 minecraft:iron_block");
+            cmd(srv, "setblock -1 " + (Y + 1) + " 2 minecraft:iron_block");
+            cmd(srv, "setblock 1 " + (Y + 1) + " 2 minecraft:iron_block");
+        }).waitTicks(20).run(mc -> {
+            base[0] = Bursts.started;
+            base[1] = Bursts.claimed;
+        }).server(srv -> cmd(srv, "setblock 0 " + (Y + 2) + " 2 minecraft:carved_pumpkin[facing=north]")).waitTicks(20).check("events_golem", mc -> {
+            int bursts = Bursts.started - base[0], claimed = Bursts.claimed - base[1];
+            if (!mc.level.getBlockState(new BlockPos(0, Y, 2)).isAir()) return "no golem built";
+            return bursts == 4 && claimed == 0 ? null : bursts + " bursts, " + claimed + " claimed";
+        }).server(srv -> {
+            cmd(srv, "kill @e[type=iron_golem]");
+            cmd(srv, "setblock 2 " + Y + " -1 minecraft:piston[facing=east]");
+            cmd(srv, "setblock 3 " + Y + " -1 minecraft:torch");
+        }).waitTicks(20).run(mc -> {
+            base[0] = Bursts.started;
+            base[1] = Bursts.claimed;
+        }).server(srv -> cmd(srv, "setblock 1 " + Y + " -1 minecraft:redstone_block")).waitTicks(20).check("events_piston", mc -> {
+            int bursts = Bursts.started - base[0], claimed = Bursts.claimed - base[1];
+            long torches = mc.level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, mc.player.getBoundingBox().inflate(8),
+                e -> e.getItem().is(net.minecraft.world.item.Items.TORCH)).size();
+            if (torches != 1) return torches + " torch drops (piston didn't break it?)";
+            return bursts == 1 && claimed == 1 ? null : bursts + " bursts, " + claimed + " claimed";
+        }).server(srv -> clearArea(srv));
+    }
+
+    /**
+     * PRD §5.1 render paths: a chest and a banner (renderer only) pop through the renderer's pose; a furnace and a
+     * barrel (mesh only) take the hide path; an enchanting table (mesh and renderer) places without a pop.
+     */
+    private static void bepop(Script s) {
+        String[] items = {"chest", "white_banner", "furnace", "barrel", "enchanting_table"};
+        int[] base = new int[3];
+        s.server(srv -> {
+            clearArea(srv);
+            cmd(srv, "tp @p 0.5 " + Y + " -3.0 0 40");
+            cmd(srv, "gamemode creative @p");
+        }).waitTicks(20).run(mc -> {
+            base[0] = Pops.started;
+            base[1] = Pops.entityPops;
+            base[2] = Pops.handedOff;
+            if (!mc.gui.hud.isHidden()) mc.gui.hud.toggle();
+            SelfTest.startCapture("bepop", 5 * 12 + 20);
+        });
+        for (int i = 0; i < items.length; i++) {
+            String item = items[i];
+            BlockPos against = new BlockPos(i * 2 - 4, Y - 1, 0);
+            s.server(srv -> cmd(srv, "item replace entity @p weapon.mainhand with minecraft:" + item))
+                .waitTicks(1)
+                .run(mc -> mc.gameMode.useItemOn(mc.player, InteractionHand.MAIN_HAND,
+                    new BlockHitResult(Vec3.atCenterOf(against).add(0, 0.5, 0), Direction.UP, against, false)))
+                .waitTicks(11);
+        }
+        s.waitTicks(20).check("bepop_paths", mc -> {
+            SelfTest.stopCapture();
+            if (mc.gui.hud.isHidden()) mc.gui.hud.toggle();
+            int started = Pops.started - base[0], entity = Pops.entityPops - base[1], handed = Pops.handedOff - base[2];
+            SnappyBlocks.LOG.info("[selftest] bepop: {} pops, {} through the renderer, {} handed off", started, entity, handed);
+            for (int i = 0; i < items.length; i++) {
+                if (mc.level.getBlockState(new BlockPos(i * 2 - 4, Y, 0)).isAir()) return items[i] + " not placed";
+            }
+            if (entity != 2) return entity + " renderer pops (chest, banner expected)";
+            if (started != 4) return started + " pops (4 expected: no pop for the enchanting table)";
+            if (handed != 2) return handed + " hand-offs (furnace, barrel expected)";
+            return Pops.active() == 0 && Hidden.isEmpty() ? null : "pops left";
+        });
+    }
+
     /** dev/server/mp.py: role "a" places a block at {@link #MP_SPOT}; role "b" must see it appear as a remote change. */
     static Script multiplayer(String role) {
         Script s = new Script();
@@ -304,15 +606,17 @@ final class Scenarios {
         } else {
             s.until("remote planks", 1200, mc -> mc.level.getBlockState(MP_SPOT).is(Blocks.OAK_PLANKS))
                 .check("mp_remote_seen", mc -> Probe.placed >= 1 && Probe.placedPredicted == 0 && MP_SPOT.equals(Probe.lastPlaced) ? null
-                    : "probe: " + Probe.summary() + " last " + Probe.lastPlaced);
+                    : "probe: " + Probe.summary() + " last " + Probe.lastPlaced)
+                .check("mp_remote_pop", mc -> Pops.remote >= 1 ? null : "the remote placement didn't pop (" + Pops.started + " pops)");
         }
         // M1 stop/go: a break on a server bursts on both clients and its drop is claimed by the burst, also at 200 ms
         BlockPos dirt = new BlockPos(3, Y, -1);
-        int[] base = new int[3];
+        int[] base = new int[4];
         s.run(mc -> {
             base[0] = Bursts.started;
             base[1] = Bursts.claimed;
             base[2] = Bursts.watchdogs;
+            base[3] = Pulses.started;
             Bursts.maxClaimDelay = 0;
         });
         if (role.equals("a")) {
@@ -339,7 +643,8 @@ final class Scenarios {
             if (claimed != 1) return "claimed " + claimed + " of 1 (drop arrived after the claim window?)";
             if (dogs > 0) return dogs + " drops shown by the watchdog";
             return null;
-        }).waitTicks(role.equals("a") ? 100 : 20);
+        }).check("mp_pulse_" + role, mc -> Pulses.started - base[3] >= 2 ? null : (Pulses.started - base[3]) + " pulses while the dirt was mined")
+            .waitTicks(role.equals("a") ? 100 : 20);
         s.run(mc -> SnappyBlocks.LOG.info("SB-MP {} done: {}", role, Probe.summary()));
         return s;
     }

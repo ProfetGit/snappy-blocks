@@ -11,14 +11,18 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import io.github.profetgit.snappyblocks.pop.PopRenderState;
-import net.minecraft.client.particle.TerrainParticle;
+import io.github.profetgit.snappyblocks.pop.Pops;
+import io.github.profetgit.snappyblocks.pulse.Pulses;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.state.level.LevelRenderState;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.SectionPos;
+import net.minecraft.util.Util;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -47,17 +51,43 @@ public final class Bursts {
     static final String DROP_SPRING = Tune.def("drop.spring", 6);
     /** Frame-time watchdog (PRD pillar 4): a claimed drop is shown after this long whatever happens. */
     static final long HIDE_LIMIT_NS = 300_000_000L;
-    /** Full bursts per tick across the world (PRD §5.3 budget); beyond it, vanilla crumbs only. */
-    static final int BUDGET = 8;
+    /** Bursts per tick across the world (PRD §5.3 budget): full ones, then lite ones (no chips), then vanilla only. */
+    static final int FULL_BUDGET = 8, LITE_BUDGET = 32;
+    /** Full effect within this distance, lite to {@link #RANGE}, nothing beyond. */
+    static final double FULL_RANGE = 32, RANGE = 64;
+    /** A denied placement's copy shrinks out over this many ticks (PRD §5.1). */
+    static final double FADE_TICKS = 3;
+    /** Several drops leave the burst one after another, this many ticks apart (the fan). */
+    static final double FAN_STEP = 0.5;
 
     static final class Burst {
         final BlockPos pos;
         final BlockState state;
-        final double t0;
+        /** When the burst's timeline starts: once the chunk mesh without the block is live (see {@link #live}). */
+        double t0;
+        final double born;
+        /** Util.getNanos() at the break: a mesh compiled after this no longer has the block. */
+        final long breakNs = Util.getNanos();
+        final long breakWallNs = System.nanoTime();
+        /**
+         * The chunk mesh still shows the broken block for a frame or more after the break; drawing the squash over it
+         * shows both. The timeline waits until a mesh compiled after the break is live (the place pop's hand-off rule),
+         * or {@link #MESH_LIMIT_NS}.
+         */
+        boolean live;
         final double cx, cy, cz;
         /** The block as it stood, lit by the real level around it (same look as the terrain block it replaces). */
         final PopRenderState whole = new PopRenderState();
         boolean chipped;
+        int first = -1;
+        /** No chips (the budget's lite tier, or a fade). */
+        boolean lite;
+        /** The block model is empty (a chest: all block-entity renderer): nothing to shrink, no hold. */
+        boolean bare;
+        /** A denied placement shrinking out from {@code from} about a pivot: no hold, no squash, no claims. */
+        boolean fade;
+        double from = 1;
+        float px = 0.5f, py = 0.5f, pz = 0.5f;
         final double claimUntil;
         int claims;
 
@@ -65,6 +95,7 @@ public final class Bursts {
             this.pos = pos;
             this.state = state;
             this.t0 = t0;
+            this.born = t0;
             this.cx = pos.getX() + 0.5;
             this.cy = pos.getY() + 0.5;
             this.cz = pos.getZ() + 0.5;
@@ -75,15 +106,20 @@ public final class Bursts {
     /** A claimed drop: hidden until {@code revealAt}, then sprung from the burst centre. */
     static final class Claim {
         final double ox, oy, oz;
-        final double revealAt;
+        final Burst burst;
+        /** Ticks after the burst's timeline starts. */
+        final double revealAfter;
+        /** Lift of the arc out of the burst, for one of several drops. */
+        double arc;
         final long hiddenNs = System.nanoTime();
         double shownAt = Double.NaN;
 
-        Claim(double ox, double oy, double oz, double revealAt) {
-            this.ox = ox;
-            this.oy = oy;
-            this.oz = oz;
-            this.revealAt = revealAt;
+        Claim(Burst burst, double revealAfter) {
+            this.burst = burst;
+            this.ox = burst.cx;
+            this.oy = burst.cy;
+            this.oz = burst.cz;
+            this.revealAfter = revealAfter;
         }
     }
 
@@ -94,10 +130,14 @@ public final class Bursts {
     /** Items that arrived in the last ticks: a server sends a break's drops before its block update. */
     private static final List<double[]> RECENT = new ArrayList<>();
     private static final RandomSource RANDOM = RandomSource.create();
+    /** (sectionNode, compileTaskStartTimeNs) of meshes that went live; filled from mesh threads too. */
+    private static final ConcurrentLinkedQueue<long[]> LIVE = new ConcurrentLinkedQueue<>();
+    static final long MESH_LIMIT_NS = 150_000_000L;
     private static long budgetTick = -1;
     private static int budgetUsed;
 
-    public static int started, claimed, revealed, watchdogs, overBudget;
+    public static int started, claimed, revealed, watchdogs, overBudget, lite, fades, denied, meshWaits;
+    public static Chip.Material lastMaterial;
     /** Ticks from a burst's start to the arrival of a drop it claimed: the round trip as the player sees it. */
     public static double maxClaimDelay;
     public static long spentNanos;
@@ -137,6 +177,11 @@ public final class Bursts {
 
     /** Every client block change. */
     public static void blockChanged(BlockPos pos, BlockState old, BlockState now) {
+        Pulses.blockChanged(pos);
+        if (Probe.syncing && Probe.empty(old) && !Probe.empty(now)) {
+            deny(pos, now);
+            return;
+        }
         if (!on() || Probe.empty(old) || !Probe.empty(now)) return;
         long key = pos.asLong();
         double[] ev = EVENTS.remove(key);
@@ -155,24 +200,62 @@ public final class Bursts {
     private static void start(BlockPos pos, BlockState state) {
         Minecraft mc = Minecraft.getInstance();
         ClientLevel level = mc.level;
-        if (level == null || state.getRenderShape() != RenderShape.MODEL) return;
-        if (mc.player == null || mc.player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > 64 * 64) return;
+        if (level == null || mc.player == null || state.getRenderShape() != RenderShape.MODEL) return;
+        double d2 = mc.player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+        if (d2 > RANGE * RANGE) return;
         if (budgetTick != Clock.ticks()) {
             budgetTick = Clock.ticks();
             budgetUsed = 0;
         }
-        if (++budgetUsed > BUDGET) {
+        boolean full = ++budgetUsed <= FULL_BUDGET && d2 <= FULL_RANGE * FULL_RANGE;
+        if (!full && budgetUsed > FULL_BUDGET + LITE_BUDGET) {
             overBudget++;
             return;
         }
         double now = Clock.now();
         Burst b = new Burst(pos, state, now, now + Rtt.ticks() + 4);
+        b.lite = !full;
+        b.bare = !Pops.hasQuads(state);
+
         setup(b.whole, level, pos, state);
         BURSTS.add(b);
         started++;
+        if (b.lite) lite++;
         for (Iterator<double[]> it = RECENT.iterator(); it.hasNext(); ) {
             double[] r = it.next();
             if (tryClaim(b, (int) r[0], r[1], r[2], r[3])) it.remove();
+        }
+    }
+
+    /** A denied placement (PRD §5.1): the copy, at its current scale, shrinks out about its pivot. */
+    public static void fade(BlockPos pos, BlockState state, double from, float px, float py, float pz) {
+        ClientLevel level = Minecraft.getInstance().level;
+        if (level == null) return;
+        double now = Clock.now();
+        Burst b = new Burst(pos, state, now, now);
+        b.fade = b.lite = b.chipped = b.live = true;
+        b.from = from;
+        b.px = px;
+        b.py = py;
+        b.pz = pz;
+        setup(b.whole, level, pos, state);
+        BURSTS.add(b);
+        fades++;
+    }
+
+    /**
+     * A denied break (PRD §5.3): the server put the block back while it was bursting. The shrink stops, nothing more is
+     * claimed, and the block grows back from where the shrink was.
+     */
+    private static void deny(BlockPos pos, BlockState now) {
+        double t = Clock.now();
+        for (Iterator<Burst> it = BURSTS.iterator(); it.hasNext(); ) {
+            Burst b = it.next();
+            if (b.fade || !b.pos.equals(pos)) continue;
+            it.remove();
+            denied++;
+            Pops.regrow(pos.immutable(), now, b.live ? shape(b, t - b.t0)[2] : 1);
+            return;
         }
     }
 
@@ -196,16 +279,34 @@ public final class Bursts {
         RECENT.add(new double[] {id, x, y, z, Clock.ticks()});
     }
 
+    /**
+     * Items that spawn inside the broken block's cube are its drops (a block's drops spawn within 0.25 of its centre, a
+     * container's contents anywhere in the cube). At most 8 per burst; they leave one after another (the fan), and
+     * the rest of a big container's contents stay vanilla.
+     */
     private static boolean tryClaim(Burst b, int id, double x, double y, double z) {
-        if (b.claims >= 8) return false;
+        if (b.fade || b.claims >= 8) return false;
         double dx = x - b.cx, dy = y - b.cy, dz = z - b.cz;
-        if (dx * dx + dy * dy + dz * dz > 0.6 * 0.6) return false;
-        b.claims++;
-        maxClaimDelay = Math.max(maxClaimDelay, Clock.now() - b.t0);
-        CLAIMS.put(id, new Claim(b.cx, b.cy, b.cz, b.t0 + Tune.get(HOLD) + 1));
+        if (Math.abs(dx) > 0.55 || Math.abs(dy) > 0.6 || Math.abs(dz) > 0.55) return false;
+        int i = b.claims++;
+        maxClaimDelay = Math.max(maxClaimDelay, Clock.now() - b.born);
+        double open = b.bare ? 0 : Tune.get(HOLD) + 1;
+        Claim c = new Claim(b, open + i * FAN_STEP);
+        if (i > 0) {
+            c.arc = 0.35;
+            Claim first = CLAIMS.get(b.first);
+            if (first != null) first.arc = 0.35;
+            lastFanSpread = Math.max(lastFanSpread, i * FAN_STEP);
+        } else {
+            b.first = id;
+        }
+        CLAIMS.put(id, c);
         claimed++;
         return true;
     }
+
+    /** The widest fan of one burst so far: ticks between its first and last reveal (test hook). */
+    public static double lastFanSpread;
 
     /** EntityRenderDispatcher.shouldRender: a claimed drop isn't drawn until its burst opens. */
     public static boolean hidden(Entity e) {
@@ -223,39 +324,64 @@ public final class Bursts {
         double k = 1 - u;
         k = k * k * k;
         state.x += (c.ox - state.x) * k;
-        state.y += (c.oy - state.y) * k;
+        state.y += (c.oy - state.y) * k + c.arc * 4 * u * (1 - u);
         state.z += (c.oz - state.z) * k;
+    }
+
+    /** A section mesh went live (any thread). */
+    public static void meshLive(long sectionNode, long compileStartNs) {
+        if (!BURSTS.isEmpty()) LIVE.add(new long[] {sectionNode, compileStartNs});
     }
 
     private static void update() {
         double now = Clock.now();
         long wall = System.nanoTime();
+        long[] l;
+        while ((l = LIVE.poll()) != null) {
+            for (Burst b : BURSTS) {
+                if (!b.live && l[1] > b.breakNs && SectionPos.blockToSection(b.pos.asLong()) == l[0]) {
+                    b.live = true;
+                    b.t0 = now;
+                }
+            }
+        }
+        for (Burst b : BURSTS) {
+            if (!b.live && wall - b.breakWallNs > MESH_LIMIT_NS) {
+                b.live = true;
+                b.t0 = now;
+                meshWaits++;
+            }
+        }
         double spring = Tune.get(DROP_SPRING);
         for (Iterator<Claim> it = CLAIMS.values().iterator(); it.hasNext(); ) {
             Claim c = it.next();
             if (Double.isNaN(c.shownAt)) {
                 boolean late = wall - c.hiddenNs > HIDE_LIMIT_NS;
-                if (now >= c.revealAt || late) {
+                boolean due = c.burst.live && now >= c.burst.t0 + c.revealAfter;
+                if (due || late) {
                     c.shownAt = now;
                     revealed++;
-                    if (late && now < c.revealAt) watchdogs++;
+                    if (!due) watchdogs++;
                 }
             } else if (now - c.shownAt > spring + 1) {
                 it.remove();
             }
         }
         double life = Tune.get(HOLD) + Tune.get(SHRINK) + 1;
-        BURSTS.removeIf(b -> now - b.t0 > life && now > b.claimUntil);
+        BURSTS.removeIf(b -> b.live && now - b.t0 > (b.fade ? FADE_TICKS : life) && now > b.claimUntil);
         long t = Clock.ticks();
         EVENTS.values().removeIf(e -> t - (long) e[0] > 1);
         REMOVED.values().removeIf(r -> t - (long) r[0] > 1);
         RECENT.removeIf(r -> t - (long) r[4] > 2);
     }
 
-    /** Chunky chips cut from the block's texture (vanilla terrain particles, bigger and faster), outward from the centre. */
+    /**
+     * Chunky chips cut from the block's texture, outward from the centre. Their flight follows the material (glass
+     * flatter and faster, leaves drift, sand and gravel fall sooner, wool soft).
+     */
     private static void chips(Burst b) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.level == null || !b.state.shouldSpawnTerrainParticles()) return;
+        if (mc.level == null || b.lite || !b.state.shouldSpawnTerrainParticles()) return;
         int n = (int) Math.round(Tune.get(CHIPS));
         switch (mc.options.particles().get()) {
             case MINIMAL -> n = 0;
@@ -263,14 +389,38 @@ public final class Bursts {
             default -> {
             }
         }
-        float size = (float) Tune.get(CHIP_SIZE), power = (float) (Tune.get(CHIP_SPEED) * Config.get().amplitude());
+        Chip.Material m = Chip.Material.of(b.state);
+        lastMaterial = m;
+        float size = (float) Tune.get(CHIP_SIZE);
+        double speed = 0.2 * Tune.get(CHIP_SPEED) * Config.get().amplitude();
         for (int i = 0; i < n; i++) {
             double ox = RANDOM.nextDouble() - 0.5, oy = RANDOM.nextDouble() - 0.5, oz = RANDOM.nextDouble() - 0.5;
-            TerrainParticle p = new TerrainParticle(mc.level, b.cx + ox * 0.8, b.cy + oy * 0.8, b.cz + oz * 0.8, ox, oy, oz, b.state, b.pos);
-            p.setPower(power);
-            p.scale(size * (0.75f + 0.5f * RANDOM.nextFloat()));
-            mc.particleEngine.add(p);
+            Chip c = new Chip(mc.level, b.cx + ox * 0.8, b.cy + oy * 0.8, b.cz + oz * 0.8, 0, 0, 0, b.state, b.pos);
+            c.fly(m, ox * speed * 2, (oy + 0.6) * speed, oz * speed * 2);
+            c.scale(size * (0.75f + 0.5f * RANDOM.nextFloat()));
+            mc.particleEngine.add(c);
         }
+    }
+
+    /**
+     * {sxz, sy, s} at {@code t} ticks: during the hold the block squashes about its floor (the punch); then the squash
+     * springs back while it shrinks away about its centre, accelerating. A fade shrinks from {@code from} only.
+     */
+    static double[] shape(Burst b, double t) {
+        if (b.fade) {
+            double u = Math.min(1, t / FADE_TICKS);
+            return new double[] {1, 1, b.from * (1 - u * u)};
+        }
+        double hold = b.bare ? 0 : Tune.get(HOLD), shrink = Math.max(1, Tune.get(SHRINK));
+        double squash = Tune.get(SQUASH) * Config.get().amplitude();
+        if (t < hold) {
+            double a = t / Math.max(0.05, hold);
+            a = 1 - (1 - a) * (1 - a);
+            return new double[] {1 + squash * 0.5 * a, 1 - squash * a, 1};
+        }
+        double u = Math.min(1, (t - hold) / shrink);
+        double back = Math.max(0, 1 - u / 0.35);
+        return new double[] {1 + squash * 0.5 * back, 1 - squash * back, 1 - u * u};
     }
 
     /** With the pops, in the transient-block pass. */
@@ -280,36 +430,29 @@ public final class Bursts {
             update();
             if (BURSTS.isEmpty()) return;
             Vec3 cam = state.cameraRenderState.pos;
-            double now = Clock.now(), hold = Tune.get(HOLD), shrink = Math.max(1, Tune.get(SHRINK));
-            double squash = Tune.get(SQUASH) * Config.get().amplitude();
+            double now = Clock.now(), shrink = Math.max(1, Tune.get(SHRINK));
             for (Burst b : BURSTS) {
-                double t = now - b.t0;
+                if (!b.live) continue;
+                double t = now - b.t0, hold = b.bare ? 0 : Tune.get(HOLD);
                 if (t >= hold && !b.chipped) {
                     b.chipped = true;
                     chips(b);
                 }
-                if (t >= hold + shrink) continue;
-                // hold: squash in about the floor (the punch); shrink: the squash springs back while the block shrinks
-                // away about its centre, accelerating
-                double sy, sxz, s = 1;
-                if (t < hold) {
-                    double a = t / Math.max(0.05, hold);
-                    a = 1 - (1 - a) * (1 - a);
-                    sy = 1 - squash * a;
-                    sxz = 1 + squash * 0.5 * a;
-                } else {
-                    double u = (t - hold) / shrink;
-                    double back = Math.max(0, 1 - u / 0.35);
-                    sy = 1 - squash * back;
-                    sxz = 1 + squash * 0.5 * back;
-                    s = 1 - u * u;
-                }
+                if (b.bare || t >= (b.fade ? FADE_TICKS : hold + shrink)) continue;
+                double[] sc = shape(b, t);
                 ps.pushPose();
-                ps.translate(b.cx - cam.x, b.pos.getY() - cam.y, b.cz - cam.z);
-                ps.scale((float) sxz, (float) sy, (float) sxz);
-                ps.translate(0, 0.5, 0);
-                ps.scale((float) s, (float) s, (float) s);
-                ps.translate(-0.5, -0.5, -0.5);
+                if (b.fade) {
+                    ps.translate(b.pos.getX() - cam.x, b.pos.getY() - cam.y, b.pos.getZ() - cam.z);
+                    ps.translate(b.px, b.py, b.pz);
+                    ps.scale((float) sc[2], (float) sc[2], (float) sc[2]);
+                    ps.translate(-b.px, -b.py, -b.pz);
+                } else {
+                    ps.translate(b.cx - cam.x, b.pos.getY() - cam.y, b.cz - cam.z);
+                    ps.scale((float) sc[0], (float) sc[1], (float) sc[0]);
+                    ps.translate(0, 0.5, 0);
+                    ps.scale((float) sc[2], (float) sc[2], (float) sc[2]);
+                    ps.translate(-0.5, -0.5, -0.5);
+                }
                 collector.submitMovingBlock(ps, b.whole, 0);
                 ps.popPose();
             }
