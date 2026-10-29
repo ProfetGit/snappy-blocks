@@ -1,6 +1,7 @@
 package io.github.profetgit.snappyblocks.mixin;
 
 import io.github.profetgit.snappyblocks.Probe;
+import io.github.profetgit.snappyblocks.pop.Pops;
 import java.util.ArrayDeque;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.prediction.BlockStatePredictionHandler;
@@ -39,7 +40,9 @@ public abstract class ClientLevelMixin {
     private void snappy_blocks$after(BlockPos pos, BlockState state, int flags, int limit, CallbackInfoReturnable<Boolean> cir) {
         BlockState old = snappy_blocks$old.poll();
         if (old != null && cir.getReturnValueZ() && old != state) {
-            Probe.blockChanged(pos, old, state, blockStatePredictionHandler.isPredicting());
+            boolean predicted = blockStatePredictionHandler.isPredicting();
+            Probe.blockChanged(pos, old, state, predicted);
+            Pops.blockChanged(pos, old, state, predicted);
         }
     }
 
@@ -52,6 +55,9 @@ public abstract class ClientLevelMixin {
     private void snappy_blocks$serverAfter(BlockPos pos, BlockState state, int flags, CallbackInfo ci) {
         BlockState old = snappy_blocks$old.poll();
         BlockState now = ((ClientLevel) (Object) this).getBlockState(pos);
-        if (old != null && old != now) Probe.blockChanged(pos, old, now, false);
+        if (old != null && old != now) {
+            Probe.blockChanged(pos, old, now, false);
+            Pops.blockChanged(pos, old, now, false);
+        }
     }
 }

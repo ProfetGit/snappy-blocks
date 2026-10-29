@@ -1,5 +1,6 @@
 package io.github.profetgit.snappyblocks;
 
+import io.github.profetgit.snappyblocks.pop.Pops;
 import net.fabricmc.api.ClientModInitializer;
 import net.minecraft.client.Minecraft;
 import org.slf4j.Logger;
@@ -26,5 +27,6 @@ public final class SnappyBlocks implements ClientModInitializer {
     public static void onLevelChange() {
         Clock.reset();
         Probe.reset();
+        Pops.clear();
     }
 }

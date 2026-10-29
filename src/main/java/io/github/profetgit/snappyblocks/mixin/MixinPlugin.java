@@ -17,7 +17,11 @@ import org.spongepowered.asm.service.MixinService;
  */
 public final class MixinPlugin implements IMixinConfigPlugin {
     /** Mixin simple name -> "methodName" + descriptor its handlers need. Filled as compat mixins are added (M1). */
-    private static final Map<String, String> METHODS = Map.of();
+    private static final Map<String, String> METHODS = Map.of(
+        "SodiumMeshingTaskMixin", "execute(Lnet/caffeinemc/mods/sodium/client/render/chunk/compile/ChunkBuildContext;"
+            + "Lnet/caffeinemc/mods/sodium/client/util/task/CancellationToken;)"
+            + "Lnet/caffeinemc/mods/sodium/client/render/chunk/compile/ChunkBuildOutput;",
+        "SodiumBlockRenderContextMixin", "shouldDrawSide(Lnet/minecraft/core/Direction;)Z");
 
     @Override
     public void onLoad(String mixinPackage) {
@@ -37,11 +41,16 @@ public final class MixinPlugin implements IMixinConfigPlugin {
         } catch (Throwable absent) {
             return false;
         }
-        String wanted = METHODS.get(mixinClassName.substring(mixinClassName.lastIndexOf('.') + 1));
+        String name = mixinClassName.substring(mixinClassName.lastIndexOf('.') + 1);
+        String wanted = METHODS.get(name);
         if (wanted == null) return true;
         for (MethodNode m : node.methods) {
-            if ((m.name + m.desc).equals(wanted)) return true;
+            if ((m.name + m.desc).equals(wanted)) {
+                org.slf4j.LoggerFactory.getLogger("Snappy Blocks").info("Snappy Blocks: {} applies", name);
+                return true;
+            }
         }
+        org.slf4j.LoggerFactory.getLogger("Snappy Blocks").warn("Snappy Blocks: {} skipped, {} has no {}", name, targetClassName, wanted);
         return false;
     }
 

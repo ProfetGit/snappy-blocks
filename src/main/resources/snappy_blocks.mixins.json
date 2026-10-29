@@ -6,8 +6,16 @@
   "compatibilityLevel": "JAVA_21",
   "client": [
     "ClientLevelMixin",
+    "LevelRendererMixin",
     "LevelEventHandlerMixin",
-    "MinecraftMixin"
+    "MinecraftMixin",
+    "ModelBlockRendererMixin",
+    "MultiPlayerGameModeMixin",
+    "RenderRegionCacheMixin",
+    "RenderSectionRegionMixin",
+    "SectionCompilerMixin",
+    "compat.SodiumBlockRenderContextMixin",
+    "compat.SodiumMeshingTaskMixin"
   ],
   "injectors": {
     "defaultRequire": 1

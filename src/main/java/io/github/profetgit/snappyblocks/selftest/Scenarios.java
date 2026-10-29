@@ -3,6 +3,9 @@ package io.github.profetgit.snappyblocks.selftest;
 import io.github.profetgit.snappyblocks.Clock;
 import io.github.profetgit.snappyblocks.Probe;
 import io.github.profetgit.snappyblocks.SnappyBlocks;
+import io.github.profetgit.snappyblocks.pop.Hidden;
+import io.github.profetgit.snappyblocks.pop.Pops;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import net.minecraft.client.Minecraft;
@@ -57,10 +60,11 @@ final class Scenarios {
             return true;
         }).server(srv -> platform(srv)).waitTicks(40);
         String only = System.getProperty("snappy_blocks.selftest.scenes", "all");
-        for (String name : List.of("smoke")) {
+        for (String name : List.of("smoke", "pop")) {
             if (!only.equals("all") && !Arrays.asList(only.split(",")).contains(name)) continue;
             switch (name) {
                 case "smoke" -> smoke(s);
+                case "pop" -> pop(s);
                 default -> {
                 }
             }
@@ -124,6 +128,90 @@ final class Scenarios {
         double dx = c.x - eye.x, dy = c.y - eye.y, dz = c.z - eye.z;
         mc.player.setYRot((float) Math.toDegrees(Math.atan2(-dx, dz)));
         mc.player.setXRot((float) -Math.toDegrees(Math.atan2(dy, Math.hypot(dx, dz))));
+    }
+
+    record Place(BlockPos against, Direction face, String item) {
+        BlockPos at() {
+            return against.relative(face);
+        }
+    }
+
+    static final String[] ITEMS = {"stone", "oak_planks", "glass", "dirt", "cobblestone", "oak_log", "bricks", "oak_leaves", "glowstone", "white_wool"};
+
+    /** One round: a 5x3 floor layer, a layer on top, a side column on the east, torches on the west wall. */
+    static List<Place> round(int seed) {
+        List<Place> out = new ArrayList<>();
+        int i = seed;
+        for (int layer = 0; layer < 2; layer++) {
+            for (int z = -1; z <= 1; z++) {
+                for (int x = -2; x <= 2; x++) {
+                    out.add(new Place(new BlockPos(x, Y - 1 + layer, z), Direction.UP, ITEMS[i++ % ITEMS.length]));
+                }
+            }
+        }
+        for (int y = 0; y < 2; y++) {
+            for (int z = -1; z <= 1; z++) out.add(new Place(new BlockPos(2, Y + y, z), Direction.EAST, ITEMS[i++ % ITEMS.length]));
+        }
+        for (int z = -1; z <= 1; z++) out.add(new Place(new BlockPos(-2, Y + 1, z), Direction.WEST, "torch"));
+        return out;
+    }
+
+    /**
+     * PRD §13 M1: every placement pops, is hidden from the mesh while it grows, and hands back to the chunk mesh with no
+     * watchdog. Frames of the first placements go to out/frames/pop for `wb img flicker` and a contact sheet.
+     */
+    private static void pop(Script s) {
+        int rounds = Integer.getInteger("snappy_blocks.selftest.rounds", 2);
+        int gap = Integer.getInteger("snappy_blocks.selftest.gap", 8);
+        int[] base = new int[4];
+        long[] ns = new long[1];
+        int[] frames0 = new int[1];
+        for (int r = 0; r < rounds; r++) {
+            int round = r;
+            List<Place> places = round(r * 3);
+            s.server(srv -> {
+                cmd(srv, "fill -4 " + Y + " -2 4 " + (Y + 3) + " 2 minecraft:air");
+                cmd(srv, "tp @p 0.5 " + Y + " -3.5 0 42");
+                cmd(srv, "gamemode creative @p");
+                cmd(srv, "gamerule send_command_feedback false");
+            }).waitTicks(20).run(mc -> {
+                base[0] = Pops.started;
+                base[1] = Pops.handedOff;
+                base[2] = Pops.watchdogs;
+                ns[0] = Pops.spentNanos;
+                frames0[0] = SelfTest.frames;
+                if (!mc.gui.hud.isHidden()) mc.gui.hud.toggle();
+                mc.gui.hud.getChat().clearMessages(false);
+                if (round == 0) SelfTest.startCapture("pop", Integer.getInteger("snappy_blocks.selftest.capture", 12 * gap * 3 + 30));
+            });
+            for (Place p : places) {
+                s.server(srv -> cmd(srv, "item replace entity @p weapon.mainhand with minecraft:" + p.item() + " 64"))
+                    .waitTicks(1)
+                    .run(mc -> mc.gameMode.useItemOn(mc.player, InteractionHand.MAIN_HAND,
+                        new BlockHitResult(Vec3.atCenterOf(p.against()).relative(p.face(), 0.5), p.face(), p.against(), false)))
+                    .waitTicks(gap - 1);
+            }
+            s.waitTicks(30).run(mc -> {
+                SelfTest.stopCapture();
+                if (mc.gui.hud.isHidden()) mc.gui.hud.toggle();
+            }).check("pop_round" + r, mc -> {
+                int started = Pops.started - base[0], handed = Pops.handedOff - base[1], dogs = Pops.watchdogs - base[2];
+                int missing = 0, expected = 0;
+                for (Place p : places) {
+                    if (mc.level.getBlockState(p.at()).isAir()) missing++;
+                    else if (Pops.eligible(mc.level.getBlockState(p.at()))) expected++;
+                }
+                double ms = (Pops.spentNanos - ns[0]) / 1e6 / Math.max(1, SelfTest.frames - frames0[0]);
+                SnappyBlocks.LOG.info("[selftest] pop round {}: {} placed, {} eligible, {} popped, {} handed off, {} watchdog, {} missing, {} ms/frame",
+                    round, places.size(), expected, started, handed, dogs, missing, String.format("%.4f", ms));
+                if (missing > 0) return missing + " of " + places.size() + " blocks not placed";
+                if (started != expected) return "popped " + started + " of " + expected + " eligible";
+                if (handed != started || dogs > 0) return "handed off " + handed + " of " + started + ", " + dogs + " watchdog";
+                if (Pops.active() > 0 || !Hidden.isEmpty()) return Pops.active() + " pops left, hidden set not empty";
+                if (ms > 0.25) return String.format("%.3f ms/frame > 0.25", ms);
+                return null;
+            });
+        }
     }
 
     /** dev/server/mp.py: role "a" places a block at {@link #MP_SPOT}; role "b" must see it appear as a remote change. */

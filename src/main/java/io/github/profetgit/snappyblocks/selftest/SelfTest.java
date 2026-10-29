@@ -1,12 +1,17 @@
 package io.github.profetgit.snappyblocks.selftest;
 
+import com.mojang.blaze3d.platform.NativeImage;
 import io.github.profetgit.snappyblocks.SnappyBlocks;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.Screenshot;
 import net.minecraft.client.gui.screens.TitleScreen;
 
 /**
@@ -18,6 +23,12 @@ public final class SelfTest {
     private static final String OUT = System.getProperty("snappy_blocks.selftest");
     private static final String MODE = System.getProperty("snappy_blocks.selftest.mode", "full");
     private static final List<String> RESULTS = new ArrayList<>();
+    private static final ExecutorService WRITER = Executors.newFixedThreadPool(2);
+    private static String captureName;
+    private static int captureLeft, captureFrame;
+    static int frames;
+    private static int handoffsSeen;
+    private static final StringBuilder HANDOFFS = new StringBuilder();
 
     private static boolean finished;
     private static int titleTicks, ticks;
@@ -63,6 +74,40 @@ public final class SelfTest {
     }
 
     public static void onFrame(Minecraft mc) {
+        frames++;
+        int h = io.github.profetgit.snappyblocks.pop.Pops.handedOff;
+        if (h != handoffsSeen && captureLeft > 0) HANDOFFS.append(captureFrame).append('\n');
+        handoffsSeen = h;
+        if (captureLeft <= 0) return;
+        Path out = Path.of(OUT, "frames", captureName, String.format("f%04d.png", captureFrame++));
+        captureLeft--;
+        Screenshot.takeScreenshot(mc.gameRenderer.mainRenderTarget(), (NativeImage img) -> WRITER.execute(() -> {
+            try (img) {
+                Files.createDirectories(out.getParent());
+                img.writeToFile(out);
+            } catch (IOException e) {
+                SnappyBlocks.LOG.warn("[selftest] frame write failed: {}", e.toString());
+            }
+        }));
+    }
+
+    /** Saves the next {@code n} frames to out/frames/&lt;name&gt;/. */
+    static void startCapture(String name, int n) {
+        captureName = name;
+        captureLeft = n;
+        captureFrame = 0;
+    }
+
+    static void stopCapture() {
+        captureLeft = 0;
+        if (HANDOFFS.isEmpty()) return;
+        try {
+            Files.createDirectories(Path.of(OUT, "frames", captureName));
+            Files.writeString(Path.of(OUT, "frames", captureName + ".handoffs.txt"), HANDOFFS.toString());
+        } catch (IOException e) {
+            SnappyBlocks.LOG.warn("[selftest] handoff list write failed: {}", e.toString());
+        }
+        HANDOFFS.setLength(0);
     }
 
     /** The test holds the attack button (MinecraftMixin). */
@@ -78,6 +123,11 @@ public final class SelfTest {
 
     private static void finish(Minecraft mc) {
         finished = true;
+        WRITER.shutdown();
+        try {
+            WRITER.awaitTermination(60, TimeUnit.SECONDS);
+        } catch (InterruptedException ignored) {
+        }
         String json = String.format("{\"loader\":\"%s\",\"mc\":\"%s\",\"results\":[%s]}%n",
             "fabric", net.minecraft.SharedConstants.getCurrentVersion().name(), String.join(",", RESULTS));
         try {

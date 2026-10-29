@@ -5,11 +5,19 @@
   "scenes_prop": "snappy_blocks.selftest.scenes",
   "props": {
     "snappy_blocks.selftest.mode": "{mode}",
-    "snappy_blocks.trace": "{trace}"
+    "snappy_blocks.trace": "{trace}",
+    "snappy_blocks.tune.pop.ticks": "{popticks}",
+    "snappy_blocks.selftest.gap": "{gap}",
+    "snappy_blocks.selftest.rounds": "{rounds}",
+    "snappy_blocks.selftest.capture": "{capture}"
   },
   "defaults": {
     "mode": "full",
-    "trace": "false"
+    "trace": "false",
+    "popticks": "",
+    "gap": "8",
+    "rounds": "2",
+    "capture": ""
   },
   "fabric_api": false,
   "width": 1280,
@@ -21,7 +29,8 @@
     "render_distance": 6
   },
   "scenes": [
-    "smoke"
+    "smoke",
+    "pop"
   ],
   "smoke": [
     "smoke"
@@ -77,6 +86,7 @@
         "26.3": "Fabric 26.3"
       },
       "mods": [
+        "fabric-api-*.jar",
         "sodium-*.jar",
         "iris-*.jar",
         "entityculling-*.jar",
@@ -91,6 +101,7 @@
         "26.3": "Fabric 26.3"
       },
       "mods": [
+        "fabric-api-*.jar",
         "sodium-*.jar",
         "iris-*.jar",
         "entityculling-*.jar",
@@ -99,6 +110,15 @@
       ],
       "packs": [],
       "shaders": true
+    },
+    "indigo": {
+      "profile": {
+        "26.3": "Fabric 26.3"
+      },
+      "mods": [
+        "fabric-api-*.jar"
+      ],
+      "packs": []
     }
   }
 }

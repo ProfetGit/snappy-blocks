@@ -8,6 +8,8 @@ import com.google.gson.JsonParser;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import net.fabricmc.loader.api.FabricLoader;
 
 /**
@@ -28,6 +30,8 @@ public final class Config {
     public int intensity = 100;
     /** Reduced motion: amplitudes x0.3, no hit-stop, no hop. */
     public boolean calm = false;
+    /** Feel numbers (see {@link Tune}); missing keys take the defaults. */
+    public Map<String, Double> tune = new LinkedHashMap<>(Tune.DEFAULTS);
 
     private static Config current = new Config();
     private static long stamp = -1;
@@ -55,6 +59,8 @@ public final class Config {
             c = new Config();
         }
         c.intensity = Math.clamp(c.intensity, 50, 150);
+        if (c.tune == null) c.tune = new LinkedHashMap<>();
+        for (var e : Tune.DEFAULTS.entrySet()) c.tune.putIfAbsent(e.getKey(), e.getValue());
         current = c;
         JsonObject merged = GSON.toJsonTree(c).getAsJsonObject();
         for (String k : raw.keySet()) if (!merged.has(k)) merged.add(k, raw.get(k));
