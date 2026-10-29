@@ -1,0 +1,104 @@
+{
+  "id": "snappy_blocks",
+  "user": "Builder",
+  "out_prop": "snappy_blocks.selftest",
+  "scenes_prop": "snappy_blocks.selftest.scenes",
+  "props": {
+    "snappy_blocks.selftest.mode": "{mode}",
+    "snappy_blocks.trace": "{trace}"
+  },
+  "defaults": {
+    "mode": "full",
+    "trace": "false"
+  },
+  "fabric_api": false,
+  "width": 1280,
+  "height": 720,
+  "timeout": 600,
+  "options": {
+    "fps": 60,
+    "volume": 0.0,
+    "render_distance": 6
+  },
+  "scenes": [
+    "smoke"
+  ],
+  "smoke": [
+    "smoke"
+  ],
+  "tiers": {
+    "quick": {
+      "unit": [],
+      "jobs": [
+        {
+          "mc": "26.3",
+          "loader": "fabric",
+          "scenes": "smoke"
+        }
+      ]
+    },
+    "full": {
+      "unit": [
+        ":26.3-fabric:test"
+      ],
+      "jobs": [
+        {
+          "mc": "26.3",
+          "loader": "fabric",
+          "scenes": "all"
+        }
+      ]
+    },
+    "release": {
+      "unit": [
+        ":26.3-fabric:test"
+      ],
+      "jobs": [
+        {
+          "mc": "26.3",
+          "loader": "fabric",
+          "scenes": "all"
+        }
+      ]
+    }
+  },
+  "addons": {
+    "sodium": {
+      "profile": {
+        "26.3": "Fabric 26.3"
+      },
+      "mods": [
+        "sodium-*.jar"
+      ],
+      "packs": []
+    },
+    "profile": {
+      "profile": {
+        "26.3": "Fabric 26.3"
+      },
+      "mods": [
+        "sodium-*.jar",
+        "iris-*.jar",
+        "entityculling-*.jar",
+        "punchy-*.jar",
+        "ferritecore-*.jar",
+        "continuity-*.jar"
+      ],
+      "packs": []
+    },
+    "shaders": {
+      "profile": {
+        "26.3": "Fabric 26.3"
+      },
+      "mods": [
+        "sodium-*.jar",
+        "iris-*.jar",
+        "entityculling-*.jar",
+        "punchy-*.jar",
+        "ferritecore-*.jar"
+      ],
+      "packs": [],
+      "shaders": true
+    }
+  }
+}
