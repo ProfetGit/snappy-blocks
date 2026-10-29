@@ -192,10 +192,12 @@ These are offsets on the render only; the entity's position is never changed.
   - The first landing after ≥ 6 ticks in the air squashes the item (height 0.8, width 1.1, for 2 ticks) and hops it
     0.15 blocks.
   - At most once per 20 ticks per item.
-  - Never in water, on hoppers, in item streams, or where more than 16 items share a block.
+  - Never in water or lava, on hoppers, or where more than 16 items share a block (streams and farms).
+  - Tune keys `land.hop` (0.15), `land.volume` (0.15), `land.air` (6).
   - Sound: the step sound of the block it lands on, at 0.15 volume and pitch 1.6, at most 4 per tick.
 - **Merge:** an item that disappears within 1.5 blocks of a stack of the same item that grew that tick slides into
-  it over 3 ticks.
+  it over 3 ticks. The removal arrives before the growth, or one tick after it, so a removed item is drawn in place
+  for up to 2 ticks until we know which it was.
 - **Removed without a take packet** (despawn, lava, cactus):
   - It shrinks out over 3 ticks where it was.
   - Only within the tracking range minus 8 blocks.
@@ -206,11 +208,18 @@ These are offsets on the render only; the entity's position is never changed.
 ### 5.5 Pickup flight
 - A world arc to the picker's chest replaces vanilla's straight pickup particle. Other players' pickups arc too.
 - Local player, first person, HUD shown, no screen open:
-  - At the near plane the arc hands over to a GUI item, which flies to its slot in 4 ticks.
-  - The slot is read from the next inventory change (≤ 2 ticks). If none comes, only the world arc plays.
+  - The world item itself flies into its hotbar slot: its end point sits on the ray through the slot's centre,
+    0.9 blocks from the eye, and it shrinks to the slot's size on the way. There is no 3D-to-2D swap, so nothing can
+    pop; the hotbar draws over its last frames (M3 spike result, replaces the GUI hand-over).
+  - The slot is predicted from the client's inventory (`Inventory.add`'s own order) and confirmed by the next slot
+    packet; a different slot retargets from where the item is drawn. A slot outside the hotbar or offhand: the world
+    arc to the chest.
+  - A slot that was empty shows its new stack only when the item arrives (≤ 5 ticks); a stack that grew shows its
+    new count at once.
 - A partial pickup flies a split copy.
-- The count updates at once (honest); the bump plays when the item arrives. The number may lead the flight by up to
-  4 ticks.
+- The slot's bump (vanilla's pop squeeze) plays when the item arrives, not when the packet lands. The count may lead
+  the flight by up to 5 ticks.
+- Flight 5 ticks (`pickup.ticks`), accelerating into the chest with a 0.35 lift; into the slot eased in and out.
 - Third person, F1, or an open screen: the world arc only. Spectators: nothing. XP orbs: vanilla.
 
 ### 5.6 Config

@@ -36,7 +36,12 @@
     "drops",
     "deny",
     "events",
-    "bepop"
+    "bepop",
+    "landing",
+    "merge",
+    "despawn",
+    "farm1000",
+    "pickup"
   ],
   "smoke": [
     "smoke"

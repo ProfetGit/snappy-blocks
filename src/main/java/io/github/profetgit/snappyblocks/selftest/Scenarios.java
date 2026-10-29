@@ -6,6 +6,8 @@ import io.github.profetgit.snappyblocks.SnappyBlocks;
 import io.github.profetgit.snappyblocks.burst.Bursts;
 import io.github.profetgit.snappyblocks.pop.Hidden;
 import io.github.profetgit.snappyblocks.burst.Chip;
+import io.github.profetgit.snappyblocks.item.Ghosts;
+import io.github.profetgit.snappyblocks.item.ItemFx;
 import io.github.profetgit.snappyblocks.pop.Pops;
 import io.github.profetgit.snappyblocks.pulse.Pulses;
 import java.util.ArrayList;
@@ -63,7 +65,7 @@ final class Scenarios {
             return true;
         }).server(srv -> platform(srv)).waitTicks(40);
         String only = System.getProperty("snappy_blocks.selftest.scenes", "all");
-        for (String name : List.of("smoke", "pop", "burst", "pulse", "drops", "deny", "events", "bepop")) {
+        for (String name : List.of("smoke", "pop", "burst", "pulse", "drops", "deny", "events", "bepop", "landing", "merge", "despawn", "farm1000", "pickup")) {
             if (!only.equals("all") && !Arrays.asList(only.split(",")).contains(name)) continue;
             switch (name) {
                 case "smoke" -> smoke(s);
@@ -74,6 +76,11 @@ final class Scenarios {
                 case "deny" -> deny(s);
                 case "events" -> events(s);
                 case "bepop" -> bepop(s);
+                case "landing" -> landing(s);
+                case "merge" -> merge(s);
+                case "despawn" -> despawn(s);
+                case "farm1000" -> farm(s);
+                case "pickup" -> pickup(s);
                 default -> {
                 }
             }
@@ -306,6 +313,174 @@ final class Scenarios {
         cmd(srv, "fill -6 " + Y + " -2 6 " + (Y + 3) + " 6 minecraft:air");
         cmd(srv, "kill @e[type=!player]");
         cmd(srv, "gamerule send_command_feedback false");
+    }
+
+    static String item(double x, double y, double z, String id, int count, String extra) {
+        return "summon item " + x + " " + y + " " + z + " {Item:{id:\"minecraft:" + id + "\",count:" + count + "},PickupDelay:32767" + extra + "}";
+    }
+
+    /**
+     * PRD §5.4 landing and Q-throw: single items dropped onto stone, wool and grass squash, hop and play the block's step
+     * sound; one dropped into water and a crowd of 20 in one cell don't. A Q press throws from the hand.
+     */
+    private static void landing(Script s) {
+        int[] base = new int[3];
+        s.server(srv -> {
+            clearArea(srv);
+            cmd(srv, "tp @p 0.5 " + Y + " -2.0 0 30");
+            cmd(srv, "gamemode survival @p");
+            cmd(srv, "clear @p");
+            cmd(srv, "setblock 2 " + (Y - 1) + " 2 minecraft:white_wool");
+            cmd(srv, "setblock -2 " + (Y - 1) + " 2 minecraft:grass_block");
+            cmd(srv, "setblock 4 " + (Y - 1) + " 4 minecraft:water");
+        }).waitTicks(20).run(mc -> {
+            base[0] = ItemFx.landings;
+            base[1] = ItemFx.sounds;
+            if (!mc.gui.hud.isHidden()) mc.gui.hud.toggle();
+            SelfTest.startCapture("landing", 60);
+        }).server(srv -> {
+            cmd(srv, item(0.5, Y + 3.5, 2.5, "stone", 1, ""));
+            cmd(srv, item(2.5, Y + 3.5, 2.5, "apple", 1, ""));
+            cmd(srv, item(-1.5, Y + 3.5, 2.5, "bone", 1, ""));
+            cmd(srv, item(4.5, Y + 3.5, 4.5, "stick", 1, ""));
+            for (int i = 0; i < 20; i++) cmd(srv, item(-3.5 + i * 0.01, Y + 3.5, 5.5, "cobblestone", 64, ""));
+        }).waitTicks(50).check("landing_hop", mc -> {
+            SelfTest.stopCapture();
+            if (mc.gui.hud.isHidden()) mc.gui.hud.toggle();
+            int landed = ItemFx.landings - base[0], sounds = ItemFx.sounds - base[1];
+            SnappyBlocks.LOG.info("[selftest] landing: {} landings, {} sounds, {} tracked", landed, sounds, ItemFx.tracked);
+            if (landed != 3) return landed + " landings (3 expected: stone, wool, grass; none in water or the crowd)";
+            return sounds == 3 ? null : sounds + " landing sounds";
+        }).server(srv -> {
+            cmd(srv, "kill @e[type=item]");
+            cmd(srv, "item replace entity @p hotbar.0 with minecraft:stone 8");
+        }).waitTicks(10).run(mc -> {
+            mc.player.getInventory().setSelectedSlot(0);
+            base[2] = ItemFx.thrown;
+            mc.gameMode.dropItem(mc.player, false);
+        }).waitTicks(10).check("landing_throw", mc -> ItemFx.thrown - base[2] == 1 ? null : (ItemFx.thrown - base[2]) + " throws from the hand")
+            .server(srv -> cmd(srv, "kill @e[type=item]"));
+    }
+
+    /** PRD §5.4 merge: two stacks of the same item side by side merge; the vanished one slides into the other. */
+    private static void merge(Script s) {
+        int[] base = new int[2];
+        s.server(srv -> {
+            clearArea(srv);
+            cmd(srv, "tp @p 0.5 " + Y + " -2.0 0 30");
+        }).waitTicks(20).run(mc -> {
+            base[0] = Ghosts.merges;
+            base[1] = Ghosts.despawns;
+        }).server(srv -> {
+            // an infinite pickup delay (32767) stops vanilla merging; 200 ticks keeps them out of our hands
+            cmd(srv, "summon item 0.3 " + Y + " 1.5 {Item:{id:\"minecraft:stone\",count:3},PickupDelay:200}");
+            cmd(srv, "summon item 0.7 " + Y + " 1.5 {Item:{id:\"minecraft:stone\",count:5},PickupDelay:200}");
+        }).waitTicks(60).check("merge_slide", mc -> {
+            int merged = Ghosts.merges - base[0], gone = Ghosts.despawns - base[1];
+            long stacks = mc.level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, mc.player.getBoundingBox().inflate(6)).size();
+            if (stacks != 1) return stacks + " stacks left (the server didn't merge)";
+            return merged == 1 && gone == 0 ? null : merged + " merge slides, " + gone + " despawn shrinks";
+        }).server(srv -> cmd(srv, "kill @e[type=item]"));
+    }
+
+    /** PRD §5.4 removal without a take packet: an item at the end of its life shrinks out where it lay. */
+    private static void despawn(Script s) {
+        int[] base = new int[2];
+        s.server(srv -> {
+            clearArea(srv);
+            cmd(srv, "tp @p 0.5 " + Y + " -2.0 0 30");
+        }).waitTicks(20).run(mc -> {
+            base[0] = Ghosts.merges;
+            base[1] = Ghosts.despawns;
+        }).server(srv -> cmd(srv, item(0.5, Y, 1.5, "apple", 1, ",Age:5980"))).waitTicks(50).check("despawn_shrink", mc -> {
+            int merged = Ghosts.merges - base[0], gone = Ghosts.despawns - base[1];
+            long left = mc.level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, mc.player.getBoundingBox().inflate(6)).size();
+            if (left != 0) return "the apple didn't despawn";
+            if (Ghosts.active() != 0) return Ghosts.active() + " ghosts left";
+            return gone == 1 && merged == 0 ? null : gone + " despawn shrinks, " + merged + " merge slides";
+        });
+    }
+
+    /** PRD §5.4 scale: 1000 full stacks; effects run on the 64 nearest only, and /kill makes at most 64 ghosts. */
+    private static void farm(Script s) {
+        int[] base = new int[1];
+        s.server(srv -> {
+            clearArea(srv);
+            cmd(srv, "tp @p 0.5 " + Y + " -2.0 0 30");
+            for (int x = 0; x < 10; x++) for (int z = 0; z < 10; z++) for (int i = 0; i < 10; i++)
+                cmd(srv, item(-4.5 + x + i * 0.05, Y + 0.5, 1.5 + z, "cobblestone", 64, ""));
+        }).waitTicks(40).check("farm1000_cap", mc -> {
+            long n = mc.level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, mc.player.getBoundingBox().inflate(16)).size();
+            SnappyBlocks.LOG.info("[selftest] farm: {} items, {} tracked", n, ItemFx.tracked);
+            if (n < 1000) return "only " + n + " items";
+            return ItemFx.tracked <= 64 ? null : ItemFx.tracked + " items tracked";
+        }).run(mc -> base[0] = Ghosts.despawns).server(srv -> cmd(srv, "kill @e[type=item]")).waitTicks(1).check("farm1000_kill", mc -> {
+            int ghosts = Ghosts.active();
+            return ghosts > 0 && ghosts <= 64 ? null : ghosts + " ghosts after /kill";
+        }).waitTicks(10).check("farm1000_clear", mc -> Ghosts.active() == 0 ? null : Ghosts.active() + " ghosts left");
+    }
+
+    /**
+     * PRD §5.5 pickup: in first person with the HUD on, a pickup flies into the slot the server put it in (a partial
+     * stack in hotbar slot 3 here), and the slot bumps when it arrives; into an empty slot the new stack shows only then.
+     * In third person it arcs to the chest. Frames go to out/frames/pickup (HUD shown).
+     */
+    private static void pickup(Script s) {
+        int[] base = new int[6];
+        Runnable snap = () -> {
+            base[0] = Ghosts.pickups;
+            base[1] = Ghosts.slotFlights;
+            base[2] = Ghosts.slotBumps;
+            base[3] = Ghosts.hiddenSlots;
+            base[4] = Ghosts.retargets;
+        };
+        s.server(srv -> {
+            clearArea(srv);
+            cmd(srv, "tp @p 0.5 " + Y + " -2.0 0 30");
+            cmd(srv, "gamemode survival @p");
+            cmd(srv, "clear @p");
+            cmd(srv, "item replace entity @p hotbar.3 with minecraft:stone 10");
+            cmd(srv, "item replace entity @p hotbar.0 with minecraft:stick");
+        }).waitTicks(20).run(mc -> {
+            mc.options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON);
+            if (mc.gui.hud.isHidden()) mc.gui.hud.toggle();
+            mc.player.getInventory().setSelectedSlot(0);
+            snap.run();
+        }).server(srv -> {
+            // in view ahead of the player, out of reach until the step forward
+            cmd(srv, "tp @p 0.5 " + Y + " -2.0 0 55");
+            cmd(srv, "summon item 0.5 " + Y + " 0.6 {Item:{id:\"minecraft:stone\",count:4},PickupDelay:0}");
+        }).waitTicks(20).run(mc -> {
+            mc.options.chatVisibility().set(net.minecraft.world.entity.player.ChatVisiblity.HIDDEN);
+            SelfTest.startCapture("pickup", 60);
+        }).waitTicks(3)
+            .server(srv -> cmd(srv, "tp @p 0.5 " + Y + " -0.5 0 55"))
+            .waitTicks(40).check("pickup_slot", mc -> {
+                SelfTest.stopCapture();
+                mc.options.chatVisibility().set(net.minecraft.world.entity.player.ChatVisiblity.FULL);
+                int picks = Ghosts.pickups - base[0], flights = Ghosts.slotFlights - base[1], bumps = Ghosts.slotBumps - base[2];
+                SnappyBlocks.LOG.info("[selftest] pickup: {} pickups, {} slot flights to {}, {} bumps, {} retargets", picks, flights, Ghosts.lastSlot,
+                    bumps, Ghosts.retargets - base[4]);
+                if (mc.player.getInventory().getItem(3).getCount() != 14) return "slot 3 holds " + mc.player.getInventory().getItem(3);
+                if (picks != 1 || flights != 1) return picks + " pickups, " + flights + " slot flights";
+                if (Ghosts.lastSlot != 3) return "flew to slot " + Ghosts.lastSlot;
+                return bumps == 1 ? null : bumps + " slot bumps";
+            }).run(mc -> snap.run()).server(srv -> cmd(srv, "summon item 0.5 " + Y + " -1.4 {Item:{id:\"minecraft:apple\",count:1},PickupDelay:10}"))
+            .waitTicks(40).check("pickup_empty_slot", mc -> {
+                int flights = Ghosts.slotFlights - base[1], hidden = Ghosts.hiddenSlots - base[3], bumps = Ghosts.slotBumps - base[2];
+                if (!mc.player.getInventory().getItem(1).is(net.minecraft.world.item.Items.APPLE)) return "apple went to " + mc.player.getInventory().findSlotMatchingItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.APPLE));
+                if (Ghosts.hiddenSlot(mc.player.getInventory().getItem(1))) return "slot 1 still hidden";
+                return flights == 1 && hidden == 1 && bumps == 1 && Ghosts.lastSlot == 1 ? null
+                    : flights + " flights, " + hidden + " hidden slots, " + bumps + " bumps, slot " + Ghosts.lastSlot;
+            }).run(mc -> {
+                mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK);
+                snap.run();
+            }).server(srv -> cmd(srv, "summon item 0.5 " + Y + " -1.4 {Item:{id:\"minecraft:stone\",count:1},PickupDelay:10}"))
+            .waitTicks(40).check("pickup_third_person", mc -> {
+                mc.options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON);
+                int picks = Ghosts.pickups - base[0], flights = Ghosts.slotFlights - base[1];
+                return picks == 1 && flights == 0 && Ghosts.active() == 0 ? null : picks + " pickups, " + flights + " slot flights, " + Ghosts.active() + " live";
+            });
     }
 
     /**

@@ -1,6 +1,8 @@
 package io.github.profetgit.snappyblocks;
 
 import io.github.profetgit.snappyblocks.burst.Bursts;
+import io.github.profetgit.snappyblocks.item.Ghosts;
+import io.github.profetgit.snappyblocks.item.ItemFx;
 import io.github.profetgit.snappyblocks.pop.Pops;
 import io.github.profetgit.snappyblocks.pulse.Pulses;
 import net.fabricmc.api.ClientModInitializer;
@@ -19,6 +21,8 @@ public final class SnappyBlocks implements ClientModInitializer {
         Bursts.clear();
         Pulses.clear();
         Pops.clear();
+        ItemFx.clear();
+        Ghosts.clear();
         Config.load();
         LOG.info("Snappy Blocks loaded (enabled={}, intensity={}%)", Config.get().enabled, Config.get().intensity);
     }
@@ -26,6 +30,10 @@ public final class SnappyBlocks implements ClientModInitializer {
     /** End of every client tick (paused or not). */
     public static void onClientTick(Minecraft mc) {
         Clock.tick(mc);
+        if (!mc.isPaused()) {
+            ItemFx.tick(mc);
+            Ghosts.tick(mc);
+        }
         Config.pollReload();
     }
 
@@ -36,6 +44,8 @@ public final class SnappyBlocks implements ClientModInitializer {
         Pops.clear();
         Bursts.clear();
         Pulses.clear();
+        ItemFx.clear();
+        Ghosts.clear();
         Rtt.clear();
     }
 }

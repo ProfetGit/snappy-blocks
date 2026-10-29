@@ -5,6 +5,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.vertex.PoseStack;
 import io.github.profetgit.snappyblocks.burst.Bursts;
+import io.github.profetgit.snappyblocks.item.Ghosts;
 import io.github.profetgit.snappyblocks.pop.Pops;
 import io.github.profetgit.snappyblocks.pulse.Pulses;
 import net.minecraft.client.renderer.LevelRenderer;
@@ -34,6 +35,7 @@ public abstract class LevelRendererMixin {
         Pops.submit(ps, collector, state);
         Pulses.submit(ps, collector, state);
         Bursts.submit(ps, collector, state);
+        Ghosts.submit(ps, collector, state);
     }
 
     /** A block entity drawn only by its renderer (chest, sign, banner) pops through the renderer's pose. */
