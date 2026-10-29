@@ -98,11 +98,18 @@ Hide path:
   Having a Blast's hand-off.
 - Under Iris, the copy is also drawn in the shadow pass.
 - Watchdog: a forced remesh after 20 ticks.
+- The copy reads the real level around it, and the mesher keeps the hidden block for ambient occlusion and skips only
+  its own geometry and the culling against it. So the copy is lit exactly like the mesh that replaces it, and the
+  contact shadow appears when the block is placed, not at the hand-off (without this the hand-off stepped by 41).
 
 Blocks that can't take the hide path:
 - The bulge is the fallback: a copy at ≥ 1.002 scale with a polygon offset, drawn only within 24 blocks.
 - Translucent blocks (glass, ice, slime, honey) take the hide path or no pop at all: a copy laid over them doubles
   their alpha.
+- While a shader pack is on, blocks that don't occlude or that emit light (glass, leaves, torches, glowstone) are placed
+  without a pop: the copy is drawn with the pack's moving-block program, and these blocks change look when the terrain
+  mesh takes over (measured 2026-10-29 with Complementary: worst tile step leaves 41, glowstone 21, glass 18; opaque
+  blocks 2-9 against a noise floor of 7).
 - Blocks drawn by a block-entity renderer (chest, bed, sign, banner, skull, shulker box) bulge through a scaled
   renderer pose.
 - Meshed blocks that have a block entity (furnace, barrel, hopper) take the normal path. The render path decides,
@@ -200,7 +207,8 @@ These are offsets on the render only; the entity's position is never changed.
 - A Mod Menu screen when Mod Menu is installed.
 - A toggle per feature (5.1-5.5) and an intensity from 50 to 150%.
 - **Calm**: amplitudes ×0.3, no hit-stop, no hop (reduced motion).
-- Dev commands (client): `/snappyblocks tune <key> <value>`, so feel notes become numbers without a rebuild.
+- Feel numbers live in the config's `tune` object (re-read within 2 s of saving the file), so feel notes become numbers
+  without a rebuild. No client command: that needs Fabric API, which the mod doesn't depend on (changed 2026-10-29, M1).
 
 ## 6. Controls
 | Input | Context | Action |
@@ -308,14 +316,15 @@ Feel check 1 (end of M1, ~3 minutes, Fabric 26.3 profile, a fresh survival world
 3. Mine dirt, stone and an ore: do the pieces and the drop read as one motion?
 4. Break glass and a leaf block.
 Judge: the size of the pop, the hold before the pieces fly, where the drop comes from.
-Tunables: `/snappyblocks tune pop.start|pop.ticks|burst.hold|burst.pieces <value>`.
+Tunables: `config/snappy_blocks.json` → `tune`: `pop.start`, `pop.peak`, `pop.ticks`, `burst.hold`, `burst.pieces`,
+`burst.speed`, `burst.lift`, `burst.flight`, `drop.spring`.
 
 Feel check 2 (end of M3, ~3 minutes, sound on):
 1. Mine 10 coal ore and walk over the drops.
 2. Throw 5 items with Q onto grass, stone and wool.
 3. Leave a pile to merge; break a full chest.
 Judge: the landing hop and its sound, the flight to the hotbar, the chest fan.
-Tunables: `/snappyblocks tune land.hop|land.volume|pickup.ticks <value>`.
+Tunables: `tune` keys `land.hop`, `land.volume`, `pickup.ticks` (added in M3).
 
 Parallel work: in M2, 5.2 (pulse) and the rest of 5.3 own different packages and can go to two builders. M1 stays
 with the main session.

@@ -18,7 +18,7 @@ public final class Tune {
 
     private Tune() {}
 
-    private static String def(String key, double value) {
+    public static String def(String key, double value) {
         DEFAULTS.put(key, value);
         return key;
     }

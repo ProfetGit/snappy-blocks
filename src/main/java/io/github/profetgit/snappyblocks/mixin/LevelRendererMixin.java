@@ -1,6 +1,7 @@
 package io.github.profetgit.snappyblocks.mixin;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import io.github.profetgit.snappyblocks.burst.Bursts;
 import io.github.profetgit.snappyblocks.pop.Pops;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
@@ -21,5 +22,6 @@ public abstract class LevelRendererMixin {
     @Inject(method = "submitTransientBlocks", at = @At("TAIL"))
     private void snappy_blocks$submit(PoseStack ps, SubmitNodeCollector collector, LevelRenderState state, CallbackInfo ci) {
         Pops.submit(ps, collector, state);
+        Bursts.submit(ps, collector, state);
     }
 }

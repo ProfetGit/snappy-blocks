@@ -1,6 +1,8 @@
 package io.github.profetgit.snappyblocks.mixin;
 
 import io.github.profetgit.snappyblocks.Probe;
+import io.github.profetgit.snappyblocks.Rtt;
+import io.github.profetgit.snappyblocks.burst.Bursts;
 import io.github.profetgit.snappyblocks.pop.Pops;
 import java.util.ArrayDeque;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -43,6 +45,7 @@ public abstract class ClientLevelMixin {
             boolean predicted = blockStatePredictionHandler.isPredicting();
             Probe.blockChanged(pos, old, state, predicted);
             Pops.blockChanged(pos, old, state, predicted);
+            Bursts.blockChanged(pos, old, state);
         }
     }
 
@@ -58,6 +61,12 @@ public abstract class ClientLevelMixin {
         if (old != null && old != now) {
             Probe.blockChanged(pos, old, now, false);
             Pops.blockChanged(pos, old, now, false);
+            Bursts.blockChanged(pos, old, now);
         }
+    }
+
+    @Inject(method = "handleBlockChangedAck", at = @At("HEAD"))
+    private void snappy_blocks$ack(int sequence, CallbackInfo ci) {
+        Rtt.acked(sequence);
     }
 }

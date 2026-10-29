@@ -3,6 +3,7 @@ package io.github.profetgit.snappyblocks.selftest;
 import io.github.profetgit.snappyblocks.Clock;
 import io.github.profetgit.snappyblocks.Probe;
 import io.github.profetgit.snappyblocks.SnappyBlocks;
+import io.github.profetgit.snappyblocks.burst.Bursts;
 import io.github.profetgit.snappyblocks.pop.Hidden;
 import io.github.profetgit.snappyblocks.pop.Pops;
 import java.util.ArrayList;
@@ -60,11 +61,12 @@ final class Scenarios {
             return true;
         }).server(srv -> platform(srv)).waitTicks(40);
         String only = System.getProperty("snappy_blocks.selftest.scenes", "all");
-        for (String name : List.of("smoke", "pop")) {
+        for (String name : List.of("smoke", "pop", "burst")) {
             if (!only.equals("all") && !Arrays.asList(only.split(",")).contains(name)) continue;
             switch (name) {
                 case "smoke" -> smoke(s);
                 case "pop" -> pop(s);
+                case "burst" -> burst(s);
                 default -> {
                 }
             }
@@ -214,6 +216,71 @@ final class Scenarios {
         }
     }
 
+    /**
+     * PRD §13 M1 break core: server-side breaks (2001 then the block update, as another player's break arrives) and a
+     * predicted survival break each burst; every drop that spawns at a burst's centre is claimed, hidden, then revealed
+     * by the burst (not by the watchdog). Frames go to out/frames/burst.
+     */
+    private static void burst(Script s) {
+        String[] blocks = {"dirt", "stone", "oak_log", "glass", "oak_planks"};
+        int drops = 4; // glass drops nothing
+        int[] base = new int[4];
+        s.server(srv -> {
+            cmd(srv, "fill -4 " + Y + " -2 4 " + (Y + 3) + " 2 minecraft:air");
+            cmd(srv, "kill @e[type=item]");
+            cmd(srv, "tp @p 0.5 " + Y + " -3.0 0 45");
+            cmd(srv, "gamemode survival @p");
+            cmd(srv, "gamerule send_command_feedback false");
+            for (int i = 0; i < blocks.length; i++) cmd(srv, "setblock " + (i - 2) + " " + Y + " 0 minecraft:" + blocks[i]);
+        }).waitTicks(20).run(mc -> {
+            base[0] = Bursts.started;
+            base[1] = Bursts.claimed;
+            base[2] = Bursts.revealed;
+            base[3] = Bursts.watchdogs;
+            if (!mc.gui.hud.isHidden()) mc.gui.hud.toggle();
+            SelfTest.startCapture("burst", 240);
+        });
+        for (int i = 0; i < blocks.length; i++) {
+            int x = i - 2;
+            s.server(srv -> cmd(srv, "setblock " + x + " " + Y + " 0 minecraft:air destroy")).waitTicks(12);
+        }
+        s.waitTicks(30).check("burst_server", mc -> {
+            int started = Bursts.started - base[0], claimed = Bursts.claimed - base[1], revealed = Bursts.revealed - base[2], dogs = Bursts.watchdogs - base[3];
+            SnappyBlocks.LOG.info("[selftest] burst server: {} bursts, {} claimed, {} revealed, {} watchdog, {} live, {} hidden", started, claimed, revealed, dogs,
+                Bursts.active(), Bursts.hiddenDrops());
+            if (started != blocks.length) return "bursts " + started + " of " + blocks.length;
+            if (claimed != drops) return "claimed " + claimed + " of " + drops + " drops";
+            if (revealed != claimed || dogs > 0) return "revealed " + revealed + " of " + claimed + ", " + dogs + " by watchdog";
+            if (Bursts.hiddenDrops() > 0) return Bursts.hiddenDrops() + " drops still hidden";
+            return null;
+        });
+        BlockPos dirt = new BlockPos(0, Y, -1);
+        s.server(srv -> {
+            cmd(srv, "kill @e[type=item]");
+            cmd(srv, "setblock 0 " + Y + " -1 minecraft:dirt");
+        }).waitTicks(10).run(mc -> {
+            mc.player.getInventory().setSelectedSlot(8);
+            base[0] = Bursts.started;
+            base[1] = Bursts.claimed;
+            base[3] = Bursts.watchdogs;
+        }).waitTicks(4).run(mc -> {
+            aim(mc, dirt);
+            SelfTest.attack = true;
+        }).until("dirt to break", 200, mc -> {
+            aim(mc, dirt);
+            if (!mc.level.getBlockState(dirt).isAir()) return false;
+            SelfTest.attack = false;
+            return true;
+        }).waitTicks(30).check("burst_predicted", mc -> {
+            SelfTest.stopCapture();
+            if (mc.gui.hud.isHidden()) mc.gui.hud.toggle();
+            int started = Bursts.started - base[0], claimed = Bursts.claimed - base[1], dogs = Bursts.watchdogs - base[3];
+            if (started != 1) return "bursts " + started + " of 1";
+            if (claimed != 1 || dogs > 0) return "claimed " + claimed + " of 1, " + dogs + " by watchdog";
+            return null;
+        });
+    }
+
     /** dev/server/mp.py: role "a" places a block at {@link #MP_SPOT}; role "b" must see it appear as a remote change. */
     static Script multiplayer(String role) {
         Script s = new Script();
@@ -239,6 +306,40 @@ final class Scenarios {
                 .check("mp_remote_seen", mc -> Probe.placed >= 1 && Probe.placedPredicted == 0 && MP_SPOT.equals(Probe.lastPlaced) ? null
                     : "probe: " + Probe.summary() + " last " + Probe.lastPlaced);
         }
+        // M1 stop/go: a break on a server bursts on both clients and its drop is claimed by the burst, also at 200 ms
+        BlockPos dirt = new BlockPos(3, Y, -1);
+        int[] base = new int[3];
+        s.run(mc -> {
+            base[0] = Bursts.started;
+            base[1] = Bursts.claimed;
+            base[2] = Bursts.watchdogs;
+            Bursts.maxClaimDelay = 0;
+        });
+        if (role.equals("a")) {
+            s.run(mc -> say(mc, "setblock 3 " + Y + " -1 minecraft:dirt")).until("dirt", 200, mc -> mc.level.getBlockState(dirt).is(Blocks.DIRT))
+                .run(mc -> say(mc, "item replace entity @s weapon.mainhand with minecraft:air")).waitTicks(20)
+                .run(mc -> {
+                    aim(mc, dirt);
+                    SelfTest.attack = true;
+                }).until("dirt to break", 400, mc -> {
+                    aim(mc, dirt);
+                    if (!mc.level.getBlockState(dirt).isAir()) return false;
+                    SelfTest.attack = false;
+                    return true;
+                });
+        } else {
+            s.until("remote dirt", 1200, mc -> mc.level.getBlockState(dirt).is(Blocks.DIRT))
+                .until("remote dirt to break", 1200, mc -> mc.level.getBlockState(dirt).isAir());
+        }
+        s.waitTicks(40).check("mp_burst_" + role, mc -> {
+            int started = Bursts.started - base[0], claimed = Bursts.claimed - base[1], dogs = Bursts.watchdogs - base[2];
+            SnappyBlocks.LOG.info("SB-MP {} burst: {} bursts, {} claimed, {} watchdog, drop arrived {} ticks after the burst", role, started, claimed, dogs,
+                String.format("%.1f", Bursts.maxClaimDelay));
+            if (started != 1) return "bursts " + started + " of 1";
+            if (claimed != 1) return "claimed " + claimed + " of 1 (drop arrived after the claim window?)";
+            if (dogs > 0) return dogs + " drops shown by the watchdog";
+            return null;
+        }).waitTicks(role.equals("a") ? 100 : 20);
         s.run(mc -> SnappyBlocks.LOG.info("SB-MP {} done: {}", role, Probe.summary()));
         return s;
     }

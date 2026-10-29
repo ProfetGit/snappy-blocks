@@ -30,7 +30,8 @@
   },
   "scenes": [
     "smoke",
-    "pop"
+    "pop",
+    "burst"
   ],
   "smoke": [
     "smoke"

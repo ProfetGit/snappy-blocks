@@ -1,5 +1,6 @@
 package io.github.profetgit.snappyblocks;
 
+import io.github.profetgit.snappyblocks.burst.Bursts;
 import io.github.profetgit.snappyblocks.pop.Pops;
 import net.fabricmc.api.ClientModInitializer;
 import net.minecraft.client.Minecraft;
@@ -13,6 +14,7 @@ public final class SnappyBlocks implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        Bursts.clear(); // registers its tune keys before the config is read
         Config.load();
         LOG.info("Snappy Blocks loaded (enabled={}, intensity={}%)", Config.get().enabled, Config.get().intensity);
     }
@@ -28,5 +30,7 @@ public final class SnappyBlocks implements ClientModInitializer {
         Clock.reset();
         Probe.reset();
         Pops.clear();
+        Bursts.clear();
+        Rtt.clear();
     }
 }

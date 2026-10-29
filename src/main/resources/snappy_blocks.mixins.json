@@ -5,7 +5,11 @@
   "plugin": "io.github.profetgit.snappyblocks.mixin.MixinPlugin",
   "compatibilityLevel": "JAVA_21",
   "client": [
+    "BlockStatePredictionHandlerMixin",
     "ClientLevelMixin",
+    "ClientPacketListenerMixin",
+    "EntityRenderDispatcherMixin",
+    "ItemEntityRendererMixin",
     "LevelRendererMixin",
     "LevelEventHandlerMixin",
     "MinecraftMixin",

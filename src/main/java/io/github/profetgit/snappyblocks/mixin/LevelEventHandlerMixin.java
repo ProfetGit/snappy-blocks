@@ -1,6 +1,7 @@
 package io.github.profetgit.snappyblocks.mixin;
 
 import io.github.profetgit.snappyblocks.Probe;
+import io.github.profetgit.snappyblocks.burst.Bursts;
 import net.minecraft.client.renderer.LevelEventHandler;
 import net.minecraft.core.BlockPos;
 import org.spongepowered.asm.mixin.Mixin;
@@ -14,5 +15,6 @@ public abstract class LevelEventHandlerMixin {
     @Inject(method = "levelEvent", at = @At("HEAD"))
     private void snappy_blocks$event(int type, BlockPos pos, int data, CallbackInfo ci) {
         Probe.levelEvent(type, pos, data);
+        Bursts.levelEvent(type, pos, data);
     }
 }
