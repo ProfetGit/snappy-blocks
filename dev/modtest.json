@@ -120,6 +120,57 @@
         "fabric-api-*.jar"
       ],
       "packs": []
+    },
+    "all": {
+      "profile": {
+        "26.3": "Fabric 26.3"
+      },
+      "mods": [
+        "baguettelib-26.3-Fabric-2.0.7.jar",
+        "buildbuddy-0.0.91+26.3-fabric.jar",
+        "c2me-fabric-mc26.3-0.4.2-alpha.0.103.jar",
+        "chorus_fold-0.0.4+26.3-fabric.jar",
+        "continuity-3.0.1+26.3.jar",
+        "controlify-3.5.3+mc26.3-universal.jar",
+        "Controlling-fabric-26.3-26.3.3.jar",
+        "countryroads-0.1.65+26.3-fabric.jar",
+        "dungeons-and-taverns-6.0.2.jar",
+        "dysoncannon-0.1.2+26.3-fabric.jar",
+        "EnchantedTimber-1.0.1-fabric.jar",
+        "EnchantedVeinminer-1.0.1-fabric.jar",
+        "entityculling-fabric-1.11.2-mc26.3.jar",
+        "entity_model_features-3.3.11-26.3-fabric.jar",
+        "entity_texture_features-7.2.5-26.3-fabric.jar",
+        "fabric-api-0.162.0+26.3.jar",
+        "far_out_zoom-0.2.3+26.3-fabric.jar",
+        "ferritecore-9.0.0-fabric.jar",
+        "Flashback-0.43.6-for-MC26.3.jar",
+        "FullGhastAhead-1.0.0-fabric.jar",
+        "harvestsweep-0.0.5+26.3-fabric.jar",
+        "havingablast-0.2.8+26.3-fabric.jar",
+        "homely-0.0.2+26.3-fabric.jar",
+        "hotairballoons-0.0.23+26.3-fabric.jar",
+        "iris-fabric-1.11.7+mc26.3.jar",
+        "lithostitched-2.0.6-fabric-26.3.jar",
+        "modmenu-21.0.0.jar",
+        "placeholder-api-3.2.0+26.3.jar",
+        "polytone-26.3-6.8.6-fabric.jar",
+        "punchy-2.8e-fabric-26.3.jar",
+        "seamless_displays-0.0.8+26.3-fabric.jar",
+        "Searchables-fabric-26.3-1.0.2.jar",
+        "skinlayers3d-fabric-1.11.3-mc26.3.jar",
+        "snappy_pistons-0.1.0+26.3-fabric.jar",
+        "sodium-fabric-0.9.2+mc26.3.jar",
+        "stonecutter_plus-0.1.0+26.3-fabric.jar",
+        "stride-0.2.3+26.3-fabric.jar",
+        "tidypockets-1.2.8+26.3-fabric.jar",
+        "Timber-1.3.6-fabric.jar",
+        "travelers_lantern-0.2.14+26.3-fabric.jar",
+        "Veinminer-1.3.3-fabric.jar",
+        "yet_another_config_lib_v3-3.9.7+26.3-fabric.jar"
+      ],
+      "packs": [],
+      "shaders": true
     }
   }
 }
