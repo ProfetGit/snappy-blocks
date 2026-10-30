@@ -30,7 +30,7 @@ import net.minecraft.world.phys.Vec3;
  * {@link #NEAREST} nearest items only.
  */
 public final class ItemFx {
-    static final String LAND_HOP = Tune.def("land.hop", 0.15);
+    static final String LAND_HOP = Tune.def("land.hop", 0.04);
     static final String LAND_VOLUME = Tune.def("land.volume", 0.15);
     static final String LAND_AIR = Tune.def("land.air", 6);
     static final String THROW_SPRING = Tune.def("throw.spring", 4);
@@ -258,12 +258,12 @@ public final class ItemFx {
         }
         if (dt < SQUASH_TICKS) {
             double s = Math.sin(Math.PI * dt / SQUASH_TICKS) * amp;
-            ((ItemFxState) state).snappy_blocks$squash((float) (1 + 0.1 * s), (float) (1 - 0.2 * s));
+            ((ItemFxState) state).snappy_blocks$squash((float) (1 + 0.06 * s), (float) (1 - 0.12 * s));
         } else {
             double v = (dt - SQUASH_TICKS) / HOP_TICKS;
             state.y += Tune.get(LAND_HOP) * amp * 4 * v * (1 - v);
             double s = Math.sin(Math.PI * v) * amp;
-            ((ItemFxState) state).snappy_blocks$squash((float) (1 - 0.04 * s), (float) (1 + 0.08 * s));
+            ((ItemFxState) state).snappy_blocks$squash((float) (1 - 0.02 * s), (float) (1 + 0.04 * s));
         }
     }
 }

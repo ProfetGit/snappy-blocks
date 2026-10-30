@@ -189,11 +189,11 @@ These are offsets on the render only; the entity's position is never changed.
 - **Thrown with Q:** starts at the hand, but only if the entity is ≤ 1 tick old when it arrives (low ping).
   Otherwise it is vanilla. Creative-inventory drops are vanilla.
 - **Landing:**
-  - The first landing after ≥ 6 ticks in the air squashes the item (height 0.8, width 1.1, for 2 ticks) and hops it
-    0.15 blocks.
+  - The first landing after ≥ 6 ticks in the air squashes the item (height 0.88, width 1.06, for 2 ticks) and hops it
+    0.04 blocks: a settle, not a bounce, since vanilla already bounces it (user: "too bouncy" at 0.15, 2026-10-30).
   - At most once per 20 ticks per item.
   - Never in water or lava, on hoppers, or where more than 16 items share a block (streams and farms).
-  - Tune keys `land.hop` (0.15), `land.volume` (0.15), `land.air` (6).
+  - Tune keys `land.hop` (0.04), `land.volume` (0.15), `land.air` (6).
   - Sound: the step sound of the block it lands on, at 0.15 volume and pitch 1.6, at most 4 per tick.
 - **Merge:** an item that disappears within 1.5 blocks of a stack of the same item that grew that tick slides into
   it over 3 ticks. The removal arrives before the growth, or one tick after it, so a removed item is drawn in place
