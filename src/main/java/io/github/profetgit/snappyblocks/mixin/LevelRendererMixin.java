@@ -35,7 +35,9 @@ public abstract class LevelRendererMixin {
         Pops.submit(ps, collector, state);
         Pulses.submit(ps, collector, state);
         Bursts.submit(ps, collector, state);
+        long t0 = System.nanoTime();
         Ghosts.submit(ps, collector, state);
+        Ghosts.spentNanos += System.nanoTime() - t0;
     }
 
     /** A block entity drawn only by its renderer (chest, sign, banner) pops through the renderer's pose. */

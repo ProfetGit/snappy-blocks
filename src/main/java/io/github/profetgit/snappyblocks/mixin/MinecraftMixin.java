@@ -21,6 +21,7 @@ public abstract class MinecraftMixin {
 
     @Inject(method = "runTick", at = @At("TAIL"))
     private void snappy_blocks$frame(boolean advance, CallbackInfo ci) {
+        io.github.profetgit.snappyblocks.burst.Bursts.frame();
         if (SelfTest.active()) SelfTest.onFrame((Minecraft) (Object) this);
     }
 

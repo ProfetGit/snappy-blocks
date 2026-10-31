@@ -2,6 +2,7 @@ package io.github.profetgit.snappyblocks.burst;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import io.github.profetgit.snappyblocks.Clock;
+import io.github.profetgit.snappyblocks.Compat;
 import io.github.profetgit.snappyblocks.Config;
 import io.github.profetgit.snappyblocks.Probe;
 import io.github.profetgit.snappyblocks.Rtt;
@@ -27,6 +28,7 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.LevelEvent;
 import net.minecraft.world.level.block.RenderShape;
@@ -49,14 +51,23 @@ public final class Bursts {
     static final String CHIP_SIZE = Tune.def("burst.chipSize", 2.2);
     static final String CHIP_SPEED = Tune.def("burst.chipSpeed", 1.6);
     static final String DROP_SPRING = Tune.def("drop.spring", 6);
-    /** Frame-time watchdog (PRD pillar 4): a claimed drop is shown after this long whatever happens. */
-    static final long HIDE_LIMIT_NS = 300_000_000L;
+    /**
+     * Watchdog (PRD pillar 4): a claimed drop is shown after this many ticks whatever happens, and at once while the
+     * clock stands still. Ticks, not wall time, so an offline render (a Flashback export) keeps its drops in the burst.
+     */
+    static final long HIDE_LIMIT_TICKS = 6;
     /** Bursts per tick across the world (PRD §5.3 budget): full ones, then lite ones (no chips), then vanilla only. */
     static final int FULL_BUDGET = 8, LITE_BUDGET = 32;
     /** Full effect within this distance, lite to {@link #RANGE}, nothing beyond. */
     static final double FULL_RANGE = 32, RANGE = 64;
     /** A denied placement's copy shrinks out over this many ticks (PRD §5.1). */
     static final double FADE_TICKS = 3;
+    /**
+     * Chips made per frame at most. With many mods installed a chip costs ~55 µs to make (measured 2026-10-31 in the
+     * user's 42-mod profile: 80 chips, 4.4 ms in one frame), so a mass break's chips spread over a few frames.
+     */
+    static final int CHIPS_PER_FRAME = 16;
+    private static int frameChips;
     /** Several drops leave the burst one after another, this many ticks apart (the fan). */
     static final double FAN_STEP = 0.5;
 
@@ -111,7 +122,7 @@ public final class Bursts {
         final double revealAfter;
         /** Lift of the arc out of the burst, for one of several drops. */
         double arc;
-        final long hiddenNs = System.nanoTime();
+        final long hiddenTick = Clock.ticks();
         double shownAt = Double.NaN;
 
         Claim(Burst burst, double revealAfter) {
@@ -136,11 +147,13 @@ public final class Bursts {
     private static long budgetTick = -1;
     private static int budgetUsed;
 
-    public static int started, claimed, revealed, watchdogs, overBudget, lite, fades, denied, meshWaits;
+    public static int started, claimed, revealed, watchdogs, overBudget, lite, fades, denied, meshWaits, stopReveals;
     public static Chip.Material lastMaterial;
     /** Ticks from a burst's start to the arrival of a drop it claimed: the round trip as the player sees it. */
     public static double maxClaimDelay;
     public static long spentNanos;
+    /** The part of spentNanos spent making chips (test hook). */
+    public static long chipNanos;
 
     private Bursts() {}
 
@@ -201,6 +214,7 @@ public final class Bursts {
         Minecraft mc = Minecraft.getInstance();
         ClientLevel level = mc.level;
         if (level == null || mc.player == null || state.getRenderShape() != RenderShape.MODEL) return;
+        if (Compat.harvestSweep && state.is(BlockTags.CROPS)) return;
         double d2 = mc.player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
         if (d2 > RANGE * RANGE) return;
         if (budgetTick != Clock.ticks()) {
@@ -333,7 +347,8 @@ public final class Bursts {
         if (!BURSTS.isEmpty()) LIVE.add(new long[] {sectionNode, compileStartNs});
     }
 
-    private static void update() {
+    /** Render thread, every frame before drawing and every client tick. */
+    public static void update() {
         double now = Clock.now();
         long wall = System.nanoTime();
         long[] l;
@@ -356,12 +371,13 @@ public final class Bursts {
         for (Iterator<Claim> it = CLAIMS.values().iterator(); it.hasNext(); ) {
             Claim c = it.next();
             if (Double.isNaN(c.shownAt)) {
-                boolean late = wall - c.hiddenNs > HIDE_LIMIT_NS;
+                boolean stopped = Clock.stopped(), late = Clock.ticks() - c.hiddenTick >= HIDE_LIMIT_TICKS;
                 boolean due = c.burst.live && now >= c.burst.t0 + c.revealAfter;
-                if (due || late) {
+                if (due || late || stopped) {
                     c.shownAt = now;
                     revealed++;
-                    if (!due) watchdogs++;
+                    if (!due && stopped) stopReveals++;
+                    else if (!due) watchdogs++;
                 }
             } else if (now - c.shownAt > spring + 1) {
                 it.remove();
@@ -379,9 +395,15 @@ public final class Bursts {
      * Chunky chips cut from the block's texture, outward from the centre. Their flight follows the material (glass
      * flatter and faster, leaves drift, sand and gravel fall sooner, wool soft).
      */
-    private static void chips(Burst b) {
+    /** End of every frame: a new chip budget. */
+    public static void frame() {
+        frameChips = 0;
+    }
+
+    /** Returns how many chips it made. */
+    private static int chips(Burst b) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.level == null || b.lite || !b.state.shouldSpawnTerrainParticles()) return;
+        if (mc.level == null || b.lite || !b.state.shouldSpawnTerrainParticles()) return 0;
         int n = (int) Math.round(Tune.get(CHIPS));
         switch (mc.options.particles().get()) {
             case MINIMAL -> n = 0;
@@ -400,6 +422,7 @@ public final class Bursts {
             c.scale(size * (0.75f + 0.5f * RANDOM.nextFloat()));
             mc.particleEngine.add(c);
         }
+        return n;
     }
 
     /**
@@ -434,9 +457,11 @@ public final class Bursts {
             for (Burst b : BURSTS) {
                 if (!b.live) continue;
                 double t = now - b.t0, hold = b.bare ? 0 : Tune.get(HOLD);
-                if (t >= hold && !b.chipped) {
+                if (t >= hold && !b.chipped && frameChips < CHIPS_PER_FRAME) {
                     b.chipped = true;
-                    chips(b);
+                    long c0 = System.nanoTime();
+                    frameChips += chips(b);
+                    chipNanos += System.nanoTime() - c0;
                 }
                 if (b.bare || t >= (b.fade ? FADE_TICKS : hold + shrink)) continue;
                 double[] sc = shape(b, t);

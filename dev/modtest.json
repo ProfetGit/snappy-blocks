@@ -41,7 +41,17 @@
     "merge",
     "despawn",
     "farm1000",
-    "pickup"
+    "pickup",
+    "actions100",
+    "vein64",
+    "autoplace",
+    "freeze",
+    "dimension",
+    "ctm",
+    "timber",
+    "blast",
+    "sweep",
+    "aside"
   ],
   "smoke": [
     "smoke"
@@ -105,7 +115,10 @@
         "ferritecore-*.jar",
         "continuity-*.jar"
       ],
-      "packs": []
+      "packs": [
+        "Connected-Rocks*.zip",
+        "Connected-Bricks*.zip"
+      ]
     },
     "shaders": {
       "profile": {
@@ -145,6 +158,7 @@
         "Timber-*.jar",
         "Veinminer-*.jar",
         "baguettelib-*.jar",
+        "benotafraid-*.jar",
         "buildbuddy-*.jar",
         "c2me-fabric-mc26.3-*.jar",
         "chorus_fold-*.jar",
@@ -152,7 +166,6 @@
         "controlify-*.jar",
         "countryroads-*.jar",
         "dungeons-and-taverns-*.jar",
-        "dysoncannon-*.jar",
         "entity_model_features-*.jar",
         "entity_texture_features-*.jar",
         "entityculling-fabric-*.jar",
@@ -175,12 +188,25 @@
         "sodium-fabric-*.jar",
         "stonecutter_plus-*.jar",
         "stride-*.jar",
+        "team-reborn-energy-*.jar",
         "tidypockets-*.jar",
         "travelers_lantern-*.jar",
         "yet_another_config_lib_v3-3.9.7+26.3-fabric.jar"
       ],
       "packs": [],
       "shaders": true
+    },
+    "aside": {
+      "profile": {
+        "26.3": "/home/emppu/Projects/Minecraft Datapacks/mods/SnappyBlocks/dev/compat"
+      },
+      "mods": [
+        "a_good_place-*.jar",
+        "itemphysiclite-*.jar",
+        "tiny_pickup_animation-*.jar",
+        "snappy_stub_block_motion-*.jar"
+      ],
+      "packs": []
     }
   }
 }

@@ -16,3 +16,5 @@ versions/*/saves/
 versions/*/*.json
 versions/*/*.txt
 versions/*/crash-reports/
+dev/compat/mods/
+dev-out/

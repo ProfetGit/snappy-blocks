@@ -24,6 +24,7 @@ public final class SnappyBlocks implements ClientModInitializer {
         ItemFx.clear();
         Ghosts.clear();
         Config.load();
+        Compat.detect();
         LOG.info("Snappy Blocks loaded (enabled={}, intensity={}%)", Config.get().enabled, Config.get().intensity);
     }
 
@@ -34,11 +35,23 @@ public final class SnappyBlocks implements ClientModInitializer {
             ItemFx.tick(mc);
             Ghosts.tick(mc);
         }
+        // the watchdogs also run when no frame draws the world
+        Pops.update();
+        Bursts.update();
         Config.pollReload();
     }
 
+    private static int[] logged = new int[6];
+
     /** The client level is about to change (join, dimension change, respawn into a new level, disconnect). */
     public static void onLevelChange() {
+        int[] now = {Pops.started, Pops.handedOff, Bursts.started, Pulses.started, ItemFx.landings, Ghosts.pickups};
+        if (now[0] != logged[0] || now[2] != logged[2] || now[3] != logged[3] || now[4] != logged[4] || now[5] != logged[5]) {
+            // one line per level, so a log shows the effects ran (replays, servers, other mods' test runs)
+            LOG.info("Snappy Blocks: in that level {} pops ({} handed off), {} bursts, {} pulses, {} landings, {} pickups",
+                now[0] - logged[0], now[1] - logged[1], now[2] - logged[2], now[3] - logged[3], now[4] - logged[4], now[5] - logged[5]);
+            logged = now;
+        }
         Clock.reset();
         Probe.reset();
         Pops.clear();

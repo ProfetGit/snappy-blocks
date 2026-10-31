@@ -2,6 +2,7 @@ package io.github.profetgit.snappyblocks.pulse;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import io.github.profetgit.snappyblocks.Clock;
+import io.github.profetgit.snappyblocks.Compat;
 import io.github.profetgit.snappyblocks.Config;
 import io.github.profetgit.snappyblocks.Probe;
 import io.github.profetgit.snappyblocks.Tune;
@@ -77,7 +78,7 @@ public final class Pulses {
      * later: a hit on a block that is still pulsing is the same hit and is skipped.
      */
     public static void hit(BlockPos pos, Direction face) {
-        if (!Config.get().enabled || !Config.get().pulse) return;
+        if (!Config.get().enabled || !Config.get().pulse || Compat.placeAside) return;
         Pulse running = PULSES.get(pos.asLong());
         if (running != null && Clock.now() - running.t0 < Math.max(0.5, Tune.get(TICKS))) return;
         Minecraft mc = Minecraft.getInstance();

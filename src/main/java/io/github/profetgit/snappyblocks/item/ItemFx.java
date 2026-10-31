@@ -1,6 +1,7 @@
 package io.github.profetgit.snappyblocks.item;
 
 import io.github.profetgit.snappyblocks.Clock;
+import io.github.profetgit.snappyblocks.Compat;
 import io.github.profetgit.snappyblocks.Config;
 import io.github.profetgit.snappyblocks.Rtt;
 import io.github.profetgit.snappyblocks.Tune;
@@ -61,6 +62,7 @@ public final class ItemFx {
     private static double thx, thy, thz;
 
     public static int landings, sounds, thrown, tracked;
+    public static long spentNanos;
 
     private ItemFx() {}
 
@@ -82,6 +84,15 @@ public final class ItemFx {
 
     /** End of a client tick: refresh the nearest set, then landings. */
     public static void tick(Minecraft mc) {
+        long t0 = System.nanoTime();
+        try {
+            track(mc);
+        } finally {
+            spentNanos += System.nanoTime() - t0;
+        }
+    }
+
+    private static void track(Minecraft mc) {
         ClientLevel level = mc.level;
         if (level == null || mc.player == null || !on()) {
             if (!TRACKED.isEmpty()) TRACKED.clear();
@@ -130,7 +141,7 @@ public final class ItemFx {
                 t.air++;
                 continue;
             }
-            if (t.air >= Tune.get(LAND_AIR) && now - t.lastLand >= LAND_GAP && landable(level, e)) {
+            if (t.air >= Tune.get(LAND_AIR) && now - t.lastLand >= LAND_GAP && !Compat.landAside && landable(level, e)) {
                 t.landedAt = Clock.now();
                 t.lastLand = now;
                 landings++;

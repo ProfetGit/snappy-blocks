@@ -70,7 +70,8 @@ My calls, open to veto:
    - No allocations per frame once warm.
    - (guess, measured in M1 and M4)
 4. **Nothing hidden for good.** A hidden item shows within 6 ticks and a hidden block is remeshed within 20 ticks,
-   both timed by frames.
+   counted in ticks, and both show at once while the clock stands still (pause, `/tick freeze`). Ticks rather than
+   wall time, so an offline render (a Flashback export) keeps its effects whole (M4, 2026-10-31).
 
 ## 5. Features (1.0)
 Clock and lifecycle:
@@ -255,18 +256,18 @@ Free letters in the profile, if one is ever needed: t, u, 0.
 | Sodium 0.9.2 | Hide path through Sodium's chunk builder, hooks checked by descriptor | `actions100` with `PROFILE=1` | M1 |
 | Fabric API alone (Indigo) | Debris drawn through the parts fallback (a Having a Blast lesson) | `actions100` with `MODS=` fabric-api | M1 |
 | Iris + Complementary | Copy drawn in the shadow pass, no pop at hand-off | Pixel diff of the hand-off frame | M1 |
-| Continuity | Unconnected for ≤ 5 ticks; no hide after bursts | Glass-pane scene | M4 |
-| EntityCulling | Copies are not culled | `actions100` in the profile | M4 |
-| Punchy | Untouched; the pulse follows 2020, not the swing | Profile run | M4 |
-| Veinminer | A 64-block chain stays within budget | Scene `vein64`, frame ms | M4 |
-| Timber, Seamless Displays | No 2001, so no burst | Timber fell scene | M4 |
-| Having a Blast | Its hidden drops are left alone; explosions aren't ours | Creeper scene with both | M4 |
-| Harvest Sweep | Crop breaks (`#crops`) are left to it | Sweep scene with both | M4 |
-| Build Buddy | Auto-place pops stay within budget | 200-block auto-place | M4 |
-| Flashback | A re-shoot shows the effects | One replay re-shoot | M4 |
-| A Good Place, Stupid Block Animations, fresh block animations, Block Motion | Our placement and mining stand aside | Class check, logged once | M4 |
-| ItemPhysic Lite | Our landing stands aside | Class check | M4 |
-| Pickup Animations, Tiny Pickup Animation | Our pickup stands aside | Class check | M4 |
+| Continuity | Unconnected only while the copy stands in (the pop + its hand-off: 5.7 ticks measured, ≤ pop.ticks + 1.5); no hide after bursts | Scene `ctm`, addon `profile` (Continuity + Connected Rocks) | M4 |
+| EntityCulling | Copies are not culled | `actions100`, addon `profile` | M4 |
+| Punchy | Untouched; the pulse follows 2020, not the swing | `pulse`, addons `profile` and `all` | M4 |
+| Veinminer | A 64-block chain stays within budget (its chain uses plain setblock: only the mined block bursts); 64 destroys in one tick ≤ 2 ms | Scene `vein64` (`/fill destroy` + a real chain), addon `all` | M4 |
+| Timber, Seamless Displays | No 2001, so no burst | Scene `timber`, addon `all` | M4 |
+| Having a Blast | Its hidden drops are left alone (`Drops.hidden`); explosions and its repair aren't ours | Scene `blast` (TNT), addon `all` | M4 |
+| Harvest Sweep | Crop breaks (`#crops`) are left to it | Scene `sweep`, addon `all` | M4 |
+| Build Buddy | Auto-place pops stay within budget | Scene `autoplace` (200 at its 20/s cap + its own auto sweep of the sample house), addon `all` | M4 |
+| Flashback | A re-shoot shows the effects | `dev/check/flashback_reshoot.py` (with/without frame diff) | M4 |
+| A Good Place, Stupid Block Animations, fresh block animations, Block Motion | Our placement and mining stand aside | Mod id (name for the two without a published id), logged once; scene `aside`, addon `aside` | M4 |
+| ItemPhysic Lite | Our landing stands aside | Mod id; scene `aside` | M4 |
+| Pickup Animations, Tiny Pickup Animation | Our pickup stands aside | Mod id; scene `aside` | M4 |
 
 ## 10. Performance
 - Budgets as in pillar 3.
@@ -274,8 +275,8 @@ Free letters in the profile, if one is ever needed: t, u, 0.
 - Scenes:
   - `actions100`: normal play.
   - `vein64`: worst case.
-  - `farm1000`: 1,000 items on hoppers.
-  - `kill_items`: `/kill` of 1,000 items.
+  - `farm1000`: 1,000 items on hoppers, then `/kill` of them.
+- Chips are made at most 16 per frame: with many mods a chip costs up to ~55 µs (M4, the user's 42-mod profile).
 - Numbers come from the probe's per-frame ms and section rebuild count. Spark only to confirm.
 
 ## 11. Technical design

@@ -2,6 +2,7 @@ package io.github.profetgit.snappyblocks.item;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import io.github.profetgit.snappyblocks.Clock;
+import io.github.profetgit.snappyblocks.Compat;
 import io.github.profetgit.snappyblocks.Config;
 import io.github.profetgit.snappyblocks.Tune;
 import java.util.ArrayList;
@@ -69,6 +70,7 @@ public final class Ghosts {
         int slot = -1;
         boolean bound, local;
         ItemStack hidden;
+        long hiddenTick;
         long removedTick;
         final double born = Clock.now();
         float age0;
@@ -93,7 +95,10 @@ public final class Ghosts {
     private static double partial;
 
     public static int lastSlot = -1;
-    public static int pickups, slotFlights, slotBumps, merges, despawns, dropped, retargets, hiddenSlots;
+    public static int pickups, slotFlights, slotBumps, merges, despawns, dropped, retargets, hiddenSlots, slotReveals, slotStopReveals;
+    public static long spentNanos;
+    /** A newly filled slot is shown after this many ticks even if its flight hasn't arrived (PRD pillar 4). */
+    static final long HIDE_LIMIT_TICKS = 6;
 
     private Ghosts() {}
 
@@ -142,7 +147,8 @@ public final class Ghosts {
      * the pickup is ours (vanilla's particle is then skipped).
      */
     public static boolean take(Entity from, LivingEntity to, int amount) {
-        if (!on() || !Config.get().pickup || !(from instanceof ItemEntity item) || to == null) return false;
+        if (!on() || !Config.get().pickup || Compat.pickupAside || !(from instanceof ItemEntity item) || to == null) return false;
+        if (Compat.blastHides(item)) return false;
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || to.isSpectator() || mc.player.isSpectator() && to == mc.player) return false;
         if (GHOSTS.size() >= CAP || item.getItem().isEmpty()) return false;
@@ -206,6 +212,7 @@ public final class Ghosts {
                 now.setPopTime(0);
                 if (wasEmpty) {
                     g.hidden = now;
+                    g.hiddenTick = Clock.ticks();
                     hiddenSlots++;
                 }
             }
@@ -225,16 +232,30 @@ public final class Ghosts {
         retargets++;
     }
 
+    /** Slots hidden right now (test hook, no side effects). */
+    public static int hiddenNow() {
+        int n = 0;
+        for (Ghost g : GHOSTS) if (g.hidden != null) n++;
+        return n;
+    }
+
     /** Hud.extractSlot: a slot that was empty shows its new stack only when the flight arrives. */
     public static boolean hiddenSlot(ItemStack stack) {
         if (GHOSTS.isEmpty()) return false;
-        for (Ghost g : GHOSTS) if (g.hidden == stack) return true;
+        for (Ghost g : GHOSTS) {
+            if (g.hidden != stack) continue;
+            if (!Clock.stopped() && Clock.ticks() - g.hiddenTick < HIDE_LIMIT_TICKS) return true;
+            // paused, frozen or late: the stack shows now, the flight goes on over it
+            g.hidden = null;
+            slotReveals++;
+            if (Clock.stopped()) slotStopReveals++;
+        }
         return false;
     }
 
     /** ClientPacketListener.handleRemoveEntities, before the item is gone: draw it on until we know why it went. */
     public static void removed(ItemEntity e) {
-        if (!on() || GHOSTS.size() >= CAP || !ItemFx.near(e.getId())) return;
+        if (!on() || GHOSTS.size() >= CAP || !ItemFx.near(e.getId()) || Compat.blastHides(e)) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || !inRange(mc, e.position()) || Clock.ticks() - teleportTick <= 1) return;
         Ghost g = ghost(e, 0);

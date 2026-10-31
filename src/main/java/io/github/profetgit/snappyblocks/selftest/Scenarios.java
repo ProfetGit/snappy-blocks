@@ -65,7 +65,9 @@ final class Scenarios {
             return true;
         }).server(srv -> platform(srv)).waitTicks(40);
         String only = System.getProperty("snappy_blocks.selftest.scenes", "all");
-        for (String name : List.of("smoke", "pop", "burst", "pulse", "drops", "deny", "events", "bepop", "landing", "merge", "despawn", "farm1000", "pickup")) {
+        List<String> names = new ArrayList<>(List.of("smoke", "pop", "burst", "pulse", "drops", "deny", "events", "bepop", "landing", "merge", "despawn", "farm1000", "pickup"));
+        names.addAll(ScaleScenes.NAMES);
+        for (String name : names) {
             if (!only.equals("all") && !Arrays.asList(only.split(",")).contains(name)) continue;
             switch (name) {
                 case "smoke" -> smoke(s);
@@ -81,8 +83,7 @@ final class Scenarios {
                 case "despawn" -> despawn(s);
                 case "farm1000" -> farm(s);
                 case "pickup" -> pickup(s);
-                default -> {
-                }
+                default -> ScaleScenes.add(s, name);
             }
         }
         return s;

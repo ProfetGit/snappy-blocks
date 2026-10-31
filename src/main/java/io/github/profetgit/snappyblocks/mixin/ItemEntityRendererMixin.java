@@ -19,8 +19,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class ItemEntityRendererMixin {
     @Inject(method = "extractRenderState(Lnet/minecraft/world/entity/item/ItemEntity;Lnet/minecraft/client/renderer/entity/state/ItemEntityRenderState;F)V", at = @At("RETURN"))
     private void snappy_blocks$offset(ItemEntity entity, ItemEntityRenderState state, float partial, CallbackInfo ci) {
+        long t0 = System.nanoTime();
         Bursts.offset(entity.getId(), state);
         ItemFx.extract(entity, state);
+        ItemFx.spentNanos += System.nanoTime() - t0;
     }
 
     /** The squash scales about the item's feet, which sit on the ground. */

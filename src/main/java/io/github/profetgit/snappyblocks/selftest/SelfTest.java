@@ -73,8 +73,50 @@ public final class SelfTest {
         if (index >= steps.size()) finish(mc);
     }
 
+    /** Our hooks' time per frame (ms): every effect's spent nanos, including the client tick that ran before the frame. */
+    static double costMax, costSum;
+    static int costFrames;
+    private static long costLast;
+    /** Per part, in the worst frame: pops, bursts (chips included), chips, pulses, ghosts, item fx. */
+    private static final long[] PART_LAST = new long[6];
+    private static final double[] PART_WORST = new double[6];
+
+    private static long[] parts() {
+        return new long[] {io.github.profetgit.snappyblocks.pop.Pops.spentNanos, io.github.profetgit.snappyblocks.burst.Bursts.spentNanos,
+            io.github.profetgit.snappyblocks.burst.Bursts.chipNanos, io.github.profetgit.snappyblocks.pulse.Pulses.spentNanos,
+            io.github.profetgit.snappyblocks.item.Ghosts.spentNanos, io.github.profetgit.snappyblocks.item.ItemFx.spentNanos};
+    }
+
+    static long spentNanos() {
+        return io.github.profetgit.snappyblocks.pop.Pops.spentNanos + io.github.profetgit.snappyblocks.burst.Bursts.spentNanos
+            + io.github.profetgit.snappyblocks.pulse.Pulses.spentNanos + io.github.profetgit.snappyblocks.item.Ghosts.spentNanos
+            + io.github.profetgit.snappyblocks.item.ItemFx.spentNanos;
+    }
+
+    static void costReset() {
+        costLast = spentNanos();
+        costMax = costSum = 0;
+        costFrames = 0;
+        System.arraycopy(parts(), 0, PART_LAST, 0, 6);
+        java.util.Arrays.fill(PART_WORST, 0);
+    }
+
+    static String cost() {
+        return String.format("%.4f ms/frame mean, %.3f ms worst over %d frames (worst frame: pops %.3f, bursts %.3f incl. chips %.3f, pulses %.3f, ghosts %.3f, items %.3f)",
+            costSum / Math.max(1, costFrames), costMax, costFrames, PART_WORST[0], PART_WORST[1], PART_WORST[2], PART_WORST[3], PART_WORST[4], PART_WORST[5]);
+    }
+
     public static void onFrame(Minecraft mc) {
         frames++;
+        long spent = spentNanos();
+        double ms = (spent - costLast) / 1e6;
+        costLast = spent;
+        costSum += ms;
+        long[] now = parts();
+        if (ms > costMax) for (int i = 0; i < 6; i++) PART_WORST[i] = (now[i] - PART_LAST[i]) / 1e6;
+        System.arraycopy(now, 0, PART_LAST, 0, 6);
+        costMax = Math.max(costMax, ms);
+        costFrames++;
         int h = io.github.profetgit.snappyblocks.pop.Pops.handedOff;
         if (h != handoffsSeen && captureLeft > 0) HANDOFFS.append(captureFrame).append('\n');
         handoffsSeen = h;

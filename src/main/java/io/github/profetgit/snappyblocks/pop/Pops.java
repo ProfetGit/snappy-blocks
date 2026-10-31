@@ -2,6 +2,7 @@ package io.github.profetgit.snappyblocks.pop;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import io.github.profetgit.snappyblocks.Clock;
+import io.github.profetgit.snappyblocks.Compat;
 import io.github.profetgit.snappyblocks.Config;
 import io.github.profetgit.snappyblocks.Probe;
 import io.github.profetgit.snappyblocks.SnappyBlocks;
@@ -39,14 +40,21 @@ import net.minecraft.world.phys.Vec3;
  * vanilla's own transient blocks use (LevelRenderer.removeTransientBlocksInSection), so the swap has no gap.
  */
 public final class Pops {
-    /** Frame-time watchdogs (PRD pillar 4): a hidden block is meshed again after this long, a released copy dropped. */
-    static final long HIDE_LIMIT_NS = 1_000_000_000L, HANDOFF_LIMIT_NS = 1_000_000_000L;
+    /**
+     * Watchdogs (PRD pillar 4). A hidden block is meshed again after this many ticks, or at once while the clock stands
+     * still (pause, /tick freeze). Ticks, not wall time: an offline render (a Flashback export) runs the clock slower
+     * than real time, and a wall-time limit would cut its pops short. A released copy waiting for its mesh is dropped
+     * after a second of wall time (meshing doesn't follow the clock).
+     */
+    static final long HIDE_LIMIT_TICKS = 20, HANDOFF_LIMIT_NS = 1_000_000_000L;
+    /** Live pops at most; further placements stay vanilla (a placing mod at any rate stays cheap). */
+    static final int CAP = 64;
 
     static final class Pop {
         final BlockPos pos;
         BlockState state;
         final double t0;
-        final long startNs = System.nanoTime();
+        final long startTick = Clock.ticks();
         final float px, py, pz;
         final PopRenderState render = new PopRenderState();
         /** Drawn by its block-entity renderer only: nothing is hidden, the renderer's pose is scaled (no hand-off). */
@@ -79,7 +87,9 @@ public final class Pops {
     private static Direction lastFace;
     private static long lastFaceTick = -1;
 
-    public static int started, handedOff, watchdogs, remote, entityPops, regrows, denied;
+    public static int started, handedOff, watchdogs, remote, entityPops, regrows, denied, overCap, stopReleases;
+    /** Longest time from a pop's start to its hand-off, in ticks (test hook; reset by the tests). */
+    public static double maxLife;
     public static long spentNanos;
 
     private Pops() {}
@@ -144,7 +154,7 @@ public final class Pops {
             }
             return;
         }
-        if (!Config.get().enabled || !Config.get().pop) return;
+        if (!Config.get().enabled || !Config.get().pop || Compat.placeAside) return;
         if (!(Probe.empty(old) || old.canBeReplaced()) || Probe.empty(now) || now.canBeReplaced()) return;
         if (predicted) {
             start(pos.immutable(), now, Clock.now(), null, LOCAL);
@@ -199,6 +209,11 @@ public final class Pops {
         return quads ? Kind.NONE : Kind.ENTITY;
     }
 
+    /** Whether a placement of {@code s} at {@code pos} pops (test hook). */
+    public static boolean wouldPop(BlockPos pos, BlockState s) {
+        return kind(pos, s) != Kind.NONE;
+    }
+
     /** Whether the block's own model draws anything (a chest's is only a particle texture). */
     public static boolean hasQuads(BlockState s) {
         if (QUADS.containsKey(s)) return QUADS.getBoolean(s);
@@ -230,6 +245,10 @@ public final class Pops {
     private static boolean start(BlockPos pos, BlockState state, double t0, Pop half, int mode) {
         Kind kind = kind(pos, state);
         if (kind == Kind.NONE) return false;
+        if (POPS.size() >= CAP) {
+            overCap++;
+            return false;
+        }
         Minecraft mc = Minecraft.getInstance();
         ClientLevel level = mc.level;
         // another player's placement: the face they clicked isn't known, so it grows from the floor
@@ -289,8 +308,8 @@ public final class Pops {
         if (!POPS.isEmpty()) LIVE.add(new long[] {sectionNode, compileStartNs});
     }
 
-    /** Render thread, every frame before drawing: curve ends, hand-offs, watchdogs. */
-    static void update() {
+    /** Render thread, every frame before drawing and every client tick: curve ends, hand-offs, watchdogs. */
+    public static void update() {
         long[] live;
         while ((live = LIVE.poll()) != null) {
             for (Iterator<Pop> it = POPS.values().iterator(); it.hasNext(); ) {
@@ -298,21 +317,25 @@ public final class Pops {
                 if (p.releaseNs != 0 && live[1] > p.releaseNs && SectionPos.blockToSection(p.pos.asLong()) == live[0]) {
                     it.remove();
                     handedOff++;
+                    maxLife = Math.max(maxLife, Clock.now() - p.t0);
                 }
             }
         }
         if (POPS.isEmpty()) return;
         double now = Clock.now();
         long wall = System.nanoTime();
+        boolean stopped = Clock.stopped();
         for (Iterator<Pop> it = POPS.values().iterator(); it.hasNext(); ) {
             Pop p = it.next();
             double ticks = ticks(p);
+            boolean late = Clock.ticks() - p.startTick > HIDE_LIMIT_TICKS;
             if (p.entity) {
-                if (now - p.t0 >= ticks || wall - p.startNs > HIDE_LIMIT_NS) it.remove();
+                if (now - p.t0 >= ticks || late) it.remove();
                 continue;
             }
-            if (p.releaseNs == 0 && (now - p.t0 >= ticks || wall - p.startNs > HIDE_LIMIT_NS)) {
-                if (now - p.t0 < ticks) watchdogs++;
+            if (p.releaseNs == 0 && (now - p.t0 >= ticks || late || stopped)) {
+                if (stopped && now - p.t0 < ticks) stopReleases++;
+                else if (now - p.t0 < ticks) watchdogs++;
                 release(p);
             } else if (p.releaseNs != 0 && wall - p.releaseWallNs > HANDOFF_LIMIT_NS) {
                 it.remove();

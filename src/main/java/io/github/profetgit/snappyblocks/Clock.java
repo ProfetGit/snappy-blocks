@@ -39,8 +39,14 @@ public final class Clock {
         return ticks + mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
     }
 
-    /** True while the tick rate is frozen; watchdogs then run on frame time instead (PRD pillar 4). */
+    /** True while the tick rate is frozen. */
     public static boolean frozen() {
         return frozenSince >= 0;
+    }
+
+    /** The clock stands still (paused, frozen, no level): nothing may stay hidden then (PRD pillar 4). */
+    public static boolean stopped() {
+        Minecraft mc = Minecraft.getInstance();
+        return mc.level == null || mc.isPaused() || frozenSince >= 0;
     }
 }
