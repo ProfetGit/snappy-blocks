@@ -9,6 +9,7 @@ import io.github.profetgit.snappyblocks.SnappyBlocks;
 import io.github.profetgit.snappyblocks.Tune;
 import io.github.profetgit.snappyblocks.burst.Bursts;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Reference2BooleanOpenHashMap;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -81,13 +82,20 @@ public final class Pops {
     private static final ConcurrentLinkedQueue<long[]> LIVE = new ConcurrentLinkedQueue<>();
     /** Place sounds of the last ticks (x, y, z, tick, sound): another player's placement plays one at the block. */
     private static final List<Object[]> SOUNDS = new ArrayList<>();
+    /**
+     * Another player's block that came before its place sound (a Flashback replay delivers the recorded player's own
+     * placement as the block update, then the sound): it pops if the sound follows in the same tick before a frame has
+     * shown the block. Cleared every frame.
+     */
+    private record Unsounded(BlockState state, long tick) {}
+    private static final Long2ObjectOpenHashMap<Unsounded> UNSOUNDED = new Long2ObjectOpenHashMap<>();
     private static final Reference2BooleanOpenHashMap<BlockState> QUADS = new Reference2BooleanOpenHashMap<>();
     private static final double REMOTE_RANGE = 16;
     static final String REGROW_TICKS = Tune.def("deny.regrow", 4);
     private static Direction lastFace;
     private static long lastFaceTick = -1;
 
-    public static int started, handedOff, watchdogs, remote, entityPops, regrows, denied, overCap, stopReleases;
+    public static int started, handedOff, watchdogs, remote, lateSounds, entityPops, regrows, denied, overCap, stopReleases;
     /** Longest time from a pop's start to its hand-off, in ticks (test hook; reset by the tests). */
     public static double maxLife;
     public static long spentNanos;
@@ -98,8 +106,14 @@ public final class Pops {
         POPS.clear();
         LIVE.clear();
         SOUNDS.clear();
+        UNSOUNDED.clear();
         QUADS.clear();
         Hidden.clear();
+    }
+
+    /** End of every frame: a block the player has seen whole no longer pops when its sound comes late. */
+    public static void frame() {
+        UNSOUNDED.clear();
     }
 
     public static int active() {
@@ -120,6 +134,25 @@ public final class Pops {
     public static void sound(double x, double y, double z, SoundEvent sound) {
         SOUNDS.removeIf(e -> Clock.ticks() - (long) e[3] > 2);
         SOUNDS.add(new Object[] {x, y, z, Clock.ticks(), sound});
+        if (UNSOUNDED.isEmpty()) return;
+        BlockPos pos = BlockPos.containing(x, y, z);
+        Unsounded u = UNSOUNDED.get(pos.asLong());
+        Minecraft mc = Minecraft.getInstance();
+        if (u == null || u.tick != Clock.ticks() || mc.level == null || mc.level.getBlockState(pos) != u.state || !placeSound(pos, u.state)) return;
+        UNSOUNDED.remove(pos.asLong());
+        if (!start(pos, u.state, Clock.now(), null, REMOTE)) return;
+        remote++;
+        lateSounds++;
+        // the other half of a door or bed came before the sound too
+        Pop first = POPS.get(pos.asLong());
+        for (Direction d : Direction.values()) {
+            BlockPos n = pos.relative(d);
+            Unsounded h = UNSOUNDED.get(n.asLong());
+            if (h != null && h.state.getBlock() == u.state.getBlock() && mc.level.getBlockState(n) == h.state) {
+                UNSOUNDED.remove(n.asLong());
+                start(n, h.state, first.t0, first, REMOTE);
+            }
+        }
     }
 
     private static boolean placeSound(BlockPos pos, BlockState state) {
@@ -134,8 +167,9 @@ public final class Pops {
 
     /**
      * Every client block change (ClientLevelMixin). Pops: the local player's predicted placement; another player's
-     * placement (a block update after its place sound at that block, within 2 ticks and 16 blocks; this also covers
-     * Flashback replays); the second half of a popping bed or door arriving from the server.
+     * placement (a block update next to its place sound at that block: the sound up to 2 ticks before, or right after
+     * it in a Flashback replay; within 16 blocks of the camera); the second half of a popping bed or door arriving from
+     * the server.
      */
     public static void blockChanged(BlockPos pos, BlockState old, BlockState now, boolean predicted) {
         Pop p = POPS.get(pos.asLong());
@@ -161,7 +195,9 @@ public final class Pops {
             return;
         }
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > REMOTE_RANGE * REMOTE_RANGE) return;
+        // the camera, not the player: in a replay the two can be far apart
+        if (mc.player == null || mc.gameRenderer.mainCamera().position().distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5)
+            > REMOTE_RANGE * REMOTE_RANGE) return;
         Pop half = null;
         for (Direction d : Direction.values()) {
             Pop q = POPS.get(pos.relative(d).asLong());
@@ -171,6 +207,8 @@ public final class Pops {
             start(pos.immutable(), now, half.t0, half, REMOTE);
         } else if (placeSound(pos, now)) {
             if (start(pos.immutable(), now, Clock.now(), null, REMOTE)) remote++;
+        } else {
+            UNSOUNDED.put(pos.asLong(), new Unsounded(now, Clock.ticks()));
         }
     }
 

@@ -215,7 +215,8 @@ public final class Bursts {
         ClientLevel level = mc.level;
         if (level == null || mc.player == null || state.getRenderShape() != RenderShape.MODEL) return;
         if (Compat.harvestSweep && state.is(BlockTags.CROPS)) return;
-        double d2 = mc.player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+        // the camera, not the player: in a replay the two can be far apart
+        double d2 = mc.gameRenderer.mainCamera().position().distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
         if (d2 > RANGE * RANGE) return;
         if (budgetTick != Clock.ticks()) {
             budgetTick = Clock.ticks();

@@ -56,12 +56,13 @@ final class ScaleScenes {
             case "blast" -> blast(s);
             case "sweep" -> sweep(s);
             case "aside" -> aside(s);
+            case "replay" -> replay(s);
             default -> {
             }
         }
     }
 
-    static final List<String> NAMES = List.of("actions100", "vein64", "autoplace", "freeze", "dimension", "ctm", "timber", "blast", "sweep", "aside");
+    static final List<String> NAMES = List.of("actions100", "vein64", "autoplace", "freeze", "dimension", "ctm", "timber", "blast", "sweep", "aside", "replay");
 
     static void place(Minecraft mc, BlockPos against, Direction face) {
         mc.gameMode.useItemOn(mc.player, InteractionHand.MAIN_HAND, new BlockHitResult(Vec3.atCenterOf(against).relative(face, 0.5), face, against, false));
@@ -498,6 +499,41 @@ final class ScaleScenes {
             .waitTicks(40);
         untune(s, LONG);
         s.server(srv -> cmd(srv, "kill @e[type=item]"));
+    }
+
+    /**
+     * PRD §9 Flashback: a replay delivers the recorded player's placement as a block update followed by its place sound
+     * in the same tick (decoded from cy_auto_build: 59 of 59). Client-only blocks stand in for the packets: the update
+     * then the sound pops; a sound one frame late, or none, leaves the block alone (it was already drawn whole).
+     */
+    private static void replay(Script s) {
+        BlockPos a = new BlockPos(-2, Y, 1), b = new BlockPos(0, Y, 1), c = new BlockPos(2, Y, 1);
+        BlockState stone = Blocks.STONE.defaultBlockState(), air = Blocks.AIR.defaultBlockState();
+        int[] base = new int[3];
+        int[] frame = new int[1];
+        s.server(ScaleScenes::volumeSetup).waitTicks(20).run(mc -> {
+            base[0] = Pops.started;
+            base[1] = Pops.remote;
+            base[2] = Pops.lateSounds;
+            mc.level.setServerVerifiedBlockState(a, stone, 19);
+            placeSound(mc, a, stone);
+            mc.level.setServerVerifiedBlockState(b, stone, 19);
+            mc.level.setServerVerifiedBlockState(c, stone, 19);
+            frame[0] = SelfTest.frames;
+        }).until("a frame", 40, mc -> SelfTest.frames > frame[0]).run(mc -> placeSound(mc, b, stone)).waitTicks(30)
+            .check("replay_late_sound", mc -> {
+                int started = Pops.started - base[0], remote = Pops.remote - base[1], late = Pops.lateSounds - base[2];
+                SnappyBlocks.LOG.info("[selftest] replay: {} popped ({} remote, {} on a late sound)", started, remote, late);
+                if (started != 1 || remote != 1 || late != 1) return started + " popped, " + remote + " remote, " + late + " late (want 1, 1, 1)";
+                return Pops.active() == 0 && Hidden.isEmpty() ? null : "still popping or hidden after 30 ticks";
+            }).run(mc -> {
+                for (BlockPos p : List.of(a, b, c)) mc.level.setServerVerifiedBlockState(p, air, 19);
+            });
+    }
+
+    private static void placeSound(Minecraft mc, BlockPos pos, BlockState state) {
+        mc.level.playSeededSound(null, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, net.minecraft.core.Holder.direct(state.getSoundType().getPlaceSound()),
+            net.minecraft.sounds.SoundSource.BLOCKS, 1f, 0.8f, 0L);
     }
 
     // ---------------------------------------------------------------------------------------------------------------
