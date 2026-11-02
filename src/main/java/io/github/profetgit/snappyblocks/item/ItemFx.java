@@ -258,6 +258,8 @@ public final class ItemFx {
                 state.x += (t.hx - state.x) * k;
                 state.y += (t.hy - 0.2 - state.y) * k;
                 state.z += (t.hz - state.z) * k;
+                float grow = (float) (1 - 0.75 * k);
+                ((ItemFxState) state).snappy_blocks$squash(grow, grow);
             }
         }
         if (Double.isNaN(t.landedAt)) return;

@@ -57,12 +57,13 @@ final class ScaleScenes {
             case "sweep" -> sweep(s);
             case "aside" -> aside(s);
             case "replay" -> replay(s);
+            case "config" -> config(s);
             default -> {
             }
         }
     }
 
-    static final List<String> NAMES = List.of("actions100", "vein64", "autoplace", "freeze", "dimension", "ctm", "timber", "blast", "sweep", "aside", "replay");
+    static final List<String> NAMES = List.of("actions100", "vein64", "autoplace", "freeze", "dimension", "ctm", "timber", "blast", "sweep", "aside", "replay", "config");
 
     static void place(Minecraft mc, BlockPos against, Direction face) {
         mc.gameMode.useItemOn(mc.player, InteractionHand.MAIN_HAND, new BlockHitResult(Vec3.atCenterOf(against).relative(face, 0.5), face, against, false));
@@ -776,5 +777,92 @@ final class ScaleScenes {
                 return pops + " pops, " + pulses + " pulses, " + landings + " landings, " + pickups + " pickup flights (stand-ins " + (stubbed ? "loaded" : "absent") + ")";
             return null;
         }).server(srv -> cmd(srv, "kill @e[type=item]"));
+    }
+
+    /**
+     * PRD §5.6: every toggle turns off exactly its own effect, `enabled` turns off all of them, Calm drops the hit-stop
+     * and scales the amplitude, and the file is re-read when it changes (intensity clamped to 50-150).
+     */
+    private static void config(Script s) {
+        BlockPos cell = new BlockPos(0, Y, 0);
+        int[] base = new int[4];
+        String[] saved = new String[1];
+        java.nio.file.Path file = net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir().resolve(SnappyBlocks.ID + ".json");
+        s.server(srv -> {
+            volumeSetup(srv);
+            cmd(srv, "gamerule send_command_feedback false");
+        }).waitTicks(20).run(mc -> {
+            mc.options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON);
+            say(mc, "kill @e[type=item]");
+        });
+        record Trial(String name, java.util.function.Consumer<Config> set, boolean pop, boolean burst, boolean thrown, boolean pickup) {}
+        List<Trial> trials = List.of(
+            new Trial("all_on", c -> {}, true, true, true, true),
+            new Trial("enabled_off", c -> c.enabled = false, false, false, false, false),
+            new Trial("pop_off", c -> c.pop = false, false, true, true, true),
+            new Trial("burst_off", c -> c.burst = false, true, false, true, true),
+            new Trial("items_off", c -> c.items = false, true, true, false, false),
+            new Trial("pickup_off", c -> c.pickup = false, true, true, true, false),
+            new Trial("calm", c -> c.calm = true, true, true, true, true));
+        for (Trial t : trials) {
+            s.run(mc -> {
+                Config c = Config.get();
+                c.enabled = c.pop = c.pulse = c.burst = c.items = c.pickup = true;
+                c.calm = false;
+                c.intensity = 100;
+                t.set().accept(c);
+                base[0] = Pops.started;
+                base[1] = Bursts.started;
+                base[2] = ItemFx.thrown;
+                base[3] = Ghosts.pickups;
+                mc.player.getInventory().setSelectedSlot(0);
+                place(mc, cell.below(), Direction.UP);
+            }).waitTicks(8).run(mc -> {
+                if (!mc.level.getBlockState(cell).isAir()) mc.gameMode.startDestroyBlock(cell, Direction.UP);
+            }).waitTicks(10).run(mc -> {
+                mc.player.getInventory().setSelectedSlot(8);
+                mc.gameMode.dropItem(mc.player, false);
+                say(mc, "summon item 0.5 " + Y + " -1.2 {Item:{id:\"minecraft:apple\",count:1},PickupDelay:5}");
+            }).waitTicks(40).check("config_" + t.name(), mc -> {
+                boolean[] got = {Pops.started > base[0], Bursts.started > base[1], ItemFx.thrown > base[2], Ghosts.pickups > base[3]};
+                boolean[] want = {t.pop(), t.burst(), t.thrown(), t.pickup()};
+                String[] what = {"pops", "bursts", "throws", "pickups"};
+                for (int i = 0; i < 4; i++) {
+                    if (got[i] != want[i]) return what[i] + (got[i] ? " ran" : " did not run") + " (expected " + (want[i] ? "yes" : "no") + ")";
+                }
+                if (t.name().equals("calm")) {
+                    double amp = Config.get().amplitude();
+                    if (Math.abs(amp - 0.3) > 1e-9) return "calm amplitude " + amp;
+                    if (Bursts.hold(false) != 0) return "calm hit-stop " + Bursts.hold(false);
+                } else if (Bursts.hold(false) <= 0) {
+                    return "hit-stop missing without calm";
+                }
+                return null;
+            }).run(mc -> say(mc, "kill @e[type=item]")).waitTicks(4);
+        }
+        s.run(mc -> {
+            Config c = Config.get();
+            c.enabled = c.pop = c.pulse = c.burst = c.items = c.pickup = true;
+            c.calm = false;
+            try {
+                saved[0] = java.nio.file.Files.readString(file);
+                java.nio.file.Files.writeString(file, "{\"calm\": true, \"intensity\": 400, \"pop\": false, \"mine\": 1}");
+            } catch (java.io.IOException e) {
+                throw new IllegalStateException(e);
+            }
+        }).waitTicks(100).check("config_reload", mc -> {
+            Config c = Config.get();
+            if (!c.calm || c.pop) return "file change not read: calm=" + c.calm + " pop=" + c.pop;
+            if (c.intensity != 150) return "intensity " + c.intensity + " (expected 150, clamped)";
+            if (!c.burst || c.tune.get("pop.ticks") == null) return "missing keys did not get defaults";
+            try {
+                if (!java.nio.file.Files.readString(file).contains("\"mine\"")) return "unknown key dropped from the file";
+                java.nio.file.Files.writeString(file, saved[0]);
+            } catch (java.io.IOException e) {
+                return e.toString();
+            }
+            return null;
+        }).waitTicks(100).check("config_restored", mc -> Config.get().calm || !Config.get().pop || Config.get().intensity != 100
+            ? "restored file not read" : null);
     }
 }

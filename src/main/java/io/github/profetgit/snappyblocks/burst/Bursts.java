@@ -426,6 +426,11 @@ public final class Bursts {
         return n;
     }
 
+    /** The hit-stop before the shrink: none for a bare burst, and none in Calm mode (PRD §5.6). */
+    public static double hold(boolean bare) {
+        return bare || Config.get().calm ? 0 : Tune.get(HOLD);
+    }
+
     /**
      * {sxz, sy, s} at {@code t} ticks: during the hold the block squashes about its floor (the punch); then the squash
      * springs back while it shrinks away about its centre, accelerating. A fade shrinks from {@code from} only.
@@ -435,7 +440,7 @@ public final class Bursts {
             double u = Math.min(1, t / FADE_TICKS);
             return new double[] {1, 1, b.from * (1 - u * u)};
         }
-        double hold = b.bare ? 0 : Tune.get(HOLD), shrink = Math.max(1, Tune.get(SHRINK));
+        double hold = hold(b.bare), shrink = Math.max(1, Tune.get(SHRINK));
         double squash = Tune.get(SQUASH) * Config.get().amplitude();
         if (t < hold) {
             double a = t / Math.max(0.05, hold);
@@ -457,7 +462,7 @@ public final class Bursts {
             double now = Clock.now(), shrink = Math.max(1, Tune.get(SHRINK));
             for (Burst b : BURSTS) {
                 if (!b.live) continue;
-                double t = now - b.t0, hold = b.bare ? 0 : Tune.get(HOLD);
+                double t = now - b.t0, hold = hold(b.bare);
                 if (t >= hold && !b.chipped && frameChips < CHIPS_PER_FRAME) {
                     b.chipped = true;
                     long c0 = System.nanoTime();
