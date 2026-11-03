@@ -5,7 +5,7 @@
 <a href="https://ko-fi.com/profetgit"><img src="https://raw.githubusercontent.com/ProfetGit/assets/main/buttons/kofi.webp" alt="Ko-fi" width="23.96%"></a>
 </p>
 
-**Nothing blinks in or out anymore.** Snappy Blocks makes blocks pop into place, burst into their drops, and lets the drops bounce, settle and fly into your hotbar. A client-side mod for Minecraft Java 26.3 on Fabric, so it works on any server.
+**Nothing blinks in or out anymore.** Snappy Blocks makes blocks pop into place, burst into their drops, and lets the drops bounce, settle and fly into your hotbar. A client-side mod for Minecraft Java 26.3 (Fabric) and 1.21.1 (Fabric, Quilt, NeoForge and Forge), so it works on any server.
 
 ![Features](https://raw.githubusercontent.com/ProfetGit/snappy-blocks/main/docs/desc/title-features.webp)
 
@@ -40,7 +40,7 @@ Edit `config/snappy_blocks.json` in your game folder. It has a switch for each e
 
 ![Installation](https://raw.githubusercontent.com/ProfetGit/snappy-blocks/main/docs/desc/title-installation.webp)
 
-Put the jar in your `mods` folder for Minecraft 26.3 on Fabric. It does not need Fabric API.
+Put the jar for your Minecraft version and loader in your `mods` folder: 26.3 on Fabric, or 1.21.1 on Fabric, Quilt, NeoForge or Forge (the 1.21.1 Fabric jar also loads on Quilt). It does not need Fabric API. On 1.21.1, Sodium and Iris are not supported yet, and other players' mining pulses don't show.
 
 ![More from Profet](https://raw.githubusercontent.com/ProfetGit/snappy-blocks/main/docs/desc/title-more-from-profet.webp)
 
