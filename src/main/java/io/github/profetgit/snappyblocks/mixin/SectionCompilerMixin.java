@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.At;
 /** The mesher's own read of each block: a hidden block is meshed as air, or as its fluid when waterlogged. */
 @Mixin(SectionCompiler.class)
 public abstract class SectionCompilerMixin {
-    @WrapOperation(method = "compile", at = @At(value = "INVOKE",
+    @WrapOperation(method = "compile", require = 0, at = @At(value = "INVOKE",
         target = "Lnet/minecraft/client/renderer/chunk/RenderSectionRegion;getBlockState(Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/block/state/BlockState;"))
     private BlockState snappy_blocks$skipHidden(RenderSectionRegion region, BlockPos pos, Operation<BlockState> original) {
         BlockState s = original.call(region, pos);

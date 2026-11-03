@@ -1,0 +1,88 @@
+[
+  {
+    "from": "getDeltaTracker",
+    "to": "getTimer",
+    "when": "<1.21.2"
+  },
+  {
+    "regex": "net\\.minecraft\\.util\\.Util\\b",
+    "to": "net.minecraft.Util",
+    "when": "<26.2"
+  },
+  {
+    "from": "EntityTypes",
+    "to": "EntityType",
+    "when": "<26.2"
+  },
+  {
+    "from": "PARTICLES_AND_SOUND_DESTROY_BLOCK",
+    "to": "PARTICLES_DESTROY_BLOCK",
+    "when": "<26.2"
+  },
+  {
+    "regex": "LevelEvent\\.PARTICLES_DESTROY_PROGRESS",
+    "to": "2019",
+    "when": "<26.2"
+  },
+  {
+    "regex": "LevelEvent\\.PARTICLES_AND_SOUND_DESTROY_PROGRESS",
+    "to": "2020",
+    "when": "<26.2"
+  },
+  {
+    "from": "getSelectedItem",
+    "to": "getSelected",
+    "when": "<26.2"
+  },
+  {
+    "from": "levelExtractor",
+    "to": "levelRenderer",
+    "when": "<26.2"
+  },
+  {
+    "regex": "\\.getMainCamera\\(\\)\\.position\\(\\)",
+    "to": ".getMainCamera().getPosition()",
+    "when": "<26.2"
+  },
+  {
+    "regex": "\\.gui\\.isHidden\\(\\)",
+    "to": ".options.hideGui",
+    "when": "<26.2"
+  },
+  {
+    "from": "RenderSectionRegion",
+    "to": "RenderChunkRegion",
+    "when": "<26.2"
+  },
+  {
+    "from": "Hud",
+    "to": "Gui",
+    "when": "<26.2",
+    "files": "^HudMixin\\.java$"
+  },
+  {
+    "from": "extractSlot",
+    "to": "renderSlot",
+    "when": "<26.2"
+  },
+  {
+    "regex": "Lnet/minecraft/network/PacketProcessor;",
+    "to": "Lnet/minecraft/util/thread/BlockableEventLoop;",
+    "when": "<26.2"
+  },
+  {
+    "regex": "\\.entityIds\\(\\)",
+    "to": ".getEntityIds()",
+    "when": "<26.2"
+  },
+  {
+    "regex": "net\\.minecraft\\.client\\.renderer\\.block\\.BlockAndTintGetter",
+    "to": "net.minecraft.world.level.BlockAndTintGetter",
+    "when": "<26.2"
+  },
+  {
+    "regex": "net/minecraft/client/renderer/block/BlockAndTintGetter",
+    "to": "net/minecraft/world/level/BlockAndTintGetter",
+    "when": "<26.2"
+  }
+]

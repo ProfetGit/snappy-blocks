@@ -47,10 +47,7 @@ final class Scenarios {
 
     static Script build() {
         Script s = new Script();
-        s.run(mc -> mc.createWorldOpenFlows().createFreshLevel("sbtest-" + System.currentTimeMillis(),
-                new LevelSettings("sbtest", GameType.SURVIVAL,
-                    new LevelSettings.DifficultySettings(Difficulty.PEACEFUL, false, false), true, WorldDataConfiguration.DEFAULT),
-                new WorldOptions(42L, false, false), WorldPresets::createTestWorldDimensions, mc.gui.screen()))
+        s.run(mc -> TestCompat.createWorld(mc, "sbtest-" + System.currentTimeMillis()))
             .until("world to load", 2400, mc -> mc.player != null && mc.level != null && mc.gui.screen() == null)
             .waitTicks(40)
             .check("world loaded", mc -> mc.player.isAlive() ? null : "player not alive");
@@ -119,7 +116,7 @@ final class Scenarios {
 
         int[] t = {0};
         // the slot change goes to the server before mining starts; the button is held through vanilla's continueAttack
-        s.run(mc -> mc.player.getInventory().setSelectedSlot(8)).waitTicks(4).run(mc -> {
+        s.run(mc -> TestCompat.selectSlot(mc.player, 8)).waitTicks(4).run(mc -> {
             Probe.removed = Probe.removedPredicted = Probe.destroyEvents = Probe.hitEvents = 0;
             aim(mc, dirt);
             SelfTest.attack = true;
@@ -134,10 +131,20 @@ final class Scenarios {
         }).waitTicks(10).check("break_predicted", mc -> Probe.removedPredicted >= 1 && dirt.equals(Probe.lastRemoved) ? null
             : "probe: " + Probe.summary() + " last " + Probe.lastRemoved)
             .check("event_2001", mc -> Probe.destroyEvents >= 1 && dirt.equals(Probe.lastDestroyEvent) ? null : "probe: " + Probe.summary())
-            .check("event_2020", mc -> Probe.hitEvents >= 10 && dirt.equals(Probe.lastHitEvent) ? null
-                : "probe: " + Probe.summary() + " after " + t[0] + " mining ticks")
+            .check("event_2020", mc -> hits(dirt, t[0]))
             .run(mc -> SnappyBlocks.LOG.info("[selftest] smoke probe: {}, mined {} ticks", Probe.summary(), t[0]));
     }
+
+//? if >=1.21.2 {
+    private static String hits(BlockPos dirt, int ticks) {
+        return Probe.hitEvents >= 10 && dirt.equals(Probe.lastHitEvent) ? null : "probe: " + Probe.summary() + " after " + ticks + " mining ticks";
+    }
+//?} else {
+/*    // no level event 2020 before 1.21.2: the player's own hit starts a pulse every four ticks
+    private static String hits(BlockPos dirt, int ticks) {
+        return Pulses.started >= 10 ? null : "pulses started " + Pulses.started + " after " + ticks + " mining ticks";
+    }
+*///?}
 
     static void aim(Minecraft mc, BlockPos at) {
         Vec3 eye = mc.player.getEyePosition();
@@ -197,7 +204,7 @@ final class Scenarios {
                 base[2] = Pops.watchdogs;
                 ns[0] = Pops.spentNanos;
                 frames0[0] = SelfTest.frames;
-                if (!mc.gui.hud.isHidden()) mc.gui.hud.toggle();
+                if (!TestCompat.hudHidden(mc)) TestCompat.toggleHud(mc);
                 mc.gui.hud.getChat().clearMessages(false);
                 if (round == 0) SelfTest.startCapture("pop", Integer.getInteger("snappy_blocks.selftest.capture", 12 * gap * 3 + 30));
             });
@@ -210,7 +217,7 @@ final class Scenarios {
             }
             s.waitTicks(30).run(mc -> {
                 SelfTest.stopCapture();
-                if (mc.gui.hud.isHidden()) mc.gui.hud.toggle();
+                if (TestCompat.hudHidden(mc)) TestCompat.toggleHud(mc);
             }).check("pop_round" + r, mc -> {
                 int started = Pops.started - base[0], handed = Pops.handedOff - base[1], dogs = Pops.watchdogs - base[2];
                 int missing = 0, expected = 0;
@@ -252,7 +259,7 @@ final class Scenarios {
             base[1] = Bursts.claimed;
             base[2] = Bursts.revealed;
             base[3] = Bursts.watchdogs;
-            if (!mc.gui.hud.isHidden()) mc.gui.hud.toggle();
+            if (!TestCompat.hudHidden(mc)) TestCompat.toggleHud(mc);
             SelfTest.startCapture("burst", 240);
         });
         for (int i = 0; i < blocks.length; i++) {
@@ -275,7 +282,7 @@ final class Scenarios {
             cmd(srv, "kill @e[type=item]");
             cmd(srv, "setblock 0 " + Y + " -1 minecraft:dirt");
         }).waitTicks(10).run(mc -> {
-            mc.player.getInventory().setSelectedSlot(8);
+            TestCompat.selectSlot(mc.player, 8);
             base[0] = Bursts.started;
             base[1] = Bursts.claimed;
             base[3] = Bursts.watchdogs;
@@ -289,7 +296,7 @@ final class Scenarios {
             return true;
         }).waitTicks(30).check("burst_predicted", mc -> {
             SelfTest.stopCapture();
-            if (mc.gui.hud.isHidden()) mc.gui.hud.toggle();
+            if (TestCompat.hudHidden(mc)) TestCompat.toggleHud(mc);
             int started = Bursts.started - base[0], claimed = Bursts.claimed - base[1], dogs = Bursts.watchdogs - base[3];
             if (started != 1) return "bursts " + started + " of 1";
             if (claimed != 1 || dogs > 0) return "claimed " + claimed + " of 1, " + dogs + " by watchdog";
@@ -337,7 +344,7 @@ final class Scenarios {
         }).waitTicks(20).run(mc -> {
             base[0] = ItemFx.landings;
             base[1] = ItemFx.sounds;
-            if (!mc.gui.hud.isHidden()) mc.gui.hud.toggle();
+            if (!TestCompat.hudHidden(mc)) TestCompat.toggleHud(mc);
             SelfTest.startCapture("landing", 60);
         }).server(srv -> {
             cmd(srv, item(0.5, Y + 3.5, 2.5, "stone", 1, ""));
@@ -347,7 +354,7 @@ final class Scenarios {
             for (int i = 0; i < 20; i++) cmd(srv, item(-3.5 + i * 0.01, Y + 3.5, 5.5, "cobblestone", 64, ""));
         }).waitTicks(50).check("landing_hop", mc -> {
             SelfTest.stopCapture();
-            if (mc.gui.hud.isHidden()) mc.gui.hud.toggle();
+            if (TestCompat.hudHidden(mc)) TestCompat.toggleHud(mc);
             int landed = ItemFx.landings - base[0], sounds = ItemFx.sounds - base[1];
             SnappyBlocks.LOG.info("[selftest] landing: {} landings, {} sounds, {} tracked", landed, sounds, ItemFx.tracked);
             if (landed != 3) return landed + " landings (3 expected: stone, wool, grass; none in water or the crowd)";
@@ -356,9 +363,9 @@ final class Scenarios {
             cmd(srv, "kill @e[type=item]");
             cmd(srv, "item replace entity @p hotbar.0 with minecraft:stone 8");
         }).waitTicks(10).run(mc -> {
-            mc.player.getInventory().setSelectedSlot(0);
+            TestCompat.selectSlot(mc.player, 0);
             base[2] = ItemFx.thrown;
-            mc.gameMode.dropItem(mc.player, false);
+            TestCompat.drop(mc);
         }).waitTicks(10).check("landing_throw", mc -> ItemFx.thrown - base[2] == 1 ? null : (ItemFx.thrown - base[2]) + " throws from the hand")
             .server(srv -> cmd(srv, "kill @e[type=item]"));
     }
@@ -444,8 +451,8 @@ final class Scenarios {
             cmd(srv, "item replace entity @p hotbar.0 with minecraft:stick");
         }).waitTicks(20).run(mc -> {
             mc.options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON);
-            if (mc.gui.hud.isHidden()) mc.gui.hud.toggle();
-            mc.player.getInventory().setSelectedSlot(0);
+            if (TestCompat.hudHidden(mc)) TestCompat.toggleHud(mc);
+            TestCompat.selectSlot(mc.player, 0);
             snap.run();
         }).server(srv -> {
             // in view ahead of the player, out of reach until the step forward
@@ -498,17 +505,20 @@ final class Scenarios {
             cmd(srv, "gamemode survival @p");
             cmd(srv, "clear @p");
         }).waitTicks(20).run(mc -> {
-            mc.player.getInventory().setSelectedSlot(8);
+            TestCompat.selectSlot(mc.player, 8);
             base[0] = Pulses.started;
             base[1] = Probe.hitEvents;
-            if (!mc.gui.hud.isHidden()) mc.gui.hud.toggle();
+            if (!TestCompat.hudHidden(mc)) TestCompat.toggleHud(mc);
             SelfTest.startCapture("pulse", 120);
         }).waitTicks(4);
         mine(s, at, 400);
         s.waitTicks(10).check("pulse_hits", mc -> {
             SelfTest.stopCapture();
-            if (mc.gui.hud.isHidden()) mc.gui.hud.toggle();
+            if (TestCompat.hudHidden(mc)) TestCompat.toggleHud(mc);
             int pulses = Pulses.started - base[0], hits = Probe.hitEvents - base[1];
+//? if <1.21.2 {
+            /*hits = pulses; // no server hit events before 1.21.2: the player's own hits are the pulses
+            *///?}
             SnappyBlocks.LOG.info("[selftest] pulse: {} pulses for {} server hits, {} live", pulses, hits, Pulses.active());
             if (hits < 10) return "only " + hits + " server hits";
             if (pulses < hits) return pulses + " pulses for " + hits + " hits";
@@ -541,7 +551,7 @@ final class Scenarios {
             cmd(srv, "setblock -1 " + Y + " 0 minecraft:stone");
             cmd(srv, "setblock 1 " + Y + " 0 minecraft:diamond_ore");
         }).waitTicks(20).run(mc -> {
-            mc.player.getInventory().setSelectedSlot(0);
+            TestCompat.selectSlot(mc.player, 0);
             snap.run();
         }).waitTicks(4);
         mine(s, new BlockPos(-1, Y, 0), 200);
@@ -552,7 +562,7 @@ final class Scenarios {
             if (bursts != 1 || claimed != 1) return bursts + " bursts, " + claimed + " claimed";
             return stone == 1 ? null : "silk touch dropped " + stone + " stone items";
         }).run(mc -> {
-            mc.player.getInventory().setSelectedSlot(1);
+            TestCompat.selectSlot(mc.player, 1);
             snap.run();
         }).waitTicks(4);
         mine(s, new BlockPos(1, Y, 0), 200);
@@ -570,18 +580,21 @@ final class Scenarios {
         }).waitTicks(20).run(mc -> {
             snap.run();
             Bursts.lastFanSpread = 0;
-            if (!mc.gui.hud.isHidden()) mc.gui.hud.toggle();
+            if (!TestCompat.hudHidden(mc)) TestCompat.toggleHud(mc);
             SelfTest.startCapture("drops", 80);
         }).server(srv -> cmd(srv, "setblock 0 " + Y + " 1 minecraft:air destroy")).waitTicks(30).check("drops_chest", mc -> {
             int bursts = Bursts.started - base[0], claimed = Bursts.claimed - base[1], dogs = Bursts.watchdogs - base[2];
             SnappyBlocks.LOG.info("[selftest] chest: {} bursts, {} claimed, fan {} ticks, {} watchdog", bursts, claimed, Bursts.lastFanSpread, dogs);
+//? if <1.21.2 {
+            /*if (bursts == 0) return null; // a chest is an entity-block shape before 1.21.2: the burst needs a model
+            *///?}
             if (bursts != 1) return bursts + " bursts";
             if (claimed != 8) return "claimed " + claimed + " of 13 drops (8 expected)";
             if (Bursts.lastFanSpread < 3) return "fan spread " + Bursts.lastFanSpread + " ticks";
             return dogs == 0 ? null : dogs + " by watchdog";
         }).run(mc -> snap.run()).server(srv -> cmd(srv, "setblock 2 " + Y + " 1 minecraft:air destroy")).waitTicks(20).check("drops_glass", mc -> {
             SelfTest.stopCapture();
-            if (mc.gui.hud.isHidden()) mc.gui.hud.toggle();
+            if (TestCompat.hudHidden(mc)) TestCompat.toggleHud(mc);
             int bursts = Bursts.started - base[0], claimed = Bursts.claimed - base[1];
             if (bursts != 1 || claimed != 0) return bursts + " bursts, " + claimed + " claimed";
             return Bursts.lastMaterial == Chip.Material.GLASS ? null : "chips flew as " + Bursts.lastMaterial;
@@ -628,7 +641,7 @@ final class Scenarios {
             cmd(srv, "gamemode survival @p");
             cmd(srv, "clear @p");
         }).waitTicks(20).run(mc -> {
-            mc.player.getInventory().setSelectedSlot(8);
+            TestCompat.selectSlot(mc.player, 8);
             mc.level.setBlock(fake, Blocks.DIRT.defaultBlockState(), 3);
             base[0] = Bursts.denied;
             base[1] = Pops.regrows;
@@ -713,7 +726,12 @@ final class Scenarios {
             long torches = mc.level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, mc.player.getBoundingBox().inflate(8),
                 e -> e.getItem().is(net.minecraft.world.item.Items.TORCH)).size();
             if (torches != 1) return torches + " torch drops (piston didn't break it?)";
+//? if >=1.21.2 {
             return bursts == 1 && claimed == 1 ? null : bursts + " bursts, " + claimed + " claimed";
+//?} else {
+/*            // before 1.21.2 a piston sends no level event for the block it destroys, so there is nothing to burst on
+            return bursts == 0 ? null : bursts + " bursts without a level event";
+*///?}
         }).server(srv -> clearArea(srv));
     }
 
@@ -732,7 +750,7 @@ final class Scenarios {
             base[0] = Pops.started;
             base[1] = Pops.entityPops;
             base[2] = Pops.handedOff;
-            if (!mc.gui.hud.isHidden()) mc.gui.hud.toggle();
+            if (!TestCompat.hudHidden(mc)) TestCompat.toggleHud(mc);
             SelfTest.startCapture("bepop", 5 * 12 + 20);
         });
         for (int i = 0; i < items.length; i++) {
@@ -746,7 +764,7 @@ final class Scenarios {
         }
         s.waitTicks(20).check("bepop_paths", mc -> {
             SelfTest.stopCapture();
-            if (mc.gui.hud.isHidden()) mc.gui.hud.toggle();
+            if (TestCompat.hudHidden(mc)) TestCompat.toggleHud(mc);
             int started = Pops.started - base[0], entity = Pops.entityPops - base[1], handed = Pops.handedOff - base[2];
             SnappyBlocks.LOG.info("[selftest] bepop: {} pops, {} through the renderer, {} handed off", started, entity, handed);
             for (int i = 0; i < items.length; i++) {

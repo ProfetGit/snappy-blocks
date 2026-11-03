@@ -9,12 +9,12 @@
   "license": "LicenseRef-All-Rights-Reserved",
   "environment": "client",
   "entrypoints": {
-    "client": ["io.github.profetgit.snappyblocks.SnappyBlocks"]
+    "client": ["io.github.profetgit.snappyblocks.platform.fabric.FabricEntry"]
   },
   "mixins": ["snappy_blocks.mixins.json"],
   "depends": {
     "fabricloader": ">=${fabric_loader}",
-    "minecraft": "~${mc}",
-    "java": ">=25"
+    "minecraft": "${mc_range}",
+    "java": ">=${java}"
   }
 }

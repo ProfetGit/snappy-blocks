@@ -5,18 +5,25 @@ import io.github.profetgit.snappyblocks.item.Ghosts;
 import io.github.profetgit.snappyblocks.item.ItemFx;
 import io.github.profetgit.snappyblocks.pop.Pops;
 import io.github.profetgit.snappyblocks.pulse.Pulses;
-import net.fabricmc.api.ClientModInitializer;
+import io.github.profetgit.snappyblocks.platform.Platform;
 import net.minecraft.client.Minecraft;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** Client entry point. Everything the mod does is visual and client-side (PRD §1, §7). */
-public final class SnappyBlocks implements ClientModInitializer {
+public final class SnappyBlocks {
     public static final String ID = "snappy_blocks";
     public static final Logger LOG = LoggerFactory.getLogger("Snappy Blocks");
 
-    @Override
-    public void onInitializeClient() {
+    private static Platform platform;
+
+    public static Platform platform() {
+        return platform;
+    }
+
+    /** Called by the loader's entry class. */
+    public static void init(Platform p) {
+        platform = p;
         // register their tune keys before the config is read
         Bursts.clear();
         Pulses.clear();
@@ -25,7 +32,7 @@ public final class SnappyBlocks implements ClientModInitializer {
         Ghosts.clear();
         Config.load();
         Compat.detect();
-        LOG.info("Snappy Blocks loaded (enabled={}, intensity={}%)", Config.get().enabled, Config.get().intensity);
+        LOG.info("Snappy Blocks loaded on {} (enabled={}, intensity={}%)", p.loader(), Config.get().enabled, Config.get().intensity);
     }
 
     /** End of every client tick (paused or not). */

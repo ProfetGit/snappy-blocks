@@ -5,8 +5,10 @@ import io.github.profetgit.snappyblocks.Clock;
 import io.github.profetgit.snappyblocks.Compat;
 import io.github.profetgit.snappyblocks.Config;
 import io.github.profetgit.snappyblocks.Probe;
+import io.github.profetgit.snappyblocks.RenderPass;
 import io.github.profetgit.snappyblocks.Rtt;
 import io.github.profetgit.snappyblocks.Tune;
+import io.github.profetgit.snappyblocks.item.ItemPose;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import java.util.ArrayList;
@@ -15,12 +17,9 @@ import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.renderer.SubmitNodeCollector;
 import io.github.profetgit.snappyblocks.pop.PopRenderState;
 import io.github.profetgit.snappyblocks.pop.Pops;
 import io.github.profetgit.snappyblocks.pulse.Pulses;
-import net.minecraft.client.renderer.entity.state.EntityRenderState;
-import net.minecraft.client.renderer.state.level.LevelRenderState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.util.Util;
@@ -31,7 +30,6 @@ import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.LevelEvent;
-import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
@@ -213,7 +211,7 @@ public final class Bursts {
     private static void start(BlockPos pos, BlockState state) {
         Minecraft mc = Minecraft.getInstance();
         ClientLevel level = mc.level;
-        if (level == null || mc.player == null || state.getRenderShape() != RenderShape.MODEL) return;
+        if (level == null || mc.player == null || !Pops.drawnLikeModel(state)) return;
         if (Compat.harvestSweep && state.is(BlockTags.CROPS)) return;
         // the camera, not the player: in a replay the two can be far apart
         double d2 = mc.gameRenderer.mainCamera().position().distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
@@ -275,13 +273,7 @@ public final class Bursts {
     }
 
     private static void setup(PopRenderState r, ClientLevel level, BlockPos pos, BlockState state) {
-        r.level = level;
-        r.blockPos = pos;
-        r.randomSeedPos = pos;
-        r.blockState = state;
-        r.biome = level.getBiome(pos);
-        r.cardinalLighting = level.cardinalLighting();
-        r.lightEngine = level.getLightEngine();
+        r.init(level, pos, state);
     }
 
     /** ClientPacketListener.handleAddEntity: an item at a fresh burst's centre is its drop. */
@@ -331,7 +323,7 @@ public final class Bursts {
     }
 
     /** ItemEntityRenderer.extractRenderState: a shown claimed drop springs from the burst centre to its real place. */
-    public static void offset(int id, EntityRenderState state) {
+    public static void offset(int id, ItemPose state) {
         Claim c = CLAIMS.get(id);
         if (c == null || Double.isNaN(c.shownAt)) return;
         double u = (Clock.now() - c.shownAt) / Math.max(1, Tune.get(DROP_SPRING));
@@ -453,12 +445,13 @@ public final class Bursts {
     }
 
     /** With the pops, in the transient-block pass. */
-    public static void submit(PoseStack ps, SubmitNodeCollector collector, LevelRenderState state) {
+    public static void submit(RenderPass pass) {
         long t0 = System.nanoTime();
         try {
             update();
             if (BURSTS.isEmpty()) return;
-            Vec3 cam = state.cameraRenderState.pos;
+            PoseStack ps = pass.ps;
+            Vec3 cam = pass.cam;
             double now = Clock.now(), shrink = Math.max(1, Tune.get(SHRINK));
             for (Burst b : BURSTS) {
                 if (!b.live) continue;
@@ -484,7 +477,7 @@ public final class Bursts {
                     ps.scale((float) sc[2], (float) sc[2], (float) sc[2]);
                     ps.translate(-0.5, -0.5, -0.5);
                 }
-                collector.submitMovingBlock(ps, b.whole, 0);
+                b.whole.draw(pass);
                 ps.popPose();
             }
         } finally {

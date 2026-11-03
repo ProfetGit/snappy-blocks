@@ -18,7 +18,6 @@ import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -124,7 +123,7 @@ final class ScaleScenes {
             cmd(srv, "gamerule send_command_feedback false");
         }).waitTicks(20).run(mc -> {
             mc.options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON);
-            if (mc.gui.hud.isHidden()) mc.gui.hud.toggle();
+            if (TestCompat.hudHidden(mc)) TestCompat.toggleHud(mc);
             mc.options.chatVisibility().set(net.minecraft.world.entity.player.ChatVisiblity.HIDDEN);
             base[0] = Pops.started;
             base[1] = Pops.handedOff;
@@ -151,7 +150,7 @@ final class ScaleScenes {
                         if (cell == null) return;
                         int slot = k == 5 ? 6 : k == 8 ? 7 : (n / 10 * 3 + k) % 6;
                         // the camera stays still (no aim) so `wb img flicker` sees only the effects move
-                        mc.player.getInventory().setSelectedSlot(slot);
+                        TestCompat.selectSlot(mc.player, slot);
                         place(mc, cell.below(), Direction.UP);
                         placed.add(cell);
                         just[0] = cell;
@@ -171,8 +170,8 @@ final class ScaleScenes {
                         if (!mc.level.getBlockState(p).is(Blocks.GLASS)) seen[3]++;
                     }
                     case 6 -> {
-                        mc.player.getInventory().setSelectedSlot(8);
-                        mc.gameMode.dropItem(mc.player, false);
+                        TestCompat.selectSlot(mc.player, 8);
+                        TestCompat.drop(mc);
                     }
                     case 7 -> say(mc, "summon item 0.5 " + Y + " -1.2 {Item:{id:\"minecraft:apple\",count:1},PickupDelay:5}");
                     default -> {
@@ -248,7 +247,7 @@ final class ScaleScenes {
             return null;
         }).server(srv -> cmd(srv, "kill @e[type=item]"));
 
-        boolean vein = FabricLoader.getInstance().isModLoaded("vanilla_veinminer");
+        boolean vein = SnappyBlocks.platform().isModLoaded("vanilla_veinminer");
         BlockPos first = new BlockPos(2, Y, 2);
         s.server(srv -> {
             cmd(srv, "fill " + cube + " minecraft:coal_ore");
@@ -256,11 +255,11 @@ final class ScaleScenes {
             cmd(srv, "tp @p 0.5 " + Y + " 0.5 -30 20");
             cmd(srv, "clear @p");
             // Enchanted Veinminer (the user's profile has it) gates chains behind its enchantment
-            String vm = FabricLoader.getInstance().isModLoaded("enchanted_veinminer") ? ",\"enchanted_veinminer:veinminer\":1" : "";
+            String vm = SnappyBlocks.platform().isModLoaded("enchanted_veinminer") ? ",\"enchanted_veinminer:veinminer\":1" : "";
             cmd(srv, "item replace entity @p hotbar.0 with minecraft:netherite_pickaxe[enchantments={efficiency:5" + vm + "}]");
             cmd(srv, "scoreboard players set #require_sneak veinminer.config 0");
         }).waitTicks(20).run(mc -> {
-            mc.player.getInventory().setSelectedSlot(0);
+            TestCompat.selectSlot(mc.player, 0);
             base[0] = Bursts.started;
             SelfTest.costReset();
             SelfTest.startCapture("vein64_chain", 150);
@@ -317,7 +316,7 @@ final class ScaleScenes {
                 int n = i;
                 BlockPos cell = new BlockPos(GX0 + n % 5, Y, GZ0 + n / 5);
                 s.run(mc -> {
-                    mc.player.getInventory().setSelectedSlot(n % 2 == 0 ? (r % 2 == 0 ? 0 : 1) : (r % 2 == 0 ? 3 : 4));
+                    TestCompat.selectSlot(mc.player, n % 2 == 0 ? (r % 2 == 0 ? 0 : 1) : (r % 2 == 0 ? 3 : 4));
                     place(mc, cell.below(), Direction.UP);
                 }).waitTicks(2).run(mc -> {
                     BlockState st = mc.level.getBlockState(cell);
@@ -333,14 +332,14 @@ final class ScaleScenes {
             int started = Pops.started - base[0], handed = Pops.handedOff - base[1], dogs = Pops.watchdogs - base[2], over = Pops.overCap - base[3];
             String cost = SelfTest.cost();
             SnappyBlocks.LOG.info("[selftest] autoplace: {} placed at 20/s, {} should pop, {} popped, {} handed off, {} watchdog, {} over cap; {} (Build Buddy {})",
-                seen[0], seen[1], started, handed, dogs, over, cost, FabricLoader.getInstance().isModLoaded("buildbuddy") ? "installed" : "absent");
+                seen[0], seen[1], started, handed, dogs, over, cost, SnappyBlocks.platform().isModLoaded("buildbuddy") ? "installed" : "absent");
             if (seen[0] < 195) return "only " + seen[0] + " of 200 placed";
             if (started != seen[1] || handed != started - (Pops.entityPops - base[4]) || dogs > 0 || over > 0)
                 return started + " popped of " + seen[1] + ", " + handed + " handed off, " + dogs + " watchdog, " + over + " over cap";
             if (SelfTest.costSum / Math.max(1, SelfTest.costFrames) > 0.25 || SelfTest.costMax > 2) return cost;
             return Pops.active() > 0 || !Hidden.isEmpty() ? "pops left" : null;
         });
-        if (FabricLoader.getInstance().isModLoaded("buildbuddy")) buildBuddy(s);
+        if (SnappyBlocks.platform().isModLoaded("buildbuddy")) buildBuddy(s);
     }
 
     /** Build Buddy's own commands and settings, as its demo scenes use them (dev hooks of the installed jar). */
@@ -420,9 +419,9 @@ final class ScaleScenes {
             cmd(srv, "item replace entity @p hotbar.0 with minecraft:stone 16");
             cmd(srv, "setblock 2 " + Y + " 3 minecraft:dirt");
         }).waitTicks(20).run(mc -> {
-            if (mc.gui.hud.isHidden()) mc.gui.hud.toggle();
+            if (TestCompat.hudHidden(mc)) TestCompat.toggleHud(mc);
             mc.options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON);
-            mc.player.getInventory().setSelectedSlot(0);
+            TestCompat.selectSlot(mc.player, 0);
             for (int x = -1; x <= 1; x++) place(mc, new BlockPos(x, Y - 1, 0), Direction.UP);
         }).server(srv -> {
             cmd(srv, "setblock 2 " + Y + " 3 minecraft:air destroy");
@@ -551,8 +550,8 @@ final class ScaleScenes {
             cmd(srv, "fill -2 " + Y + " 2 2 " + (Y + 2) + " 2 minecraft:stone");
             cmd(srv, "tp @p 0.5 " + Y + " -2.0 0 10");
         }).waitTicks(20).run(mc -> {
-            mc.player.getInventory().setSelectedSlot(0);
-            if (!mc.gui.hud.isHidden()) mc.gui.hud.toggle();
+            TestCompat.selectSlot(mc.player, 0);
+            if (!TestCompat.hudHidden(mc)) TestCompat.toggleHud(mc);
             base[0] = Pops.started;
             base[1] = Pops.handedOff;
             base[2] = Pops.watchdogs;
@@ -568,7 +567,7 @@ final class ScaleScenes {
             // the pop's curve plus its hand-off to the remeshed section (a few frames; more under load)
             double limit = io.github.profetgit.snappyblocks.Tune.get(io.github.profetgit.snappyblocks.Tune.POP_TICKS) + 1.5;
             SnappyBlocks.LOG.info("[selftest] ctm: {} popped, {} handed off, longest copy {} ticks (Continuity {})", started, handed,
-                String.format("%.2f", Pops.maxLife), FabricLoader.getInstance().isModLoaded("continuity") ? "installed" : "absent");
+                String.format("%.2f", Pops.maxLife), SnappyBlocks.platform().isModLoaded("continuity") ? "installed" : "absent");
             if (started != 5 || handed != 5 || dogs > 0) return started + " popped, " + handed + " handed off, " + dogs + " watchdog";
             return Pops.maxLife <= limit ? null : String.format("a copy stood in for %.2f ticks (> %.1f)", Pops.maxLife, limit);
         }).run(mc -> base[3] = Bursts.started);
@@ -581,7 +580,7 @@ final class ScaleScenes {
         }
         s.waitTicks(20).check("ctm_burst", mc -> {
             SelfTest.stopCapture();
-            if (mc.gui.hud.isHidden()) mc.gui.hud.toggle();
+            if (TestCompat.hudHidden(mc)) TestCompat.toggleHud(mc);
             int bursts = Bursts.started - base[3];
             if (bursts != 5) return bursts + " bursts of 5";
             return hiddenTicks[0] == 0 ? null : "a block was hidden for " + hiddenTicks[0] + " ticks while bursting";
@@ -595,7 +594,7 @@ final class ScaleScenes {
      * so it doesn't. Without Timber only the chopped log goes.
      */
     private static void timber(Script s) {
-        boolean timber = FabricLoader.getInstance().isModLoaded("vanilla_timber");
+        boolean timber = SnappyBlocks.platform().isModLoaded("vanilla_timber");
         BlockPos base = new BlockPos(0, Y, 3);
         int[] b = new int[2];
         s.server(srv -> {
@@ -610,9 +609,9 @@ final class ScaleScenes {
             cmd(srv, "clear @p");
             // Enchanted Timber gates felling behind its enchantment
             cmd(srv, "item replace entity @p hotbar.0 with minecraft:diamond_axe"
-                + (FabricLoader.getInstance().isModLoaded("enchanted_timber") ? "[enchantments={\"enchanted_timber:timber\":1}]" : ""));
+                + (SnappyBlocks.platform().isModLoaded("enchanted_timber") ? "[enchantments={\"enchanted_timber:timber\":1}]" : ""));
         }).waitTicks(20).run(mc -> {
-            mc.player.getInventory().setSelectedSlot(0);
+            TestCompat.selectSlot(mc.player, 0);
             b[0] = Bursts.started;
             b[1] = Pops.started;
             SelfTest.startCapture("timber", 200);
@@ -628,7 +627,7 @@ final class ScaleScenes {
             int logs = 0;
             for (int y = 1; y <= 4; y++) if (mc.level.getBlockState(base.above(y)).is(Blocks.OAK_LOG)) logs++;
             SnappyBlocks.LOG.info("[selftest] timber (Timber {}, Seamless Displays {}): {} bursts, {} pops, {} logs left", timber ? "installed" : "absent",
-                FabricLoader.getInstance().isModLoaded("seamless_displays") ? "installed" : "absent", bursts, pops, logs);
+                SnappyBlocks.platform().isModLoaded("seamless_displays") ? "installed" : "absent", bursts, pops, logs);
             if (timber && logs > 0) return logs + " logs left: Timber didn't fell the tree";
             if (!timber && logs != 4) return logs + " logs left without Timber";
             if (bursts != 1 || pops != 0) return bursts + " bursts, " + pops + " pops (only the chopped log bursts)";
@@ -645,7 +644,7 @@ final class ScaleScenes {
      * are left alone (no ghosts for them when they go); its repair places blocks without place sounds, so no pops.
      */
     private static void blast(Script s) {
-        boolean hab = FabricLoader.getInstance().isModLoaded("havingablast");
+        boolean hab = SnappyBlocks.platform().isModLoaded("havingablast");
         int[] b = new int[4];
         String house = "-2 " + Y + " 8 2 " + (Y + 2) + " 10";
         // first without Having a Blast's repair (with it on, the blast leaves no drops to hide)
@@ -708,7 +707,7 @@ final class ScaleScenes {
             cmd(srv, "clear @p");
             cmd(srv, "item replace entity @p hotbar.0 with minecraft:iron_hoe");
         }).waitTicks(20).run(mc -> {
-            mc.player.getInventory().setSelectedSlot(0);
+            TestCompat.selectSlot(mc.player, 0);
             b[0] = Bursts.started;
         });
         Scenarios.mine(s, new BlockPos(-2, Y, 2), 40);
@@ -756,9 +755,9 @@ final class ScaleScenes {
             cmd(srv, "item replace entity @p hotbar.0 with minecraft:stone 8");
             cmd(srv, "setblock 1 " + Y + " 1 minecraft:stone");
         }).waitTicks(20).run(mc -> {
-            if (mc.gui.hud.isHidden()) mc.gui.hud.toggle();
+            if (TestCompat.hudHidden(mc)) TestCompat.toggleHud(mc);
             mc.options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON);
-            mc.player.getInventory().setSelectedSlot(0);
+            TestCompat.selectSlot(mc.player, 0);
             b[0] = Pops.started;
             b[1] = Pulses.started;
             b[2] = ItemFx.landings;
@@ -787,7 +786,7 @@ final class ScaleScenes {
         BlockPos cell = new BlockPos(0, Y, 0);
         int[] base = new int[4];
         String[] saved = new String[1];
-        java.nio.file.Path file = net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir().resolve(SnappyBlocks.ID + ".json");
+        java.nio.file.Path file = SnappyBlocks.platform().configDir().resolve(SnappyBlocks.ID + ".json");
         s.server(srv -> {
             volumeSetup(srv);
             cmd(srv, "gamerule send_command_feedback false");
@@ -815,13 +814,13 @@ final class ScaleScenes {
                 base[1] = Bursts.started;
                 base[2] = ItemFx.thrown;
                 base[3] = Ghosts.pickups;
-                mc.player.getInventory().setSelectedSlot(0);
+                TestCompat.selectSlot(mc.player, 0);
                 place(mc, cell.below(), Direction.UP);
             }).waitTicks(8).run(mc -> {
                 if (!mc.level.getBlockState(cell).isAir()) mc.gameMode.startDestroyBlock(cell, Direction.UP);
             }).waitTicks(10).run(mc -> {
-                mc.player.getInventory().setSelectedSlot(8);
-                mc.gameMode.dropItem(mc.player, false);
+                TestCompat.selectSlot(mc.player, 8);
+                TestCompat.drop(mc);
                 say(mc, "summon item 0.5 " + Y + " -1.2 {Item:{id:\"minecraft:apple\",count:1},PickupDelay:5}");
             }).waitTicks(40).check("config_" + t.name(), mc -> {
                 boolean[] got = {Pops.started > base[0], Bursts.started > base[1], ItemFx.thrown > base[2], Ghosts.pickups > base[3]};

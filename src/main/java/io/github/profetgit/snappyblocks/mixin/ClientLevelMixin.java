@@ -14,6 +14,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Final;
@@ -84,6 +85,7 @@ public abstract class ClientLevelMixin {
     }
 
     /** Positional sounds from the server (and the client's own): another player's place sound starts a remote pop. */
+//? if >=1.21.2 {
     @Inject(method = "playSeededSound(Lnet/minecraft/world/entity/Entity;DDDLnet/minecraft/core/Holder;Lnet/minecraft/sounds/SoundSource;FFJ)V", at = @At("HEAD"))
     private void snappy_blocks$sound(Entity except, double x, double y, double z, Holder<SoundEvent> sound, SoundSource source, float volume, float pitch,
         long seed, CallbackInfo ci) {
@@ -95,6 +97,13 @@ public abstract class ClientLevelMixin {
     private void snappy_blocks$hit(BlockPos pos, Direction direction, boolean withSound, CallbackInfo ci) {
         if (withSound) Pulses.hit(pos, direction);
     }
+//?} else {
+/*    @Inject(method = "playSeededSound(Lnet/minecraft/world/entity/player/Player;DDDLnet/minecraft/core/Holder;Lnet/minecraft/sounds/SoundSource;FFJ)V", at = @At("HEAD"))
+    private void snappy_blocks$sound(Player except, double x, double y, double z, Holder<SoundEvent> sound, SoundSource source, float volume, float pitch,
+        long seed, CallbackInfo ci) {
+        Pops.sound(x, y, z, sound.value());
+    }
+*///?}
 
     @Inject(method = "handleBlockChangedAck", at = @At("HEAD"))
     private void snappy_blocks$ack(int sequence, CallbackInfo ci) {

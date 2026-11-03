@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.14 — 2026-11-03
+
+Snappy Blocks now runs on **Minecraft 1.21.1** too, on Fabric, Quilt, NeoForge and Forge. The Fabric 26.3 build is not part of this release.
+
+- Same place pop, mining pulse, break burst, item landing, Q-throw, merge, despawn and pickup flight as on 26.3.
+- Chests and banners pop and burst like other blocks.
+- Not on 1.21.1: other players' mining pulses (the server doesn't send their hits there), and a burst for blocks a piston destroys (vanilla sends no event for them).
+- Sodium and Iris are not supported on 1.21.1 yet: with Sodium installed, the place pop and the mining pulse stand aside.
+
 ## 0.0.13 — 2026-11-02
 
 First public build. Blocks, drops and pickups move instead of blinking in and out. Client-side only: it works on any server.

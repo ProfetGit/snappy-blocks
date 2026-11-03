@@ -35,6 +35,9 @@ public final class MixinPlugin implements IMixinConfigPlugin {
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
         if (!mixinClassName.contains(".compat.")) return true;
+//? if <1.21.2 {
+        /*if (true) return false; // the Sodium stand-ins are 26.x's; Sodium on this version isn't supported (Compat)
+        *///?}
         ClassNode node;
         try {
             node = MixinService.getService().getBytecodeProvider().getClassNode(targetClassName);

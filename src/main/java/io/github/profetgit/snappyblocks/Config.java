@@ -10,7 +10,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import net.fabricmc.loader.api.FabricLoader;
 
 /**
  * `config/snappy_blocks.json`, re-read when the file changes (PRD §5.6). Unknown keys are kept and missing keys get
@@ -18,7 +17,7 @@ import net.fabricmc.loader.api.FabricLoader;
  */
 public final class Config {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-    private static final Path FILE = FabricLoader.getInstance().getConfigDir().resolve(SnappyBlocks.ID + ".json");
+    private static final Path FILE = SnappyBlocks.platform().configDir().resolve(SnappyBlocks.ID + ".json");
 
     public boolean enabled = true;
     public boolean pop = true;

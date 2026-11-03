@@ -4,7 +4,6 @@ import io.github.profetgit.snappyblocks.SnappyBlocks;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
-import net.fabricmc.loader.api.FabricLoader;
 
 /** Whether an Iris shader pack is in use (reflective, no Iris dependency). Pattern from Seamless Displays' IrisCompat. */
 final class ShaderPack {
@@ -16,7 +15,7 @@ final class ShaderPack {
     static boolean active() {
         if (!tried) {
             tried = true;
-            if (FabricLoader.getInstance().isModLoaded("iris")) {
+            if (SnappyBlocks.platform().isModLoaded("iris")) {
                 try {
                     inUse = MethodHandles.publicLookup().findStatic(Class.forName("net.irisshaders.iris.Iris"), "isPackInUseQuick",
                         MethodType.methodType(boolean.class));

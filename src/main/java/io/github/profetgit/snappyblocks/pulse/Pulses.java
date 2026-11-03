@@ -5,6 +5,7 @@ import io.github.profetgit.snappyblocks.Clock;
 import io.github.profetgit.snappyblocks.Compat;
 import io.github.profetgit.snappyblocks.Config;
 import io.github.profetgit.snappyblocks.Probe;
+import io.github.profetgit.snappyblocks.RenderPass;
 import io.github.profetgit.snappyblocks.Tune;
 import io.github.profetgit.snappyblocks.burst.Chip;
 import io.github.profetgit.snappyblocks.pop.PopRenderState;
@@ -13,8 +14,6 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import java.util.Iterator;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.client.renderer.state.level.LevelRenderState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
@@ -90,13 +89,7 @@ public final class Pulses {
         BlockPos at = pos.immutable();
         if (eligible(state) && !Pops.popping(at)) {
             Pulse p = new Pulse(at, state, Clock.now());
-            p.render.level = level;
-            p.render.blockPos = at;
-            p.render.randomSeedPos = at;
-            p.render.blockState = state;
-            p.render.biome = level.getBiome(at);
-            p.render.cardinalLighting = level.cardinalLighting();
-            p.render.lightEngine = level.getLightEngine();
+            p.render.init(level, at, state);
             PULSES.put(at.asLong(), p);
             started++;
         }
@@ -158,11 +151,12 @@ public final class Pulses {
     }
 
     /** With the pops, in the transient-block pass. */
-    public static void submit(PoseStack ps, SubmitNodeCollector collector, LevelRenderState state) {
+    public static void submit(RenderPass pass) {
         if (PULSES.isEmpty()) return;
         long t0 = System.nanoTime();
         try {
-            Vec3 cam = state.cameraRenderState.pos;
+            PoseStack ps = pass.ps;
+            Vec3 cam = pass.cam;
             double now = Clock.now(), ticks = Math.max(0.5, Tune.get(TICKS));
             ClientLevel level = Minecraft.getInstance().level;
             for (Iterator<Pulse> it = PULSES.values().iterator(); it.hasNext(); ) {
@@ -177,7 +171,7 @@ public final class Pulses {
                 ps.translate(p.pos.getX() + 0.5 - cam.x, p.pos.getY() + 0.5 - cam.y, p.pos.getZ() + 0.5 - cam.z);
                 ps.scale(s, s, s);
                 ps.translate(-0.5f, -0.5f, -0.5f);
-                collector.submitMovingBlock(ps, p.render, 0);
+                p.render.draw(pass);
                 ps.popPose();
             }
         } finally {

@@ -11,7 +11,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.Screenshot;
 import net.minecraft.client.gui.screens.TitleScreen;
 
 /**
@@ -123,7 +122,7 @@ public final class SelfTest {
         if (captureLeft <= 0) return;
         Path out = Path.of(OUT, "frames", captureName, String.format("f%04d.png", captureFrame++));
         captureLeft--;
-        Screenshot.takeScreenshot(mc.gameRenderer.mainRenderTarget(), (NativeImage img) -> WRITER.execute(() -> {
+        TestCompat.screenshot(mc.gameRenderer.mainRenderTarget(), (NativeImage img) -> WRITER.execute(() -> {
             try (img) {
                 Files.createDirectories(out.getParent());
                 img.writeToFile(out);
@@ -171,7 +170,7 @@ public final class SelfTest {
         } catch (InterruptedException ignored) {
         }
         String json = String.format("{\"loader\":\"%s\",\"mc\":\"%s\",\"results\":[%s]}%n",
-            "fabric", net.minecraft.SharedConstants.getCurrentVersion().name(), String.join(",", RESULTS));
+            "fabric", TestCompat.versionName(), String.join(",", RESULTS));
         try {
             Files.createDirectories(Path.of(OUT));
             Files.writeString(Path.of(OUT, "results.json"), json);

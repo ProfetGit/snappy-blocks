@@ -3,6 +3,7 @@ package io.github.profetgit.snappyblocks.pop;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import it.unimi.dsi.fastutil.longs.LongSets;
+import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -18,6 +19,8 @@ import net.minecraft.world.level.block.state.BlockState;
 public final class Hidden {
     private static final LongOpenHashSet SET = new LongOpenHashSet();
     private static LongSet snapshot;
+    /** Before 1.21.2: Util.getNanos() when a mesh region of a section was made (render thread), read when that section's mesh is live. */
+    private static final ConcurrentHashMap<Long, Long> COMPILE_STARTS = new ConcurrentHashMap<>();
 
     private Hidden() {}
 
@@ -32,6 +35,16 @@ public final class Hidden {
     static void clear() {
         SET.clear();
         snapshot = null;
+        COMPILE_STARTS.clear();
+    }
+
+    public static void compileStarted(long sectionNode, long ns) {
+        COMPILE_STARTS.put(sectionNode, ns);
+    }
+
+    public static long compileStart(long sectionNode) {
+        Long ns = COMPILE_STARTS.get(sectionNode);
+        return ns == null ? 0 : ns;
     }
 
     public static boolean isEmpty() {

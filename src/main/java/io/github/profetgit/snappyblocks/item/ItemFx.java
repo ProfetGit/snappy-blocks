@@ -14,7 +14,6 @@ import java.util.Arrays;
 import java.util.Iterator;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.renderer.entity.state.ItemEntityRenderState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
@@ -242,8 +241,8 @@ public final class ItemFx {
     }
 
     /** ItemEntityRenderer.extractRenderState: the throw offset, the hop and the squash. */
-    public static void extract(ItemEntity e, ItemEntityRenderState state) {
-        ((ItemFxState) state).snappy_blocks$squash(1, 1);
+    public static void extract(ItemEntity e, ItemPose state) {
+        state.squash(1, 1);
         if (TRACKED.isEmpty()) return;
         Tracked t = TRACKED.get(e.getId());
         if (t == null) return;
@@ -259,7 +258,7 @@ public final class ItemFx {
                 state.y += (t.hy - 0.2 - state.y) * k;
                 state.z += (t.hz - state.z) * k;
                 float grow = (float) (1 - 0.75 * k);
-                ((ItemFxState) state).snappy_blocks$squash(grow, grow);
+                state.squash(grow, grow);
             }
         }
         if (Double.isNaN(t.landedAt)) return;
@@ -271,12 +270,12 @@ public final class ItemFx {
         }
         if (dt < SQUASH_TICKS) {
             double s = Math.sin(Math.PI * dt / SQUASH_TICKS) * amp;
-            ((ItemFxState) state).snappy_blocks$squash((float) (1 + 0.06 * s), (float) (1 - 0.12 * s));
+            state.squash((float) (1 + 0.06 * s), (float) (1 - 0.12 * s));
         } else {
             double v = (dt - SQUASH_TICKS) / HOP_TICKS;
             state.y += Tune.get(LAND_HOP) * amp * 4 * v * (1 - v);
             double s = Math.sin(Math.PI * v) * amp;
-            ((ItemFxState) state).snappy_blocks$squash((float) (1 - 0.02 * s), (float) (1 + 0.04 * s));
+            state.squash((float) (1 - 0.02 * s), (float) (1 + 0.04 * s));
         }
     }
 }

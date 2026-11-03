@@ -4,16 +4,11 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import io.github.profetgit.snappyblocks.Clock;
 import io.github.profetgit.snappyblocks.Compat;
 import io.github.profetgit.snappyblocks.Config;
+import io.github.profetgit.snappyblocks.RenderPass;
 import io.github.profetgit.snappyblocks.Tune;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
-import net.minecraft.client.renderer.entity.state.EntityRenderState;
-import net.minecraft.client.renderer.entity.state.ItemEntityRenderState;
-import net.minecraft.client.renderer.state.level.CameraRenderState;
-import net.minecraft.client.renderer.state.level.LevelRenderState;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.HumanoidArm;
@@ -22,7 +17,6 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
@@ -56,7 +50,7 @@ public final class Ghosts {
     enum Kind { PICKUP, SLOT, PENDING, MERGE, DESPAWN }
 
     static final class Ghost {
-        final ItemEntityRenderState state;
+        final GhostItem item;
         final ItemStack stack;
         final int entityId;
         Kind kind;
@@ -75,8 +69,8 @@ public final class Ghosts {
         final double born = Clock.now();
         float age0;
 
-        Ghost(ItemEntityRenderState state, ItemStack stack, int entityId) {
-            this.state = state;
+        Ghost(GhostItem item, ItemStack stack, int entityId) {
+            this.item = item;
             this.stack = stack;
             this.entityId = entityId;
         }
@@ -116,30 +110,15 @@ public final class Ghosts {
     }
 
     private static Ghost ghost(ItemEntity e, int count) {
-        Minecraft mc = Minecraft.getInstance();
-        float pt = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
-        EntityRenderState s = mc.getEntityRenderDispatcher().extractEntity(e, pt);
-        if (!(s instanceof ItemEntityRenderState state)) return null;
-        ((ItemFxState) state).snappy_blocks$squash(1, 1);
-        state.shadowPieces.clear();
-        state.shadowRadius = 0;
-        state.outlineColor = 0;
-        // a partial pickup flies a split copy
-        if (count > 0 && count < e.getItem().getCount()) state.count = 1;
-        Ghost g = new Ghost(state, e.getItem().copy(), e.getId());
-        g.age0 = state.ageInTicks;
-        double lift = lift(state);
-        g.sx = g.lx = state.x;
-        g.sy = g.ly = state.y + lift;
-        g.sz = g.lz = state.z;
+        GhostItem item = GhostItem.capture(e, count);
+        if (item == null) return null;
+        Ghost g = new Ghost(item, e.getItem().copy(), e.getId());
+        g.age0 = item.age0;
+        double lift = item.lift();
+        g.sx = g.lx = item.x;
+        g.sy = g.ly = item.y + lift;
+        g.sz = g.lz = item.z;
         return g;
-    }
-
-    /** Height of the item's visual centre above its feet, as ItemEntityRenderer draws it (bob included). */
-    private static double lift(ItemEntityRenderState s) {
-        AABB box = s.item.getModelBoundingBox();
-        double bob = Mth.sin(s.ageInTicks / 10.0F + s.bobOffset) * 0.1F + 0.1F;
-        return bob + 0.0625 + box.getYsize() / 2;
     }
 
     /**
@@ -279,7 +258,7 @@ public final class Ghosts {
         for (Ghost g : GHOSTS) {
             if (g.kind != Kind.PENDING || g.entityId == target.getId()) continue;
             if (!ItemStack.isSameItemSameComponents(g.stack, target.getItem())) continue;
-            double dx = target.getX() - g.sx, dz = target.getZ() - g.sz, dy = target.getY() - (g.sy - lift(g.state));
+            double dx = target.getX() - g.sx, dz = target.getZ() - g.sz, dy = target.getY() - (g.sy - g.item.lift());
             if (dx * dx + dy * dy + dz * dz > 1.5 * 1.5) continue;
             g.kind = Kind.MERGE;
             g.target = target;
@@ -337,19 +316,19 @@ public final class Ghosts {
     }
 
     /** With the pops, in the transient-block pass. */
-    public static void submit(PoseStack ps, SubmitNodeCollector collector, LevelRenderState level) {
+    public static void submit(RenderPass pass) {
         if (GHOSTS.isEmpty()) return;
         Minecraft mc = Minecraft.getInstance();
-        CameraRenderState cam = level.cameraRenderState;
+        PoseStack ps = pass.ps;
+        Vec3 cam = pass.cam;
         double now = Clock.now();
         partial = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
-        EntityRenderDispatcher dispatcher = mc.getEntityRenderDispatcher();
         for (Ghost g : GHOSTS) {
             if (g.kind == null) continue;
             double u = g.u(now);
             if (g.kind != Kind.PENDING && u >= 1) continue;
-            ItemEntityRenderState s = g.state;
-            s.ageInTicks = (float) (g.age0 + now - g.born); // spin and bob go on
+            GhostItem s = g.item;
+            s.age((float) (g.age0 + now - g.born)); // spin and bob go on
             double cx = g.sx, cy = g.sy, cz = g.sz, scale = g.s0;
             switch (g.kind) {
                 case PICKUP -> {
@@ -363,10 +342,10 @@ public final class Ghosts {
                     scale += (0.45 - scale) * e;
                 }
                 case SLOT -> {
-                    if (!slotPoint(mc, cam, g.slot)) continue;
-                    double tx = cam.pos.x + V3.x * SLOT_DEPTH, ty = cam.pos.y + V3.y * SLOT_DEPTH, tz = cam.pos.z + V3.z * SLOT_DEPTH;
-                    double size = Math.max(s.item.getModelBoundingBox().getXsize(), s.item.getModelBoundingBox().getYsize());
-                    double k = 32 * SLOT_DEPTH / (Math.max(0.1, size) * cam.projectionMatrix.m11() * mc.getWindow().getGuiScaledHeight());
+                    if (!slotPoint(mc, pass, g.slot)) continue;
+                    double tx = cam.x + V3.x * SLOT_DEPTH, ty = cam.y + V3.y * SLOT_DEPTH, tz = cam.z + V3.z * SLOT_DEPTH;
+                    double size = s.size();
+                    double k = 32 * SLOT_DEPTH / (Math.max(0.1, size) * pass.projection.m11() * mc.getWindow().getGuiScaledHeight());
                     double e = u * u * (3 - 2 * u);
                     cx += (tx - cx) * e;
                     cy += (ty - cy) * e + SLOT_ARC * 4 * u * (1 - u);
@@ -375,7 +354,7 @@ public final class Ghosts {
                 }
                 case MERGE -> {
                     Entity t = g.target;
-                    double tx = Mth.lerp(partial, t.xo, t.getX()), ty = Mth.lerp(partial, t.yo, t.getY()) + lift(s), tz = Mth.lerp(partial, t.zo, t.getZ());
+                    double tx = Mth.lerp(partial, t.xo, t.getX()), ty = Mth.lerp(partial, t.yo, t.getY()) + s.lift(), tz = Mth.lerp(partial, t.zo, t.getZ());
                     double e = u * u * (3 - 2 * u);
                     cx += (tx - cx) * e;
                     cy += (ty - cy) * e;
@@ -391,11 +370,11 @@ public final class Ghosts {
             g.lz = cz;
             g.ls = scale;
             if (scale <= 0.001) continue;
-            double lift = lift(s);
+            double lift = s.lift();
             ps.pushPose();
-            ps.translate(cx - cam.pos.x, cy - cam.pos.y, cz - cam.pos.z);
+            ps.translate(cx - cam.x, cy - cam.y, cz - cam.z);
             ps.scale((float) scale, (float) scale, (float) scale);
-            dispatcher.submit(s, cam, 0, -lift, 0, ps, collector);
+            s.draw(pass, lift, cx, cy, cz);
             ps.popPose();
         }
     }
@@ -404,7 +383,7 @@ public final class Ghosts {
      * The direction from the eye through the centre of a hotbar slot, into {@link #V3}. Unprojects the slot's screen
      * point with this frame's projection and view rotation, so the flight end follows the camera.
      */
-    private static boolean slotPoint(Minecraft mc, CameraRenderState cam, int slot) {
+    private static boolean slotPoint(Minecraft mc, RenderPass pass, int slot) {
         int w = mc.getWindow().getGuiScaledWidth(), h = mc.getWindow().getGuiScaledHeight();
         double gx, gy = h - 19 + 8;
         if (slot == Inventory.SLOT_OFFHAND) {
@@ -415,11 +394,11 @@ public final class Ghosts {
             gx = w / 2 - 90 + slot * 20 + 2 + 8;
         }
         float nx = (float) (gx / w * 2 - 1), ny = (float) (1 - gy / h * 2);
-        INV.set(cam.projectionMatrix).invert();
+        INV.set(pass.projection).invert();
         V4.set(nx, ny, 0.5f, 1).mul(INV);
         if (V4.w == 0) return false;
         V3.set(V4.x / V4.w, V4.y / V4.w, V4.z / V4.w);
-        INV.set(cam.viewRotationMatrix).invert();
+        INV.set(pass.viewRotation).invert();
         INV.transformDirection(V3);
         V3.normalize();
         return Float.isFinite(V3.x);

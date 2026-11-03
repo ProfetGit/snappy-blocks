@@ -5,6 +5,7 @@ import io.github.profetgit.snappyblocks.Clock;
 import io.github.profetgit.snappyblocks.Compat;
 import io.github.profetgit.snappyblocks.Config;
 import io.github.profetgit.snappyblocks.Probe;
+import io.github.profetgit.snappyblocks.RenderPass;
 import io.github.profetgit.snappyblocks.SnappyBlocks;
 import io.github.profetgit.snappyblocks.Tune;
 import io.github.profetgit.snappyblocks.burst.Bursts;
@@ -17,10 +18,12 @@ import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.renderer.SubmitNodeCollector;
+//? if >=1.21.2 {
 import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
 import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
-import net.minecraft.client.renderer.state.level.LevelRenderState;
+//?} else {
+/*import net.minecraft.client.resources.model.BakedModel;
+*///?}
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.SectionPos;
@@ -184,7 +187,7 @@ public final class Pops {
                 cancel(p);
             } else {
                 p.state = now;
-                p.render.blockState = now;
+                p.render.state(now);
             }
             return;
         }
@@ -237,7 +240,7 @@ public final class Pops {
      * pop: the mesher drops a hidden block's block entity from the section, so the renderer part would vanish.
      */
     static Kind kind(BlockPos pos, BlockState s) {
-        if (s.getRenderShape() != RenderShape.MODEL) return Kind.NONE;
+        if (!drawnLikeModel(s)) return Kind.NONE;
         if (!s.hasBlockEntity()) return eligible(s) ? Kind.MESH : Kind.NONE;
         Minecraft mc = Minecraft.getInstance();
         BlockEntity be = mc.level == null ? null : mc.level.getBlockEntity(pos);
@@ -245,6 +248,16 @@ public final class Pops {
         boolean quads = hasQuads(s);
         if (!renderer) return quads && (!ShaderPack.active() || s.canOcclude() && s.getLightEmission() == 0) ? Kind.MESH : Kind.NONE;
         return quads ? Kind.NONE : Kind.ENTITY;
+    }
+
+    /** Chests, banners and the like: MODEL (with an empty model) in 26.x, ENTITYBLOCK_ANIMATED or INVISIBLE (banner) before 1.21.2. */
+    public static boolean drawnLikeModel(BlockState s) {
+//? if >=1.21.2 {
+        return s.getRenderShape() == RenderShape.MODEL;
+//?} else {
+/*        RenderShape shape = s.getRenderShape();
+        return shape == RenderShape.MODEL || (shape == RenderShape.ENTITYBLOCK_ANIMATED || shape == RenderShape.INVISIBLE) && s.hasBlockEntity();
+*///?}
     }
 
     /** Whether a placement of {@code s} at {@code pos} pops (test hook). */
@@ -255,14 +268,21 @@ public final class Pops {
     /** Whether the block's own model draws anything (a chest's is only a particle texture). */
     public static boolean hasQuads(BlockState s) {
         if (QUADS.containsKey(s)) return QUADS.getBoolean(s);
+        boolean any = false;
+//? if >=1.21.2 {
         BlockStateModel model = Minecraft.getInstance().getModelManager().getBlockStateModelSet().get(s);
         List<BlockStateModelPart> parts = new ArrayList<>();
         model.collectParts(RandomSource.create(42), parts);
-        boolean any = false;
         for (BlockStateModelPart part : parts) {
             if (!part.getQuads(null).isEmpty()) any = true;
             for (Direction d : Direction.values()) if (!part.getQuads(d).isEmpty()) any = true;
         }
+//?} else {
+/*        BakedModel model = Minecraft.getInstance().getBlockRenderer().getBlockModel(s);
+        RandomSource random = RandomSource.create(42);
+        if (!model.getQuads(s, null, random).isEmpty()) any = true;
+        for (Direction d : Direction.values()) if (!model.getQuads(s, d, random).isEmpty()) any = true;
+*///?}
         QUADS.put(s, any);
         return any;
     }
@@ -308,13 +328,7 @@ public final class Pops {
         Pop p = new Pop(pos, state, t0, px, py, pz);
         p.entity = kind == Kind.ENTITY;
         p.regrow = mode == REGROW;
-        p.render.blockPos = pos;
-        p.render.randomSeedPos = pos;
-        p.render.blockState = state;
-        p.render.biome = level.getBiome(pos);
-        p.render.cardinalLighting = level.cardinalLighting();
-        p.render.lightEngine = level.getLightEngine();
-        p.render.level = level;
+        p.render.init(level, pos, state);
         POPS.put(pos.asLong(), p);
         if (p.entity) entityPops++;
         else Hidden.add(pos.asLong());
@@ -428,13 +442,14 @@ public final class Pops {
         return 1;
     }
 
-    /** LevelRenderer.submitTransientBlocks TAIL: the copies, in the same pass as vanilla's own transient blocks. */
-    public static void submit(PoseStack ps, SubmitNodeCollector collector, LevelRenderState state) {
+    /** The copies, drawn after the terrain and the entities (26.3: in the same pass as vanilla's own transient blocks). */
+    public static void submit(RenderPass pass) {
         long t0 = System.nanoTime();
         try {
             update();
             if (POPS.isEmpty()) return;
-            Vec3 cam = state.cameraRenderState.pos;
+            PoseStack ps = pass.ps;
+            Vec3 cam = pass.cam;
             double now = Clock.now();
             for (Pop p : POPS.values()) {
                 if (p.entity) continue;
@@ -446,7 +461,7 @@ public final class Pops {
                     ps.scale((float) s, (float) s, (float) s);
                     ps.translate(-p.px, -p.py, -p.pz);
                 }
-                collector.submitMovingBlock(ps, p.render, 0);
+                p.render.draw(pass);
                 ps.popPose();
             }
         } finally {

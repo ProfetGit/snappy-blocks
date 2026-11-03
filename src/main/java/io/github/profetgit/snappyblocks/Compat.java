@@ -7,8 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import net.fabricmc.loader.api.FabricLoader;
-import net.fabricmc.loader.api.ModContainer;
+import io.github.profetgit.snappyblocks.platform.Platform.ModInfo;
 import net.minecraft.world.entity.Entity;
 
 /**
@@ -38,8 +37,15 @@ public final class Compat {
     private Compat() {}
 
     static void detect() {
-        for (ModContainer mod : FabricLoader.getInstance().getAllMods()) {
-            String id = mod.getMetadata().getId(), name = mod.getMetadata().getName().toLowerCase(Locale.ROOT).trim();
+//? if <1.21.2 {
+        /*// Sodium meshes on its own: the hide path isn't wired to it before 1.21.2 (untested there), so the pop and pulse stand aside
+        if (SnappyBlocks.platform().isModLoaded("sodium")) {
+            placeAside = true;
+            SnappyBlocks.LOG.info("Snappy Blocks: Sodium is installed, not supported on this Minecraft version: place pop and mining pulse stand aside");
+        }
+        *///?}
+        for (ModInfo mod : SnappyBlocks.platform().mods()) {
+            String id = mod.id(), name = mod.name().toLowerCase(Locale.ROOT).trim();
             if (PLACE_IDS.contains(id) || PLACE_NAMES.contains(name)) {
                 placeAside = true;
                 found(mod, "our place pop and mining pulse stand aside");
@@ -68,9 +74,9 @@ public final class Compat {
         }
     }
 
-    private static void found(ModContainer mod, String what) {
-        found.add(mod.getMetadata().getId());
-        SnappyBlocks.LOG.info("Snappy Blocks: {} ({}) is installed: {}", mod.getMetadata().getName(), mod.getMetadata().getId(), what);
+    private static void found(ModInfo mod, String what) {
+        found.add(mod.id());
+        SnappyBlocks.LOG.info("Snappy Blocks: {} ({}) is installed: {}", mod.name(), mod.id(), what);
     }
 
     /** True while Having a Blast keeps this item hidden. */

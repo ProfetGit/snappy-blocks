@@ -1,8 +1,9 @@
 package io.github.profetgit.snappyblocks.mixin;
 
+import org.spongepowered.asm.mixin.Mixin;
+//? if >=1.21.2 {
 import io.github.profetgit.snappyblocks.item.ItemFxState;
 import net.minecraft.client.renderer.entity.state.ItemEntityRenderState;
-import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 
 @Mixin(ItemEntityRenderState.class)
@@ -26,3 +27,9 @@ public abstract class ItemEntityRenderStateMixin implements ItemFxState {
         snappy_blocks$sy = sy;
     }
 }
+//?} else {
+/*// item entities have no render state before 1.21.2 (ItemEntityRendererMixin): nothing to add
+@Mixin(net.minecraft.client.Minecraft.class)
+public abstract class ItemEntityRenderStateMixin {
+}
+*///?}
