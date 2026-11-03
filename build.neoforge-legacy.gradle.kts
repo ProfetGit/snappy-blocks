@@ -55,6 +55,8 @@ tasks.processResources {
 
 tasks.named<Jar>("jar") {
     from(rootProject.file("LICENSE"))
+    // compile-time stand-ins for Sodium classes (src/main/java/net/caffeinemc): the real ones come from Sodium
+    exclude("net/caffeinemc/**")
 }
 
 repositories {

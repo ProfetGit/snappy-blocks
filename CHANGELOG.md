@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.15 — 2026-11-03
+
+- Fixed: on NeoForge and Forge 1.21.1 the game crashed at launch next to Sodium ("Modules sodium and snappy_blocks export package net.caffeinemc.mods.sodium.client.render.chunk"). The jar carried Sodium placeholder classes it only needs while compiling; they are gone from every jar now.
+
 ## 0.0.14 — 2026-11-03
 
 Snappy Blocks now runs on **Minecraft 1.21.1** too, on Fabric, Quilt, NeoForge and Forge. The Fabric 26.3 build is not part of this release.

@@ -86,3 +86,4 @@ tasks.register('publishForTests', Copy) {
     into file('../versions/1.21.1-forge/build/libs')
 }
 jar { archiveClassifier = 'slim' }
+tasks.withType(Jar).configureEach { exclude 'net/caffeinemc/**' }  // compile-time stand-ins; the real classes come from Sodium
