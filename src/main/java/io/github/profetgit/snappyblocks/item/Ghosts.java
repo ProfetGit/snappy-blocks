@@ -265,21 +265,41 @@ public final class Ghosts {
         return mc.player.position().distanceToSqr(at) < range * range;
     }
 
-    /** ClientPacketListener.handleSetEntityData: a stack grew; a ghost of the same item right next to it merged into it. */
-    public static void grew(ItemEntity target) {
+    /** Widest merge slide: servers can widen the merge radius (Get It Together, Drops!), vanilla merges within ~1 block. */
+    static final double MERGE_RANGE = 48;
+
+    /**
+     * ClientPacketListener.handleSetEntityData: a stack grew by {@code growth}; ghosts of the same item that are waiting
+     * for it (nearest first, while the growth covers their count) merged into it, however far away they were.
+     */
+    public static void grew(ItemEntity target, int growth) {
         if (GHOSTS.isEmpty()) return;
+        List<Ghost> hits = new ArrayList<>();
         for (Ghost g : GHOSTS) {
             if (g.kind != Kind.PENDING || g.entityId == target.getId()) continue;
             if (!ItemStack.isSameItemSameComponents(g.stack, target.getItem())) continue;
-            double dx = target.getX() - g.sx, dz = target.getZ() - g.sz, dy = target.getY() - (g.sy - g.item.lift());
-            if (dx * dx + dy * dy + dz * dz > 1.5 * 1.5) continue;
+            if (distSq(g, target) > MERGE_RANGE * MERGE_RANGE) continue;
+            hits.add(g);
+        }
+        if (hits.isEmpty()) return;
+        hits.sort((x, y) -> Double.compare(distSq(x, target), distSq(y, target)));
+        int left = growth;
+        for (Ghost g : hits) {
+            int c = Math.max(1, g.stack.getCount());
+            if (c > left) continue;
+            left -= c;
             g.kind = Kind.MERGE;
             g.target = target;
             g.t0 = Clock.now();
-            g.dur = Math.max(1, Tune.get(MERGE_TICKS));
+            g.dur = Math.max(1, Tune.get(MERGE_TICKS)) + Math.min(6, Math.sqrt(distSq(g, target)) / 6);
             merges++;
-            return;
+            if (left <= 0) return;
         }
+    }
+
+    private static double distSq(Ghost g, ItemEntity target) {
+        double dx = target.getX() - g.sx, dz = target.getZ() - g.sz, dy = target.getY() - (g.sy - g.item.lift());
+        return dx * dx + dy * dy + dz * dz;
     }
 
     /** End of a client tick: settle pending removals, land arrivals, drop finished ghosts. */

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.23 — 2026-11-04
+
+- **Fix: works with Get It Together, Drops!** (and any server that merges dropped items over a wider area). Items that merge into a stack farther away now slide into it instead of shrinking away.
+
 ## 0.0.22 — 2026-11-04
 
 - **New: Minecraft 26.3 on NeoForge and Forge.** Same effects as the Fabric build: place pop, mining pulse, break burst and item effects.

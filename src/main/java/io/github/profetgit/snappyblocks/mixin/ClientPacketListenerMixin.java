@@ -63,7 +63,10 @@ public abstract class ClientPacketListenerMixin {
 
     @Inject(method = "handleSetEntityData", at = @At("TAIL"))
     private void snappy_blocks$data(ClientboundSetEntityDataPacket packet, CallbackInfo ci) {
-        if (level != null && level.getEntity(packet.id()) instanceof ItemEntity item && ItemFx.stackChanged(item) > 0) Ghosts.grew(item);
+        if (level != null && level.getEntity(packet.id()) instanceof ItemEntity item) {
+            int growth = ItemFx.stackChanged(item);
+            if (growth > 0) Ghosts.grew(item, growth);
+        }
     }
 
     @Inject(method = "handleContainerSetSlot", at = @At(value = "INVOKE", target = "Lnet/minecraft/network/protocol/PacketUtils;ensureRunningOnSameThread(Lnet/minecraft/network/protocol/Packet;Lnet/minecraft/network/PacketListener;Lnet/minecraft/network/PacketProcessor;)V", shift = At.Shift.AFTER))
