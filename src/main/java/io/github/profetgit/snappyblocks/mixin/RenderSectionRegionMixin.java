@@ -2,9 +2,13 @@ package io.github.profetgit.snappyblocks.mixin;
 
 import io.github.profetgit.snappyblocks.pop.HiddenRegion;
 import it.unimi.dsi.fastutil.longs.LongSet;
-import net.minecraft.client.renderer.chunk.RenderSectionRegion;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
+//? if >=1.21 {
+import net.minecraft.client.renderer.chunk.RenderSectionRegion;
+//?} else {
+/*import net.minecraft.client.renderer.chunk.RenderChunkRegion;
+*///?}
 
 /**
  * The hidden positions a mesh region was created with. The region itself still reads every block as it is, so the
@@ -12,7 +16,11 @@ import org.spongepowered.asm.mixin.Unique;
  * the hand-off); SectionCompilerMixin and ModelBlockRendererMixin leave out only its own geometry and the culling
  * against it.
  */
+//? if >=1.21 {
 @Mixin(RenderSectionRegion.class)
+//?} else {
+/*@Mixin(RenderChunkRegion.class)
+*///?}
 public abstract class RenderSectionRegionMixin implements HiddenRegion {
     @Unique
     private LongSet snappy_blocks$hidden;

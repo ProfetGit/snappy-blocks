@@ -4,6 +4,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.vertex.PoseStack;
+import io.github.profetgit.snappyblocks.Probe;
 import io.github.profetgit.snappyblocks.RenderPass;
 import io.github.profetgit.snappyblocks.burst.Bursts;
 import io.github.profetgit.snappyblocks.item.Ghosts;
@@ -22,9 +23,8 @@ import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.state.level.LevelRenderState;
 import net.minecraft.world.phys.Vec3;
-//?} else {
-/*import io.github.profetgit.snappyblocks.Probe;
-import io.github.profetgit.snappyblocks.pop.Hidden;
+//?} else if >=1.21 {
+/*import io.github.profetgit.snappyblocks.pop.Hidden;
 import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.renderer.GameRenderer;
@@ -33,6 +33,22 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher;
 import net.minecraft.client.renderer.chunk.SectionRenderDispatcher;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.core.SectionPos;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.BlockAndTintGetter;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import org.joml.Matrix4f;
+*///?} else {
+/*import io.github.profetgit.snappyblocks.pop.Hidden;
+import net.minecraft.client.Camera;
+import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.block.BlockRenderDispatcher;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher;
+import net.minecraft.client.renderer.chunk.ChunkRenderDispatcher;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.core.SectionPos;
 import net.minecraft.world.entity.Entity;
@@ -76,6 +92,7 @@ public abstract class LevelRendererMixin {
     @WrapOperation(method = "submitBlockDestroyAnimation", at = @At(value = "INVOKE",
         target = "Lcom/mojang/blaze3d/vertex/PoseStack;translate(Lnet/minecraft/world/phys/Vec3;)V"))
     private void snappy_blocks$crack(PoseStack ps, Vec3 offset, Operation<Void> original, @Local BlockPos pos) {
+        Probe.cracks++;
         Pops.transform(ps, pos);
         Pulses.transform(ps, pos);
         original.call(ps, offset);
@@ -84,11 +101,12 @@ public abstract class LevelRendererMixin {
     /** The selection outline follows the block too. */
     @WrapOperation(method = "submitBlockOutline", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/vertex/PoseStack;translate(DDD)V"))
     private void snappy_blocks$outline(PoseStack ps, double x, double y, double z, Operation<Void> original, @Local BlockPos pos) {
+        Probe.outlines++;
         original.call(ps, x, y, z);
         Pops.transform(ps, pos);
         Pulses.transform(ps, pos);
     }
-//?} else {
+//?} else if >=1.21 {
 /*    // no transient blocks before 1.21.2: a section mesh is live when its upload is done (setCompiled -> here)
     @Inject(method = "addRecentlyCompiledSection", at = @At("HEAD"))
     private void snappy_blocks$meshLive(SectionRenderDispatcher.RenderSection section, CallbackInfo ci) {
@@ -131,6 +149,7 @@ public abstract class LevelRendererMixin {
         target = "Lnet/minecraft/client/renderer/block/BlockRenderDispatcher;renderBreakingTexture(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/BlockAndTintGetter;Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;)V"))
     private void snappy_blocks$crack(BlockRenderDispatcher dispatcher, BlockState state, BlockPos pos, BlockAndTintGetter level, PoseStack ps, VertexConsumer consumer,
         Operation<Void> original) {
+        Probe.cracks++;
         Pops.transform(ps, pos);
         Pulses.transform(ps, pos);
         original.call(dispatcher, state, pos, level, ps, consumer);
@@ -141,6 +160,71 @@ public abstract class LevelRendererMixin {
         target = "Lnet/minecraft/client/renderer/LevelRenderer;renderHitOutline(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;Lnet/minecraft/world/entity/Entity;DDDLnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)V"))
     private void snappy_blocks$outline(LevelRenderer self, PoseStack ps, VertexConsumer consumer, Entity entity, double x, double y, double z, BlockPos pos, BlockState state,
         Operation<Void> original) {
+        Probe.outlines++;
+        double dx = pos.getX() - x, dy = pos.getY() - y, dz = pos.getZ() - z;
+        ps.pushPose();
+        ps.translate(dx, dy, dz);
+        Pops.transform(ps, pos);
+        Pulses.transform(ps, pos);
+        ps.translate(-dx, -dy, -dz);
+        original.call(self, ps, consumer, entity, x, y, z, pos, state);
+        ps.popPose();
+    }
+*///?} else {
+/*    // no transient blocks before 1.21.2: a chunk mesh is live when its upload is done (setCompiled -> here)
+    @Inject(method = "addRecentlyCompiledChunk", at = @At("HEAD"))
+    private void snappy_blocks$meshLive(ChunkRenderDispatcher.RenderChunk section, CallbackInfo ci) {
+        long node = SectionPos.asLong(section.getOrigin());
+        long start = Hidden.compileStart(node);
+        Pops.meshLive(node, start);
+        Bursts.meshLive(node, start);
+    }
+
+    @Inject(method = "levelEvent", at = @At("HEAD"))
+    private void snappy_blocks$event(int type, BlockPos pos, int data, CallbackInfo ci) {
+        Probe.levelEvent(type, pos, data);
+        Bursts.levelEvent(type, pos, data);
+    }
+
+    // after the entities, before their buffers are flushed: the copies, items in flight and the block-entity pops share vanilla's batches
+    @Inject(method = "renderLevel", at = @At(value = "INVOKE", ordinal = 0,
+        target = "Lnet/minecraft/client/renderer/MultiBufferSource$BufferSource;endLastBatch()V"))
+    private void snappy_blocks$submit(PoseStack ps, float partial, long finishNanos, boolean outline, Camera camera, GameRenderer renderer, LightTexture light,
+        Matrix4f projection, CallbackInfo ci, @Local MultiBufferSource.BufferSource buffers) {
+        RenderPass pass = new RenderPass(ps, buffers, camera.getPosition(), projection, new Matrix4f(ps.last().pose()));
+        Pops.submit(pass);
+        Pulses.submit(pass);
+        Bursts.submit(pass);
+        long t0 = System.nanoTime();
+        Ghosts.submit(pass);
+        Ghosts.spentNanos += System.nanoTime() - t0;
+        pass.flush();
+    }
+
+    @WrapOperation(method = "renderLevel", at = @At(value = "INVOKE",
+        target = "Lnet/minecraft/client/renderer/blockentity/BlockEntityRenderDispatcher;render(Lnet/minecraft/world/level/block/entity/BlockEntity;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;)V"))
+    private void snappy_blocks$blockEntity(BlockEntityRenderDispatcher dispatcher, BlockEntity entity, float partial, PoseStack ps, MultiBufferSource buffers,
+        Operation<Void> original) {
+        Pops.transform(ps, entity.getBlockPos());
+        original.call(dispatcher, entity, partial, ps, buffers);
+    }
+
+    @WrapOperation(method = "renderLevel", require = 0, at = @At(value = "INVOKE",
+        target = "Lnet/minecraft/client/renderer/block/BlockRenderDispatcher;renderBreakingTexture(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/BlockAndTintGetter;Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;)V"))
+    private void snappy_blocks$crack(BlockRenderDispatcher dispatcher, BlockState state, BlockPos pos, BlockAndTintGetter level, PoseStack ps, VertexConsumer consumer,
+        Operation<Void> original) {
+        Probe.cracks++;
+        Pops.transform(ps, pos);
+        Pulses.transform(ps, pos);
+        original.call(dispatcher, state, pos, level, ps, consumer);
+    }
+
+    // renderHitOutline takes the block's offset from the camera as arguments, not from the pose: scale about the block there
+    @WrapOperation(method = "renderLevel", at = @At(value = "INVOKE",
+        target = "Lnet/minecraft/client/renderer/LevelRenderer;renderHitOutline(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;Lnet/minecraft/world/entity/Entity;DDDLnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)V"))
+    private void snappy_blocks$outline(LevelRenderer self, PoseStack ps, VertexConsumer consumer, Entity entity, double x, double y, double z, BlockPos pos, BlockState state,
+        Operation<Void> original) {
+        Probe.outlines++;
         double dx = pos.getX() - x, dy = pos.getY() - y, dz = pos.getZ() - z;
         ps.pushPose();
         ps.translate(dx, dy, dz);

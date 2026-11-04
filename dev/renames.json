@@ -84,5 +84,83 @@
     "regex": "net/minecraft/client/renderer/block/BlockAndTintGetter",
     "to": "net/minecraft/world/level/BlockAndTintGetter",
     "when": "<26.2"
+  },
+  {
+    "regex": "import net\\.minecraft\\.client\\.DeltaTracker;\\n",
+    "to": "",
+    "when": "<1.21"
+  },
+  {
+    "regex": "DeltaTracker delta",
+    "to": "float delta",
+    "when": "<1.21"
+  },
+  {
+    "regex": "mc\\.level\\.tickRateManager\\(\\)\\.runsNormally\\(\\)",
+    "to": "true",
+    "when": "<1.21"
+  },
+  {
+    "regex": "\\.getTimer\\(\\)\\.getGameTimeDeltaPartialTick\\(false\\)",
+    "to": ".getFrameTime()",
+    "when": "<1.21"
+  },
+  {
+    "regex": "\\bMath\\.clamp\\(",
+    "to": "net.minecraft.util.Mth.clamp(",
+    "when": "<1.21"
+  },
+  {
+    "regex": "mc\\.isGameLoadFinished\\(\\)",
+    "to": "(mc.getOverlay() == null)",
+    "when": "<1.21"
+  },
+  {
+    "regex": "(\\w+(?:\\.\\w+)*)\\.shouldSpawnTerrainParticles\\(\\)",
+    "to": "($1.getRenderShape() != net.minecraft.world.level.block.RenderShape.INVISIBLE)",
+    "when": "<1.21",
+    "groups": "1"
+  },
+  {
+    "from": "isSameItemSameComponents",
+    "to": "isSameItemSameTags",
+    "when": "<1.21"
+  },
+  {
+    "regex": "(createWorldDimensions\\(\\)), mc\\.screen\\)",
+    "to": "$1)",
+    "when": "<1.21",
+    "groups": "1"
+  },
+  {
+    "regex": "\\[enchantments=\\{silk_touch:1\\}\\]",
+    "to": "{Enchantments:[{id:\\\"minecraft:silk_touch\\\",lvl:1}]}",
+    "when": "<1.21"
+  },
+  {
+    "regex": "\\[enchantments=\\{fortune:3\\}\\]",
+    "to": "{Enchantments:[{id:\\\"minecraft:fortune\\\",lvl:3}]}",
+    "when": "<1.21"
+  },
+  {
+    "regex": ",count:(\\d+)\\}",
+    "to": ",Count:$1b}",
+    "when": "<1.21",
+    "groups": "1"
+  },
+  {
+    "regex": ",count:\" \\+ count \\+ \"\\}",
+    "to": ",Count:\" + count + \"b}",
+    "when": "<1.21"
+  },
+  {
+    "regex": "\\[enchantments=\\{efficiency:5\" \\+ vm \\+ \"\\}\\]",
+    "to": "{Enchantments:[{id:\\\"minecraft:efficiency\\\",lvl:5}]}",
+    "when": "<1.21"
+  },
+  {
+    "regex": "case \"freeze\" -> freeze\\(s\\);",
+    "to": "case \"freeze\" -> s.waitTicks(1); // no /tick command before 1.20.3",
+    "when": "<1.21"
   }
 ]

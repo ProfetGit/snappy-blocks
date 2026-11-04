@@ -63,7 +63,9 @@ processResources {
     def p = [version: project.version.toString(), mc: '1.21.1', mc_next: '1.22', name: props['mod.name'],
              description: props['mod.description'], author: props['mod.author'], homepage: props['mod.homepage']]
     inputs.properties(p)
+    inputs.file(buildFile)
     filesMatching('META-INF/mods.toml') { expand(p) }
+    filesMatching('*.mixins.json') { filter { it.replace('"LevelRendererNeoForgeMixin",', '"LevelRendererNeoForgeMixin",\n    "LevelRendererForgeMixin",') } }
     filesMatching('pack.mcmeta') {
         filter { line -> line.contains('"min_format"') ? '    "pack_format": 34' : (line.contains('"max_format"') ? null : line) }
     }

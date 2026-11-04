@@ -13,6 +13,7 @@ public abstract class LevelRendererNeoForgeMixin {
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import io.github.profetgit.snappyblocks.Probe;
 import io.github.profetgit.snappyblocks.pop.Pops;
 import io.github.profetgit.snappyblocks.pulse.Pulses;
 import net.minecraft.client.renderer.LevelRenderer;
@@ -30,6 +31,7 @@ public abstract class LevelRendererNeoForgeMixin {
         target = "Lnet/minecraft/client/renderer/block/BlockRenderDispatcher;renderBreakingTexture(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/BlockAndTintGetter;Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;Lnet/neoforged/neoforge/client/model/data/ModelData;)V"))
     private void snappy_blocks$crack(BlockRenderDispatcher dispatcher, BlockState state, BlockPos pos, BlockAndTintGetter level, PoseStack ps, VertexConsumer consumer,
         ModelData modelData, Operation<Void> original) {
+        Probe.cracks++;
         Pops.transform(ps, pos);
         Pulses.transform(ps, pos);
         original.call(dispatcher, state, pos, level, ps, consumer, modelData);

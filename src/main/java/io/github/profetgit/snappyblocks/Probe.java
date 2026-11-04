@@ -12,6 +12,10 @@ import net.minecraft.world.level.block.state.BlockState;
 public final class Probe {
     private static final boolean TRACE = Boolean.getBoolean("snappy_blocks.trace");
 
+    /** Times the crack-overlay hook ran (a pulse scene proves it applies on every loader). */
+    public static int cracks;
+    /** Times the selection-outline hook ran (same proof, same scene). */
+    public static int outlines;
     public static int placed, placedPredicted, removed, removedPredicted, destroyEvents, hitEvents;
     public static BlockPos lastPlaced, lastRemoved, lastDestroyEvent, lastHitEvent;
     /** Inside ClientLevel.syncBlockState: the server corrected a prediction (a denied placement or break). */

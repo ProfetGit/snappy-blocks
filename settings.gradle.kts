@@ -20,6 +20,7 @@ stonecutter {
         fun legacy(mc: String) = version("$mc-fabric", mc).apply { buildscript = "build.fabric-legacy.gradle.kts" }
 
         legacy("1.21.1")
+        legacy("1.20.1")
         version("1.21.1-neoforge", "1.21.1").buildscript = "build.neoforge-legacy.gradle.kts"
         target("26.3", "fabric")
         vcsVersion = "26.3-fabric"

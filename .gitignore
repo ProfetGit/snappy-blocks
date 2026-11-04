@@ -18,3 +18,6 @@ versions/*/*.txt
 versions/*/crash-reports/
 dev/compat/mods/
 dev-out/
+forge-*/build/
+forge-*/run/
+forge-*/.gradle/

@@ -9,7 +9,8 @@
     "snappy_blocks.tune.pop.ticks": "{popticks}",
     "snappy_blocks.selftest.gap": "{gap}",
     "snappy_blocks.selftest.rounds": "{rounds}",
-    "snappy_blocks.selftest.capture": "{capture}"
+    "snappy_blocks.selftest.capture": "{capture}",
+    "snappy_blocks.selftest.shadows": "{shadows}"
   },
   "defaults": {
     "mode": "full",
@@ -17,7 +18,8 @@
     "popticks": "",
     "gap": "8",
     "rounds": "2",
-    "capture": ""
+    "capture": "",
+    "shadows": ""
   },
   "fabric_api": false,
   "width": 1280,
@@ -92,6 +94,20 @@
             "quilt"
           ],
           "scenes": "smoke"
+        },
+        {
+          "mc": "1.20.1",
+          "loader": "fabric",
+          "scenes": "all"
+        },
+        {
+          "mc": "1.20.1",
+          "loader": [
+            "forge",
+            "neoforge",
+            "quilt"
+          ],
+          "scenes": "smoke"
         }
       ]
     },
@@ -118,6 +134,95 @@
             "quilt"
           ],
           "scenes": "smoke"
+        },
+        {
+          "mc": "1.20.1",
+          "loader": "fabric",
+          "scenes": "all"
+        },
+        {
+          "mc": "1.20.1",
+          "loader": [
+            "forge",
+            "neoforge",
+            "quilt"
+          ],
+          "scenes": "smoke"
+        }
+      ]
+    },
+    "audit": {
+      "unit": [],
+      "jobs": [
+        {
+          "mc": "26.3",
+          "loader": "fabric",
+          "scenes": [
+            "smoke",
+            "pop",
+            "pulse",
+            "burst",
+            "drops",
+            "deny",
+            "bepop",
+            "events",
+            "landing",
+            "merge",
+            "despawn",
+            "pickup",
+            "pickupwalk",
+            "config"
+          ]
+        },
+        {
+          "mc": "1.21.1",
+          "loader": [
+            "fabric",
+            "neoforge",
+            "forge",
+            "quilt"
+          ],
+          "scenes": [
+            "smoke",
+            "pop",
+            "pulse",
+            "burst",
+            "drops",
+            "deny",
+            "bepop",
+            "events",
+            "landing",
+            "merge",
+            "despawn",
+            "pickup",
+            "pickupwalk",
+            "config"
+          ]
+        },
+        {
+          "mc": "1.20.1",
+          "loader": [
+            "fabric",
+            "forge",
+            "neoforge",
+            "quilt"
+          ],
+          "scenes": [
+            "smoke",
+            "pop",
+            "pulse",
+            "burst",
+            "drops",
+            "deny",
+            "bepop",
+            "events",
+            "landing",
+            "merge",
+            "despawn",
+            "pickup",
+            "pickupwalk",
+            "config"
+          ]
         }
       ]
     }
@@ -125,7 +230,9 @@
   "addons": {
     "sodium": {
       "profile": {
-        "26.3": "Fabric 26.3"
+        "26.3": "Fabric 26.3",
+        "1.21.1": "/home/emppu/.cache/studio/addons/sodium-1.21.1",
+        "1.20.1": "/home/emppu/.cache/studio/addons/sodium-1.20.1"
       },
       "mods": [
         "sodium-*.jar"
@@ -152,8 +259,7 @@
     },
     "shaders": {
       "profile": {
-        "26.3": "Fabric 26.3",
-        "1.21.1": "/home/emppu/.cache/studio/addons/sodium-1.21.1"
+        "26.3": "Fabric 26.3"
       },
       "mods": [
         "fabric-api-*.jar",
@@ -238,6 +344,18 @@
         "snappy_stub_block_motion-*.jar"
       ],
       "packs": []
+    },
+    "iris": {
+      "profile": {
+        "1.21.1": "/home/emppu/.cache/studio/addons/iris-1.21.1",
+        "1.20.1": "/home/emppu/.cache/studio/addons/iris-1.20.1"
+      },
+      "mods": [
+        "sodium-*.jar",
+        "iris-*.jar"
+      ],
+      "packs": [],
+      "shaders": true
     }
   }
 }

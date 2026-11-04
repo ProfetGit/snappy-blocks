@@ -4,6 +4,7 @@ plugins {
 
 val mc = stonecutter.current.version
 val modId = property("mod.id") as String
+val javaVer = if (mc.startsWith("1.20")) 17 else 21
 
 version = "${property("mod.version")}+$mc-fabric"
 group = property("mod.group") as String
@@ -39,12 +40,12 @@ loom {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
+    sourceCompatibility = JavaVersion.toVersion(javaVer)
+    targetCompatibility = JavaVersion.toVersion(javaVer)
 }
 
 tasks.withType<JavaCompile>().configureEach {
-    options.release = 21
+    options.release = javaVer
     options.encoding = "UTF-8"
 }
 
@@ -62,11 +63,12 @@ tasks.processResources {
         "homepage" to project.property("mod.homepage"),
         "fabric_loader" to project.property("deps.fabric_loader"),
         "mc_range" to ((findProperty("deps.mc_range") as String?) ?: "~$mc"),
-        "java" to "21",
+        "java" to javaVer.toString(),
     )
     inputs.properties(props)
     exclude("META-INF/mods.toml", "META-INF/neoforge.mods.toml")
     filesMatching("fabric.mod.json") { expand(props) }
+    if (javaVer < 21) filesMatching("*.mixins.json") { filter { it.replace("JAVA_21", "JAVA_$javaVer") } }
 }
 
 tasks.named<Jar>("jar") {

@@ -2,6 +2,7 @@ package io.github.profetgit.snappyblocks.selftest;
 
 import io.github.profetgit.snappyblocks.Clock;
 import io.github.profetgit.snappyblocks.Probe;
+import io.github.profetgit.snappyblocks.Tune;
 import io.github.profetgit.snappyblocks.SnappyBlocks;
 import io.github.profetgit.snappyblocks.burst.Bursts;
 import io.github.profetgit.snappyblocks.pop.Hidden;
@@ -9,6 +10,7 @@ import io.github.profetgit.snappyblocks.burst.Chip;
 import io.github.profetgit.snappyblocks.item.Ghosts;
 import io.github.profetgit.snappyblocks.item.ItemFx;
 import io.github.profetgit.snappyblocks.pop.Pops;
+import io.github.profetgit.snappyblocks.pop.ShaderPack;
 import io.github.profetgit.snappyblocks.pulse.Pulses;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -234,6 +236,7 @@ final class Scenarios {
                 if (handed != started || dogs > 0) return "handed off " + handed + " of " + started + ", " + dogs + " watchdog";
                 if (Pops.active() > 0 || !Hidden.isEmpty()) return Pops.active() + " pops left, hidden set not empty";
                 if (ms > 0.25) return String.format("%.3f ms/frame > 0.25", ms);
+                if (round == 0 && Boolean.getBoolean("snappy_blocks.selftest.shadows") && Pops.shadowDrawn == 0) return "no pop copy was drawn into the shadow pass";
                 return null;
             });
         }
@@ -567,7 +570,7 @@ final class Scenarios {
      */
     private static void pulse(Script s) {
         BlockPos at = new BlockPos(0, Y, 0);
-        int[] base = new int[2];
+        int[] base = new int[4];
         s.server(srv -> {
             clearArea(srv);
             cmd(srv, "setblock 0 " + Y + " 0 minecraft:stone");
@@ -578,6 +581,12 @@ final class Scenarios {
             TestCompat.selectSlot(mc.player, 8);
             base[0] = Pulses.started;
             base[1] = Probe.hitEvents;
+            base[2] = Probe.cracks;
+            base[3] = Probe.outlines;
+        }).waitTicks(6).check("pulse_outline", mc -> {
+            // vanilla draws no selection outline with the HUD hidden, so this runs before the capture hides it
+            return Probe.outlines == base[3] ? "the selection-outline hook never ran on the targeted block" : null;
+        }).run(mc -> {
             if (!TestCompat.hudHidden(mc)) TestCompat.toggleHud(mc);
             SelfTest.startCapture("pulse", 120);
         }).waitTicks(4);
@@ -590,9 +599,14 @@ final class Scenarios {
             /*hits = pulses; // no server hit events before 1.21.2: the player's own hits are the pulses
             *///?}
             SnappyBlocks.LOG.info("[selftest] pulse: {} pulses for {} server hits, {} live", pulses, hits, Pulses.active());
-            if (hits < 10) return "only " + hits + " server hits";
-            if (pulses < hits) return pulses + " pulses for " + hits + " hits";
+            if (ShaderPack.active() && Tune.get("pulse.shaded") < 0.5) {
+                if (pulses > 0) return pulses + " pulse copies drawn under a shader pack";
+            } else {
+                if (hits < 10) return "only " + hits + " server hits";
+                if (pulses < hits) return pulses + " pulses for " + hits + " hits";
+            }
             if (Pulses.active() > 0) return Pulses.active() + " pulses left after the break";
+            if (Probe.cracks == base[2]) return "the crack-overlay hook never ran while mining";
             return null;
         });
     }
