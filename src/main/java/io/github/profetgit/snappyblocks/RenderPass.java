@@ -8,7 +8,8 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.state.level.LevelRenderState;
 //?} else {
-/*import java.util.LinkedHashSet;
+/*import io.github.profetgit.snappyblocks.pop.ShaderPack;
+import java.util.LinkedHashSet;
 import java.util.Set;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -51,7 +52,14 @@ public final class RenderPass {
     }
 
     public void flush() {
-        for (RenderType t : used) buffers.endBatch(t);
+        for (RenderType t : used) {
+            // block copies are lit like the chunk mesh when drawn in Iris's terrain phase (items and the rest stay as they are)
+            String phase = t == RenderType.solid() ? "TERRAIN_SOLID" : t == RenderType.cutout() ? "TERRAIN_CUTOUT"
+                : t == RenderType.cutoutMipped() ? "TERRAIN_CUTOUT_MIPPED" : t == RenderType.translucent() ? "TERRAIN_TRANSLUCENT" : null;
+            if (phase != null) ShaderPack.phase(phase);
+            buffers.endBatch(t);
+            if (phase != null) ShaderPack.phase(null);
+        }
     }
 *///?}
 }

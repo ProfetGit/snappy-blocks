@@ -12,6 +12,35 @@ public final class ShaderPack {
 
     private ShaderPack() {}
 
+    private static MethodHandle setPhase, notifyPhase;
+    private static Class<?> phases;
+    private static boolean phaseTried;
+
+    /**
+     * Makes Iris draw the next batch with the program of a terrain phase (TERRAIN_SOLID, TERRAIN_CUTOUT, ...), or back to the
+     * current phase for null. A copy of a block drawn in the entity phase gets the entity program and is lit differently from
+     * the chunk mesh; in the terrain phase it is lit like it. Nothing happens without Iris or a shader pack.
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public static void phase(String terrainPhase) {
+        if (!active()) return;
+        try {
+            if (!phaseTried) {
+                phaseTried = true;
+                phases = Class.forName("net.irisshaders.iris.pipeline.WorldRenderingPhase");
+                Class<?> g = Class.forName("net.irisshaders.iris.layer.GbufferPrograms");
+                setPhase = MethodHandles.publicLookup().findStatic(g, "setOverridePhase", MethodType.methodType(void.class, phases));
+                notifyPhase = MethodHandles.publicLookup().findStatic(g, "runPhaseChangeNotifier", MethodType.methodType(void.class));
+            }
+            if (setPhase == null) return;
+            setPhase.invoke(terrainPhase == null ? null : Enum.valueOf((Class<? extends Enum>) phases, terrainPhase));
+            notifyPhase.invoke();
+        } catch (Throwable t) {
+            setPhase = null;
+            SnappyBlocks.LOG.warn("Snappy Blocks: can't set Iris's rendering phase, copies keep the entity program ({})", t.toString());
+        }
+    }
+
     public static boolean active() {
         if (!tried) {
             tried = true;
