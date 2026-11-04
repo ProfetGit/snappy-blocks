@@ -29,6 +29,7 @@ public final class MixinPlugin implements IMixinConfigPlugin {
             + "Lnet/caffeinemc/mods/sodium/client/render/chunk/translucent_sorting/SortBehavior;Z)V",
         "SodiumOcclusionCacheMixin", "shouldDrawSide(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;"
             + "Lnet/minecraft/core/BlockPos;Lnet/minecraft/core/Direction;)Z",
+        "IrisShadowMixin", "renderShadows(Lnet/irisshaders/iris/mixin/LevelRendererAccessor;Lnet/minecraft/client/Camera;)V",
         "SodiumBlockRenderContextMixin", "shouldDrawSide(Lnet/minecraft/core/Direction;)Z",
         "SodiumMeshLiveMixin", "createRebuildTask(Lnet/caffeinemc/mods/sodium/client/render/chunk/RenderSection;I)"
             + "Lnet/caffeinemc/mods/sodium/client/render/chunk/compile/tasks/ChunkBuilderMeshingTask;"
@@ -47,7 +48,7 @@ public final class MixinPlugin implements IMixinConfigPlugin {
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
         if (!mixinClassName.contains(".compat.")) return true;
 //? if >=1.21.2 {
-        if (mixinClassName.endsWith(".SodiumMeshLiveMixin")) return false;
+        if (mixinClassName.endsWith(".SodiumMeshLiveMixin") || mixinClassName.endsWith(".IrisShadowMixin")) return false;
 //?}
         ClassNode node;
         try {

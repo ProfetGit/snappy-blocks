@@ -23,6 +23,7 @@
     "RenderSectionRegionMixin",
     "SectionCompilerMixin",
     "SectionCompilerNeoForgeMixin",
+    "compat.IrisShadowMixin",
     "compat.SodiumBlockRenderContextMixin",
     "compat.SodiumMeshLiveMixin",
     "compat.SodiumMeshingTaskInit6Mixin",

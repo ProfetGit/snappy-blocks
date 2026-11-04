@@ -10,6 +10,7 @@ import io.github.profetgit.snappyblocks.Tune;
 import io.github.profetgit.snappyblocks.burst.Chip;
 import io.github.profetgit.snappyblocks.pop.PopRenderState;
 import io.github.profetgit.snappyblocks.pop.Pops;
+import io.github.profetgit.snappyblocks.pop.ShaderPack;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import java.util.Iterator;
 import net.minecraft.client.Minecraft;
@@ -30,6 +31,8 @@ public final class Pulses {
     static final String PEAK = Tune.def("pulse.peak", 1.03);
     static final String TICKS = Tune.def("pulse.ticks", 2);
     static final String CHIPS = Tune.def("pulse.chips", 2);
+    /** 0: under a shader pack the bulge copy stays out (shaders light it brighter than the chunk mesh, a flicker each hit); 1: draw it anyway. */
+    static final String SHADED = Tune.def("pulse.shaded", 0);
     /** The copy never sits closer to the block than this, so it never z-fights with it (24 blocks out). */
     static final double FLOOR = 1.004;
     static final double RANGE = 24;
@@ -87,7 +90,7 @@ public final class Pulses {
         BlockState state = level.getBlockState(pos);
         if (Probe.empty(state)) return;
         BlockPos at = pos.immutable();
-        if (eligible(state) && !Pops.popping(at)) {
+        if (eligible(state) && !Pops.popping(at) && (Tune.get(SHADED) > 0.5 || !ShaderPack.active())) {
             Pulse p = new Pulse(at, state, Clock.now());
             p.render.init(level, at, state);
             PULSES.put(at.asLong(), p);

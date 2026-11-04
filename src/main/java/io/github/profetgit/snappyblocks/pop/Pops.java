@@ -98,6 +98,8 @@ public final class Pops {
     private static Direction lastFace;
     private static long lastFaceTick = -1;
 
+    /** Pop copies drawn into Iris's shadow pass (test hook). */
+    public static int shadowDrawn;
     public static int started, handedOff, watchdogs, remote, lateSounds, entityPops, regrows, denied, overCap, stopReleases;
     /** Longest time from a pop's start to its hand-off, in ticks (test hook; reset by the tests). */
     public static double maxLife;
@@ -443,6 +445,28 @@ public final class Pops {
     }
 
     /** The copies, drawn after the terrain and the entities (26.3: in the same pass as vanilla's own transient blocks). */
+    /** The copies again, into Iris's shadow pass (compat.IrisShadowMixin): no bookkeeping, only the draw. */
+    public static void submitShadow(RenderPass pass) {
+        if (POPS.isEmpty()) return;
+        PoseStack ps = pass.ps;
+        Vec3 cam = pass.cam;
+        double now = Clock.now();
+        for (Pop p : POPS.values()) {
+            if (p.entity) continue;
+            double s = p.releaseNs != 0 ? 1 : scale(p, now - p.t0);
+            ps.pushPose();
+            ps.translate(p.pos.getX() - cam.x, p.pos.getY() - cam.y, p.pos.getZ() - cam.z);
+            if (s != 1) {
+                ps.translate(p.px, p.py, p.pz);
+                ps.scale((float) s, (float) s, (float) s);
+                ps.translate(-p.px, -p.py, -p.pz);
+            }
+            p.render.draw(pass);
+            ps.popPose();
+            shadowDrawn++;
+        }
+    }
+
     public static void submit(RenderPass pass) {
         long t0 = System.nanoTime();
         try {

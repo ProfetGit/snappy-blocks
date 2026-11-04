@@ -6,13 +6,13 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 
 /** Whether an Iris shader pack is in use (reflective, no Iris dependency). Pattern from Seamless Displays' IrisCompat. */
-final class ShaderPack {
+public final class ShaderPack {
     private static MethodHandle inUse;
     private static boolean tried;
 
     private ShaderPack() {}
 
-    static boolean active() {
+    public static boolean active() {
         if (!tried) {
             tried = true;
             if (SnappyBlocks.platform().isModLoaded("iris")) {

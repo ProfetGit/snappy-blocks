@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.18 — 2026-11-04
+
+- Fixed (1.21.1 with Iris shaders): a block growing in now casts its shadow while it grows. Before, the shadow popped in only once the block had finished placing, because Iris draws its shadow map from the chunk mesh and never saw the growing copy.
+- Fixed (shader packs): the mining pulse made the shaded side of a block flash lighter on every hit, because shaders light the pulsing copy brighter than the real block. With a shader pack on, the block no longer bulges under the pickaxe (chips, crack overlay and sound stay). To bring it back, set `pulse.shaded` to 1 in the `tune` section of `config/snappy_blocks.json`.
+
 ## 0.0.17 — 2026-11-04
 
 - Added (1.21.1 with Sodium 0.8): blocks now pop into place and pulse under the pickaxe with Sodium installed. Before, Sodium switched both off on 1.21.1. Sodium builds the mod has no hook for (older 1.21.1 Sodium) still switch only the place pop off; the mining pulse, break burst and item effects stay on.
