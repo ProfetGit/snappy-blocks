@@ -26,6 +26,8 @@ public final class Compat {
     private static final Set<String> PICKUP_IDS = Set.of("pickupanimations", "tiny_pickup_animation");
 
     public static boolean placeAside, landAside, pickupAside;
+    /** A mod that meshes chunks itself (Sodium, Embeddium): vanilla's "section mesh is live" signal may never come. */
+    public static boolean meshReplaced;
     /** Harvest Sweep animates crop harvests: crop breaks (#crops) are left to it. */
     public static boolean harvestSweep;
     /** Having a Blast hides explosion drops until its debris lands: those are left alone. */
@@ -37,6 +39,9 @@ public final class Compat {
     private Compat() {}
 
     static void detect() {
+        for (String id : new String[] {"sodium", "embeddium", "rubidium"}) {
+            meshReplaced |= SnappyBlocks.platform().isModLoaded(id);
+        }
 //? if <1.21.2 {
         /*// Sodium meshes on its own: the hide path isn't wired to it before 1.21.2 (untested there), so the pop and pulse stand aside
         if (SnappyBlocks.platform().isModLoaded("sodium")) {

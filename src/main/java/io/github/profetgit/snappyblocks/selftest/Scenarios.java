@@ -62,7 +62,7 @@ final class Scenarios {
             return true;
         }).server(srv -> platform(srv)).waitTicks(40);
         String only = System.getProperty("snappy_blocks.selftest.scenes", "all");
-        List<String> names = new ArrayList<>(List.of("smoke", "pop", "burst", "pulse", "drops", "deny", "events", "bepop", "landing", "merge", "despawn", "farm1000", "pickup"));
+        List<String> names = new ArrayList<>(List.of("smoke", "pop", "burst", "pulse", "drops", "deny", "events", "bepop", "landing", "merge", "despawn", "farm1000", "pickup", "pickupwalk"));
         names.addAll(ScaleScenes.NAMES);
         for (String name : names) {
             if (!only.equals("all") && !Arrays.asList(only.split(",")).contains(name)) continue;
@@ -80,6 +80,7 @@ final class Scenarios {
                 case "despawn" -> despawn(s);
                 case "farm1000" -> farm(s);
                 case "pickup" -> pickup(s);
+                case "pickupwalk" -> pickupWalk(s);
                 default -> ScaleScenes.add(s, name);
             }
         }
@@ -489,6 +490,75 @@ final class Scenarios {
                 int picks = Ghosts.pickups - base[0], flights = Ghosts.slotFlights - base[1];
                 return picks == 1 && flights == 0 && Ghosts.active() == 0 ? null : picks + " pickups, " + flights + " slot flights, " + Ghosts.active() + " live";
             });
+    }
+
+    /**
+     * GitHub issue 3: pickups while walking. The player sprints forward over stone items laid out along the way, in first
+     * person with the HUD on; each one must end on its hotbar slot (the second half of its flight stays within 0.2 of the slot, in screen
+     * widths); before the fix a sprinting player saw them swing 0.4-0.5 off it and under the screen's bottom edge.
+     * Per item: frames, frames in view, the first/middle/last position in screen space, and the widest gap to the slot
+     * over the second half of the flight. Frames go to out/frames/pickupwalk (HUD shown).
+     */
+    private static void pickupWalk(Script s) {
+        int[] base = new int[2];
+        s.server(srv -> {
+            clearArea(srv);
+            cmd(srv, "tp @p 0.5 " + Y + " -10.0 0 0");
+            cmd(srv, "gamemode survival @p");
+            cmd(srv, "clear @p");
+            cmd(srv, "item replace entity @p hotbar.3 with minecraft:stone 10");
+            cmd(srv, "item replace entity @p hotbar.0 with minecraft:stick");
+        }).waitTicks(20).run(mc -> {
+            mc.options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON);
+            if (TestCompat.hudHidden(mc)) TestCompat.toggleHud(mc);
+            TestCompat.selectSlot(mc.player, 0);
+            mc.options.chatVisibility().set(net.minecraft.world.entity.player.ChatVisiblity.HIDDEN);
+            base[0] = Ghosts.pickups;
+            base[1] = Ghosts.slotFlights;
+            Ghosts.trace.clear();
+            Ghosts.record = true;
+            SelfTest.startCapture("pickupwalk", 100);
+        }).server(srv -> {
+            for (int z = -6; z <= 6; z += 4) cmd(srv, "summon item 0.5 " + Y + " " + z + ".5 {Item:{id:\"minecraft:stone\",count:1},PickupDelay:0}");
+        }).run(mc -> {
+            mc.options.keyUp.setDown(true);
+            mc.options.keySprint.setDown(true);
+        }).waitTicks(75).run(mc -> {
+            mc.options.keyUp.setDown(false);
+            mc.options.keySprint.setDown(false);
+            Ghosts.record = false;
+            SelfTest.stopCapture();
+            mc.options.chatVisibility().set(net.minecraft.world.entity.player.ChatVisiblity.FULL);
+        }).waitTicks(10).check("pickupwalk_slot", mc -> {
+            int picks = Ghosts.pickups - base[0], flights = Ghosts.slotFlights - base[1];
+            java.util.Map<Integer, List<double[]>> by = new java.util.TreeMap<>();
+            for (double[] r : Ghosts.trace) by.computeIfAbsent((int) r[0], k -> new ArrayList<>()).add(r);
+            double worst = 0;
+            int hidden = 0;
+            for (List<double[]> f : by.values()) {
+                int inView = 0;
+                double gap = 0;
+                for (double[] r : f) {
+                    if (r[4] > 0 && Math.abs(r[2]) <= 1 && Math.abs(r[3]) <= 1) inView++;
+                    if (r[1] >= 0.5) gap = Math.max(gap, r[4] > 0 ? Math.hypot(r[2] - r[5], r[3] - r[6]) : 9);
+                }
+                double[] a = f.get(0), m = f.get(f.size() / 2), z = f.get(f.size() - 1);
+                StringBuilder path = new StringBuilder();
+                for (double[] r : f) path.append(String.format(java.util.Locale.ROOT, " %.2f:e%.2f:(%.2f,%.2f)->t(%.2f,%.2f)", r[1], r[9], r[2], r[3], r[7], r[8]));
+                SnappyBlocks.LOG.info("[selftest] pickupwalk path {}:{}", (int) f.get(0)[0], path);
+                SnappyBlocks.LOG.info("[selftest] pickupwalk item {}: {} frames, {} in view; ndc first ({}, {}) mid ({}, {}) last ({}, {}) slot ({}, {}); gap in 2nd half {}",
+                    (int) a[0], f.size(), inView, r2(a[2]), r2(a[3]), r2(m[2]), r2(m[3]), r2(z[2]), r2(z[3]), r2(z[5]), r2(z[6]), r2(gap));
+                worst = Math.max(worst, gap);
+                if (inView * 2 < f.size()) hidden++; // the start can be under the bottom edge: informational
+            }
+            SnappyBlocks.LOG.info("[selftest] pickupwalk: {} pickups, {} slot flights, {} items traced, worst gap {}, {} mostly out of view", picks, flights, by.size(), r2(worst), hidden);
+            if (picks < 4 || flights < 4) return picks + " pickups, " + flights + " slot flights";
+            return worst > 0.2 ? "a flight stayed " + r2(worst) + " (screen widths) from its slot in the second half" : null;
+        });
+    }
+
+    private static double r2(double v) {
+        return Math.round(v * 100) / 100.0;
     }
 
     /**

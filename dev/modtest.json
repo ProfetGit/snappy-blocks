@@ -42,6 +42,7 @@
     "despawn",
     "farm1000",
     "pickup",
+    "pickupwalk",
     "actions100",
     "vein64",
     "autoplace",
@@ -151,7 +152,8 @@
     },
     "shaders": {
       "profile": {
-        "26.3": "Fabric 26.3"
+        "26.3": "Fabric 26.3",
+        "1.21.1": "/home/emppu/.cache/studio/addons/sodium-1.21.1"
       },
       "mods": [
         "fabric-api-*.jar",

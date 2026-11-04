@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.16 — 2026-11-04
+
+- Fixed (1.21.1 with Sodium or Embeddium): a broken block blinked out for about a tenth of a second and then reappeared to play its break animation. Sodium never told the mod when its new mesh was ready, so the animation waited out a fixed timer; it now follows Sodium's own mesh upload.
+- Fixed (1.21.1): while walking or sprinting, picked-up items did not fly into their hotbar slot but swung off to the side and under the screen. The flight now moves with you, and its end follows the walking bob, so it lands on the slot.
+
 ## 0.0.15 — 2026-11-03
 
 - Fixed: on NeoForge and Forge 1.21.1 the game crashed at launch next to Sodium ("Modules sodium and snappy_blocks export package net.caffeinemc.mods.sodium.client.render.chunk"). The jar carried Sodium placeholder classes it only needs while compiling; they are gone from every jar now.

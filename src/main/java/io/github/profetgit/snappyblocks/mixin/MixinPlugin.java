@@ -21,7 +21,10 @@ public final class MixinPlugin implements IMixinConfigPlugin {
         "SodiumMeshingTaskMixin", "execute(Lnet/caffeinemc/mods/sodium/client/render/chunk/compile/ChunkBuildContext;"
             + "Lnet/caffeinemc/mods/sodium/client/util/task/CancellationToken;)"
             + "Lnet/caffeinemc/mods/sodium/client/render/chunk/compile/ChunkBuildOutput;",
-        "SodiumBlockRenderContextMixin", "shouldDrawSide(Lnet/minecraft/core/Direction;)Z");
+        "SodiumBlockRenderContextMixin", "shouldDrawSide(Lnet/minecraft/core/Direction;)Z",
+        "SodiumMeshLiveMixin", "createRebuildTask(Lnet/caffeinemc/mods/sodium/client/render/chunk/RenderSection;I)"
+            + "Lnet/caffeinemc/mods/sodium/client/render/chunk/compile/tasks/ChunkBuilderMeshingTask;"
+            + "|processChunkBuildResults(Ljava/util/ArrayList;)Z");
 
     @Override
     public void onLoad(String mixinPackage) {
@@ -36,8 +39,11 @@ public final class MixinPlugin implements IMixinConfigPlugin {
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
         if (!mixinClassName.contains(".compat.")) return true;
 //? if <1.21.2 {
-        /*if (true) return false; // the Sodium stand-ins are 26.x's; Sodium on this version isn't supported (Compat)
-        *///?}
+        /*// the other Sodium stand-ins are 26.x's; Sodium on this version isn't supported (Compat) except for the burst's mesh signal
+        if (!mixinClassName.endsWith(".SodiumMeshLiveMixin")) return false;
+        *///?} else {
+        if (mixinClassName.endsWith(".SodiumMeshLiveMixin")) return false;
+//?}
         ClassNode node;
         try {
             node = MixinService.getService().getBytecodeProvider().getClassNode(targetClassName);
@@ -47,14 +53,21 @@ public final class MixinPlugin implements IMixinConfigPlugin {
         String name = mixinClassName.substring(mixinClassName.lastIndexOf('.') + 1);
         String wanted = METHODS.get(name);
         if (wanted == null) return true;
-        for (MethodNode m : node.methods) {
-            if ((m.name + m.desc).equals(wanted)) {
-                org.slf4j.LoggerFactory.getLogger("Snappy Blocks").info("Snappy Blocks: {} applies", name);
-                return true;
+        for (String one : wanted.split("\\|")) {
+            boolean found = false;
+            for (MethodNode m : node.methods) {
+                if ((m.name + m.desc).equals(one)) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                org.slf4j.LoggerFactory.getLogger("Snappy Blocks").warn("Snappy Blocks: {} skipped, {} has no {}", name, targetClassName, one);
+                return false;
             }
         }
-        org.slf4j.LoggerFactory.getLogger("Snappy Blocks").warn("Snappy Blocks: {} skipped, {} has no {}", name, targetClassName, wanted);
-        return false;
+        org.slf4j.LoggerFactory.getLogger("Snappy Blocks").info("Snappy Blocks: {} applies", name);
+        return true;
     }
 
     @Override

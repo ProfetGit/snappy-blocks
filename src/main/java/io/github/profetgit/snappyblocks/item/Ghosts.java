@@ -57,6 +57,9 @@ public final class Ghosts {
         double t0, dur;
         /** Start centre (world). */
         double sx, sy, sz;
+        /** The camera when a slot flight's first frame was drawn: the start moves with it (see the SLOT case). */
+        boolean camSet;
+        double cax, cay, caz;
         /** Last drawn centre and scale, for a retarget without a jump. */
         double lx, ly, lz, ls = 1;
         double s0 = 1;
@@ -84,6 +87,8 @@ public final class Ghosts {
     private static final Matrix4f INV = new Matrix4f();
     private static final Vector4f V4 = new Vector4f();
     private static final Vector3f V3 = new Vector3f();
+    /** The slot's target point, relative to the camera, in world axes (set by {@link #slotPoint}). */
+    private static final Vector3f SLOT_AT = new Vector3f();
     private static double lastPx, lastPy, lastPz;
     private static long teleportTick = Long.MIN_VALUE;
     private static double partial;
@@ -91,6 +96,13 @@ public final class Ghosts {
     public static int lastSlot = -1;
     public static int pickups, slotFlights, slotBumps, merges, despawns, dropped, retargets, hiddenSlots, slotReveals, slotStopReveals;
     public static long spentNanos;
+    /**
+     * Test hook: while true every drawn slot-flight frame appends {entity id, u, ndc x, ndc y, w, slot ndc x, slot ndc y}
+     * (the item's centre and the slot's centre projected with the frame's matrices).
+     */
+    public static boolean record;
+    public static final List<double[]> trace = new ArrayList<>();
+    private static float slotNx, slotNy;
     /** A newly filled slot is shown after this many ticks even if its flight hasn't arrived (PRD pillar 4). */
     static final long HIDE_LIMIT_TICKS = 6;
 
@@ -205,6 +217,7 @@ public final class Ghosts {
         g.sy = g.ly;
         g.sz = g.lz;
         g.s0 = g.ls;
+        g.camSet = false;
         g.t0 = now;
         g.dur = Math.max(2, g.dur * (1 - g.u(now)));
         g.kind = kind;
@@ -343,7 +356,19 @@ public final class Ghosts {
                 }
                 case SLOT -> {
                     if (!slotPoint(mc, pass, g.slot)) continue;
-                    double tx = cam.x + V3.x * SLOT_DEPTH, ty = cam.y + V3.y * SLOT_DEPTH, tz = cam.z + V3.z * SLOT_DEPTH;
+                    // The slot is fixed to the screen. A world-fixed start would be left behind by a walking player
+                    // (under the feet, behind the eye, off the bottom of the screen) before it rose into the slot, so
+                    // the start goes along with the camera: the flight is the same one a player standing still sees.
+                    if (!g.camSet) {
+                        g.camSet = true;
+                        g.cax = cam.x;
+                        g.cay = cam.y;
+                        g.caz = cam.z;
+                    }
+                    cx += cam.x - g.cax;
+                    cy += cam.y - g.cay;
+                    cz += cam.z - g.caz;
+                    double tx = cam.x + SLOT_AT.x, ty = cam.y + SLOT_AT.y, tz = cam.z + SLOT_AT.z;
                     double size = s.size();
                     double k = 32 * SLOT_DEPTH / (Math.max(0.1, size) * pass.projection.m11() * mc.getWindow().getGuiScaledHeight());
                     double e = u * u * (3 - 2 * u);
@@ -351,6 +376,16 @@ public final class Ghosts {
                     cy += (ty - cy) * e + SLOT_ARC * 4 * u * (1 - u);
                     cz += (tz - cz) * e;
                     scale += (k - scale) * e;
+                    if (record) {
+                        V4.set((float) (cx - cam.x), (float) (cy - cam.y), (float) (cz - cam.z), 1);
+                        pass.viewRotation.transform(V4);
+                        pass.projection.transform(V4);
+                        double ix = V4.x / V4.w, iy = V4.y / V4.w, iw = V4.w;
+                        V4.set((float) (tx - cam.x), (float) (ty - cam.y), (float) (tz - cam.z), 1);
+                        pass.viewRotation.transform(V4);
+                        pass.projection.transform(V4);
+                        trace.add(new double[] {g.entityId, u, ix, iy, iw, slotNx, slotNy, V4.x / V4.w, V4.y / V4.w, e});
+                    }
                 }
                 case MERGE -> {
                     Entity t = g.target;
@@ -380,7 +415,7 @@ public final class Ghosts {
     }
 
     /**
-     * The direction from the eye through the centre of a hotbar slot, into {@link #V3}. Unprojects the slot's screen
+     * The point {@link #SLOT_DEPTH} in front of the eye (along the view axis) on the ray through the centre of a hotbar slot, into {@link #SLOT_AT}. Unprojects the slot's screen
      * point with this frame's projection and view rotation, so the flight end follows the camera.
      */
     private static boolean slotPoint(Minecraft mc, RenderPass pass, int slot) {
@@ -394,13 +429,22 @@ public final class Ghosts {
             gx = w / 2 - 90 + slot * 20 + 2 + 8;
         }
         float nx = (float) (gx / w * 2 - 1), ny = (float) (1 - gy / h * 2);
+        slotNx = nx;
+        slotNy = ny;
+        // Before 1.21.2 the projection matrix also carries the walking bob and hurt shake, so the eye is not at the origin
+        // of the unprojected space: take the slot's ray from its near and far points and cut it at the wanted depth.
         INV.set(pass.projection).invert();
-        V4.set(nx, ny, 0.5f, 1).mul(INV);
+        V4.set(nx, ny, -1, 1).mul(INV);
         if (V4.w == 0) return false;
         V3.set(V4.x / V4.w, V4.y / V4.w, V4.z / V4.w);
+        V4.set(nx, ny, 1, 1).mul(INV);
+        if (V4.w == 0) return false;
+        double dz = V4.z / V4.w - V3.z;
+        if (dz == 0) return false;
+        double s = (-SLOT_DEPTH - V3.z) / dz;
+        SLOT_AT.set((float) (V3.x + s * (V4.x / V4.w - V3.x)), (float) (V3.y + s * (V4.y / V4.w - V3.y)), (float) (V3.z + s * dz));
         INV.set(pass.viewRotation).invert();
-        INV.transformDirection(V3);
-        V3.normalize();
-        return Float.isFinite(V3.x);
+        INV.transformPosition(SLOT_AT);
+        return Float.isFinite(SLOT_AT.x);
     }
 }

@@ -142,6 +142,13 @@ public final class Bursts {
     /** (sectionNode, compileTaskStartTimeNs) of meshes that went live; filled from mesh threads too. */
     private static final ConcurrentLinkedQueue<long[]> LIVE = new ConcurrentLinkedQueue<>();
     static final long MESH_LIMIT_NS = 150_000_000L;
+    /**
+     * With a chunk mesher of its own installed and no live signal seen yet (its hook didn't apply, an unknown version),
+     * the wait is cut to a few frames: Sodium rebuilds a broken block's section within one to three frames, and a late
+     * burst shows as the block blinking out first (GitHub issue 2).
+     */
+    static final long MESH_LIMIT_BLIND_NS = 45_000_000L;
+    private static boolean meshSeen;
     private static long budgetTick = -1;
     private static int budgetUsed;
 
@@ -337,6 +344,7 @@ public final class Bursts {
 
     /** A section mesh went live (any thread). */
     public static void meshLive(long sectionNode, long compileStartNs) {
+        meshSeen = true;
         if (!BURSTS.isEmpty()) LIVE.add(new long[] {sectionNode, compileStartNs});
     }
 
@@ -353,8 +361,9 @@ public final class Bursts {
                 }
             }
         }
+        long limit = Compat.meshReplaced && !meshSeen ? MESH_LIMIT_BLIND_NS : MESH_LIMIT_NS;
         for (Burst b : BURSTS) {
-            if (!b.live && wall - b.breakWallNs > MESH_LIMIT_NS) {
+            if (!b.live && wall - b.breakWallNs > limit) {
                 b.live = true;
                 b.t0 = now;
                 meshWaits++;
