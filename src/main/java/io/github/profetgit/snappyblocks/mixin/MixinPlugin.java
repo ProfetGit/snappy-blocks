@@ -16,7 +16,15 @@ import org.spongepowered.asm.service.MixinService;
  * mismatch skips the mixin instead. Pattern from mods/BeltLantern's MixinPlugin.
  */
 public final class MixinPlugin implements IMixinConfigPlugin {
-    /** Mixin simple name -> "methodName" + descriptor its handlers need. Filled as compat mixins are added (M1). */
+//? if >=1.21.2 {
+    private static final String IRIS_SHADOWS = "renderShadows(Lnet/irisshaders/iris/mixin/LevelRendererAccessor;Lnet/minecraft/client/Camera;"
+        + "Lnet/minecraft/client/renderer/state/level/CameraRenderState;)V";
+//?} else {
+    /*// Fabric and Quilt run intermediary names (class_4184 = Camera), NeoForge and Forge Mojang names
+    private static final String IRIS_SHADOWS = "renderShadows(Lnet/irisshaders/iris/mixin/LevelRendererAccessor;Lnet/minecraft/client/Camera;)V"
+        + "~renderShadows(Lnet/irisshaders/iris/mixin/LevelRendererAccessor;Lnet/minecraft/class_4184;)V";
+*///?}
+    /** Mixin simple name -> "methodName" + descriptor its handlers need ("|": all of them, "~": any of these). Filled as compat mixins are added (M1). */
     private static final Map<String, String> METHODS = Map.of(
         "SodiumMeshingTaskMixin", "execute(Lnet/caffeinemc/mods/sodium/client/render/chunk/compile/ChunkBuildContext;"
             + "Lnet/caffeinemc/mods/sodium/client/util/task/CancellationToken;)"
@@ -29,8 +37,17 @@ public final class MixinPlugin implements IMixinConfigPlugin {
             + "Lnet/caffeinemc/mods/sodium/client/render/chunk/translucent_sorting/SortBehavior;Z)V",
         "SodiumOcclusionCacheMixin", "shouldDrawSide(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;"
             + "Lnet/minecraft/core/BlockPos;Lnet/minecraft/core/Direction;)Z",
-        "IrisShadowMixin", "renderShadows(Lnet/irisshaders/iris/mixin/LevelRendererAccessor;Lnet/minecraft/client/Camera;)V",
+        "IrisShadowMixin", IRIS_SHADOWS,
         "SodiumBlockRenderContextMixin", "shouldDrawSide(Lnet/minecraft/core/Direction;)Z",
+        "SodiumNonTerrainAoMixin", "shadeQuad(Lnet/caffeinemc/mods/sodium/client/render/model/MutableQuadViewImpl;"
+            + "Lnet/caffeinemc/mods/sodium/client/model/light/LightMode;ZLnet/caffeinemc/mods/sodium/client/render/model/SodiumShadeMode;)V",
+        "Sodium05MeshingTaskMixin", "<init>(Lme/jellysquid/mods/sodium/client/render/chunk/RenderSection;"
+            + "Lme/jellysquid/mods/sodium/client/world/cloned/ChunkRenderContext;I)V"
+            + "|execute(Lme/jellysquid/mods/sodium/client/render/chunk/compile/ChunkBuildContext;"
+            + "Lme/jellysquid/mods/sodium/client/util/task/CancellationToken;)Lme/jellysquid/mods/sodium/client/render/chunk/compile/ChunkBuildOutput;",
+        "Sodium05MeshLiveMixin", "createRebuildTask(Lme/jellysquid/mods/sodium/client/render/chunk/RenderSection;I)"
+            + "Lme/jellysquid/mods/sodium/client/render/chunk/compile/tasks/ChunkBuilderMeshingTask;"
+            + "|processChunkBuildResults(Ljava/util/ArrayList;)V",
         "SodiumMeshLiveMixin", "createRebuildTask(Lnet/caffeinemc/mods/sodium/client/render/chunk/RenderSection;I)"
             + "Lnet/caffeinemc/mods/sodium/client/render/chunk/compile/tasks/ChunkBuilderMeshingTask;"
             + "|processChunkBuildResults(Ljava/util/ArrayList;)Z");
@@ -48,7 +65,7 @@ public final class MixinPlugin implements IMixinConfigPlugin {
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
         if (!mixinClassName.contains(".compat.")) return true;
 //? if >=1.21.2 {
-        if (mixinClassName.endsWith(".SodiumMeshLiveMixin") || mixinClassName.endsWith(".IrisShadowMixin")) return false;
+        if (mixinClassName.endsWith(".SodiumMeshLiveMixin")) return false;
 //?}
         ClassNode node;
         try {
@@ -61,8 +78,9 @@ public final class MixinPlugin implements IMixinConfigPlugin {
         if (wanted == null) return true;
         for (String one : wanted.split("\\|")) {
             boolean found = false;
+            List<String> any = List.of(one.split("~"));
             for (MethodNode m : node.methods) {
-                if ((m.name + m.desc).equals(one)) {
+                if (any.contains(m.name + m.desc)) {
                     found = true;
                     break;
                 }

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.21 — 2026-11-04
+
+- Fixed (26.3 with Iris shaders): no lighting pop when a block finishes placing. Sodium drew the growing copy with its corner shading baked in, while shader packs like Complementary and BSL shade the real block their own softer way. The copy is now shaded the same way.
+- Fixed (26.3 with Iris shaders): a block growing in casts its shadow while it grows, not only once it has landed.
+- Added (1.20.1 with Sodium): blocks pop into place with Sodium installed. Before, the place pop switched itself off next to Sodium on 1.20.1.
+- Fixed (1.20.1 with Sodium): a broken block no longer blinks out for a moment before its break animation.
+- Fixed (1.20.1 with Iris shaders): growing blocks are lit like the real block and cast their shadow.
+- Fixed (1.21.1 Fabric/Quilt with Iris shaders): growing blocks cast their shadow (the hook only applied on NeoForge and Forge before).
+
 ## 0.0.20 — 2026-11-04
 
 - Fixed (1.21.1 with Iris shaders): the lighting no longer pops when a block finishes placing. Shader packs that ask for ambient occlusion in the vertex alpha (Complementary, BSL) got the real block with its soft corner shading, but the growing copy without it, so the sides and bottom looked lighter until the block landed. The copy now carries the same shading. The same applies to the mining pulse and the break burst.

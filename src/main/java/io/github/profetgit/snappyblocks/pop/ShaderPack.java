@@ -65,6 +65,9 @@ public final class ShaderPack {
         }
     }
 
+    /** Set while a block copy is tesselated under a shader pack with `separateAo` (26.x, MovingBlockFeatureRendererMixin). */
+    public static boolean aoCopy;
+
     public static boolean active() {
         if (!tried) {
             tried = true;

@@ -33,6 +33,16 @@ public final class RenderPass {
         this.viewRotation = state.cameraRenderState.viewRotationMatrix;
     }
 
+    /** A pass with its own pose and camera position (Iris's shadow map): blocks only, no camera state. */
+    public RenderPass(PoseStack ps, SubmitNodeCollector collector, Vec3 cam) {
+        this.ps = ps;
+        this.collector = collector;
+        this.camera = null;
+        this.cam = cam;
+        this.projection = new org.joml.Matrix4f();
+        this.viewRotation = new org.joml.Matrix4f();
+    }
+
     public void flush() {
     }
 //?} else {

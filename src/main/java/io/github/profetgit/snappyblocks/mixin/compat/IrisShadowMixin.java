@@ -29,12 +29,35 @@ public abstract class IrisShadowMixin {
     }
 }
 *///?} else {
+import com.llamalad7.mixinextras.sugar.Local;
+import com.mojang.blaze3d.vertex.PoseStack;
+import io.github.profetgit.snappyblocks.RenderPass;
+import io.github.profetgit.snappyblocks.pop.Pops;
+import net.minecraft.client.renderer.SubmitNodeStorage;
+import net.minecraft.world.phys.Vec3;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
+import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** Iris 1.8 (1.21.1) only: the shadow pass has no world hook to join there; MixinPlugin skips this stand-in. */
+/**
+ * Iris 1.11 (26.x) submits its shadow-pass entities and block entities into its own node storage and never runs the world
+ * hook that submits our copies: a growing block cast its shadow only once the chunk mesh took over. The pop copies join
+ * that storage just before it is drawn, with the shadow's pose and camera.
+ */
 @Pseudo
 @Mixin(targets = "net.irisshaders.iris.shadows.ShadowRenderer", remap = false)
 public abstract class IrisShadowMixin {
+    @Shadow(remap = false) @Final private SubmitNodeStorage submitNodeStorage;
+
+    @Inject(method = "renderShadows", remap = false, require = 0, at = @At(value = "INVOKE",
+        target = "Lnet/minecraft/client/renderer/feature/FeatureRenderDispatcher;prepareFrame(Lnet/minecraft/client/renderer/SubmitNodeStorage;)Lnet/minecraft/client/renderer/feature/FeatureRenderDispatcher$PreparedFrame;"))
+    private void snappy_blocks$shadowPops(CallbackInfo ci, @Local PoseStack modelView,
+                                          @Local(ordinal = 0) double cameraX, @Local(ordinal = 1) double cameraY, @Local(ordinal = 2) double cameraZ) {
+        Pops.submitShadow(new RenderPass(modelView, submitNodeStorage, new Vec3(cameraX, cameraY, cameraZ)));
+    }
 }
 //?}
