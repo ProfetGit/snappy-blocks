@@ -53,7 +53,11 @@ public abstract class ClientPacketListenerMixin {
     @Inject(method = "handleRemoveEntities", at = @At(value = "INVOKE", target = "Lnet/minecraft/network/protocol/PacketUtils;ensureRunningOnSameThread(Lnet/minecraft/network/protocol/Packet;Lnet/minecraft/network/PacketListener;Lnet/minecraft/network/PacketProcessor;)V", shift = At.Shift.AFTER))
     private void snappy_blocks$removed(ClientboundRemoveEntitiesPacket packet, CallbackInfo ci) {
         if (level == null) return;
+//? if >=26.3 {
         packet.entityIds().forEach(id -> {
+//?} else {
+/*        packet.getEntityIds().forEach(id -> {
+*///?}
             if (level.getEntity(id) instanceof ItemEntity item) {
                 if (!Bursts.hidden(item)) Ghosts.removed(item);
                 ItemFx.forget(id);

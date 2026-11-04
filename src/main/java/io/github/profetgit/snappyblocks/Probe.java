@@ -48,13 +48,13 @@ public final class Probe {
     }
 
     public static void levelEvent(int type, BlockPos pos, int data) {
-        if (type == LevelEvent.PARTICLES_AND_SOUND_DESTROY_BLOCK) {
+        if (type == 2001) {
             destroyEvents++;
             lastDestroyEvent = pos.immutable();
             if (TRACE) SnappyBlocks.LOG.info("[probe] 2001 {} data {}", pos, data);
-        } else if (TRACE && type == LevelEvent.PARTICLES_DESTROY_PROGRESS) {
+        } else if (TRACE && type == 2019) {
             SnappyBlocks.LOG.info("[probe] 2019 {}", pos);
-        } else if (type == LevelEvent.PARTICLES_AND_SOUND_DESTROY_PROGRESS) {
+        } else if (type == 2020) {
             hitEvents++;
             lastHitEvent = pos.immutable();
             if (TRACE) SnappyBlocks.LOG.info("[probe] 2020 {}", pos);

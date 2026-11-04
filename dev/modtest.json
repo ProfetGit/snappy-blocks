@@ -90,6 +90,20 @@
           "scenes": "smoke"
         },
         {
+          "mc": "26.2",
+          "loader": "fabric",
+          "scenes": "all"
+        },
+        {
+          "mc": "26.2",
+          "loader": [
+            "neoforge",
+            "forge",
+            "quilt"
+          ],
+          "scenes": "smoke"
+        },
+        {
           "mc": "1.21.1",
           "loader": "fabric",
           "scenes": "all"
@@ -134,6 +148,20 @@
           "loader": [
             "neoforge",
             "forge"
+          ],
+          "scenes": "smoke"
+        },
+        {
+          "mc": "26.2",
+          "loader": "fabric",
+          "scenes": "all"
+        },
+        {
+          "mc": "26.2",
+          "loader": [
+            "neoforge",
+            "forge",
+            "quilt"
           ],
           "scenes": "smoke"
         },
@@ -251,6 +279,7 @@
     "sodium": {
       "profile": {
         "26.3": "Fabric 26.3",
+        "26.2": "/home/emppu/.cache/studio/clients/SnappyBlocks-26.2-fabric",
         "1.21.1": "/home/emppu/.cache/studio/addons/sodium-1.21.1",
         "1.20.1": "/home/emppu/.cache/studio/addons/sodium-1.20.1"
       },
@@ -367,6 +396,7 @@
     },
     "iris": {
       "profile": {
+        "26.2": "/home/emppu/.cache/studio/clients/SnappyBlocks-26.2-fabric",
         "1.21.1": "/home/emppu/.cache/studio/addons/iris-1.21.1",
         "1.20.1": "/home/emppu/.cache/studio/addons/iris-1.20.1"
       },

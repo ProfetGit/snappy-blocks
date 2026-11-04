@@ -39,7 +39,7 @@ public abstract class MinecraftMixin {
     }
 *///?}
 
-//? if <1.21.2 {
+//? if <26.3 {
     /*// the drop key calls LocalPlayer.drop directly before 1.21.2 (MultiPlayerGameMode.dropItem is newer)
     @Inject(method = "handleKeybinds", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;drop(Z)Z"))
     private void snappy_blocks$drop(CallbackInfo ci) {

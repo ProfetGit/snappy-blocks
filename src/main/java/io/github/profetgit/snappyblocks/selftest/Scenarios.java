@@ -138,12 +138,12 @@ final class Scenarios {
             .run(mc -> SnappyBlocks.LOG.info("[selftest] smoke probe: {}, mined {} ticks", Probe.summary(), t[0]));
     }
 
-//? if >=1.21.2 {
+//? if >=26.3 {
     private static String hits(BlockPos dirt, int ticks) {
         return Probe.hitEvents >= 10 && dirt.equals(Probe.lastHitEvent) ? null : "probe: " + Probe.summary() + " after " + ticks + " mining ticks";
     }
 //?} else {
-/*    // no level event 2020 before 1.21.2: the player's own hit starts a pulse every four ticks
+/*    // no level event 2020 before 1.21.2 and on 26.2: the player's own hit starts a pulse every four ticks
     private static String hits(BlockPos dirt, int ticks) {
         return Pulses.started >= 10 ? null : "pulses started " + Pulses.started + " after " + ticks + " mining ticks";
     }
@@ -595,7 +595,7 @@ final class Scenarios {
             SelfTest.stopCapture();
             if (TestCompat.hudHidden(mc)) TestCompat.toggleHud(mc);
             int pulses = Pulses.started - base[0], hits = Probe.hitEvents - base[1];
-//? if <1.21.2 {
+//? if <26.3 {
             /*hits = pulses; // no server hit events before 1.21.2: the player's own hits are the pulses
             *///?}
             SnappyBlocks.LOG.info("[selftest] pulse: {} pulses for {} server hits, {} live", pulses, hits, Pulses.active());

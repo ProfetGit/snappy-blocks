@@ -29,6 +29,7 @@ public abstract class RenderRegionCacheMixin {
 //? if >=1.21.2 {
     @Inject(method = "createRegion", at = @At("RETURN"))
     private void snappy_blocks$hidden(ClientLevel level, long sectionNode, CallbackInfoReturnable<RenderSectionRegion> cir) {
+        Hidden.compileStarted(sectionNode, net.minecraft.util.Util.getNanos());
         ((HiddenRegion) cir.getReturnValue()).snappy_blocks$setHidden(Hidden.snapshot());
     }
 //?} else if >=1.21 {

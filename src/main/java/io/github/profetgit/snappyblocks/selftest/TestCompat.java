@@ -57,10 +57,10 @@ final class TestCompat {
 
     /** The drop key's effect (before 1.21.2 the key calls LocalPlayer.drop itself, MinecraftMixin). */
     static void drop(Minecraft mc) {
-//? if >=1.21.2 {
+//? if >=26.3 {
         mc.gameMode.dropItem(mc.player, false);
 //?} else {
-/*        if (!mc.player.getInventory().getSelected().isEmpty()) ItemFx.dropPressed(mc);
+/*        if (!mc.player.getInventory().getSelectedItem().isEmpty()) io.github.profetgit.snappyblocks.item.ItemFx.dropPressed(mc);
         mc.player.drop(false);
 *///?}
     }

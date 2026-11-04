@@ -5,4 +5,6 @@ import net.caffeinemc.mods.sodium.client.render.chunk.RenderSection;
 
 public class BuilderTaskOutput {
     public RenderSection render;
+    /** Sodium 0.9 renamed render to section. */
+    public RenderSection section;
 }

@@ -182,7 +182,7 @@ public final class Bursts {
 
     /** LevelEventHandler.levelEvent. */
     public static void levelEvent(int type, BlockPos pos, int data) {
-        if (type != LevelEvent.PARTICLES_AND_SOUND_DESTROY_BLOCK || !on()) return;
+        if (type != 2001 || !on()) return;
         long key = pos.asLong();
         Object[] removed = REMOVED.remove(key);
         BlockState state = Block.stateById(data);

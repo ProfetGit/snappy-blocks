@@ -25,13 +25,16 @@ public final class MixinPlugin implements IMixinConfigPlugin {
         + "~renderShadows(Lnet/irisshaders/iris/mixin/LevelRendererAccessor;Lnet/minecraft/class_4184;)V";
 *///?}
     /** Mixin simple name -> "methodName" + descriptor its handlers need ("|": all of them, "~": any of these). Filled as compat mixins are added (M1). */
-    private static final Map<String, String> METHODS = Map.of(
+    private static final Map<String, String> METHODS = mapOf(
         "SodiumMeshingTaskMixin", "execute(Lnet/caffeinemc/mods/sodium/client/render/chunk/compile/ChunkBuildContext;"
             + "Lnet/caffeinemc/mods/sodium/client/util/task/CancellationToken;)"
             + "Lnet/caffeinemc/mods/sodium/client/render/chunk/compile/ChunkBuildOutput;",
         "SodiumMeshingTaskInit8Mixin", "<init>(Lnet/caffeinemc/mods/sodium/client/render/chunk/RenderSection;ILorg/joml/Vector3dc;"
             + "Lnet/caffeinemc/mods/sodium/client/world/cloned/ChunkRenderContext;"
             + "Lnet/caffeinemc/mods/sodium/client/render/chunk/translucent_sorting/SortBehavior;ZZJ)V",
+        "SodiumMeshingTaskInit7Mixin", "<init>(Lnet/caffeinemc/mods/sodium/client/render/chunk/RenderSection;ILorg/joml/Vector3dc;"
+            + "Lnet/caffeinemc/mods/sodium/client/world/cloned/ChunkRenderContext;"
+            + "Lnet/caffeinemc/mods/sodium/client/render/chunk/translucent_sorting/SortBehavior;ZZ)V",
         "SodiumMeshingTaskInit6Mixin", "<init>(Lnet/caffeinemc/mods/sodium/client/render/chunk/RenderSection;ILorg/joml/Vector3dc;"
             + "Lnet/caffeinemc/mods/sodium/client/world/cloned/ChunkRenderContext;"
             + "Lnet/caffeinemc/mods/sodium/client/render/chunk/translucent_sorting/SortBehavior;Z)V",
@@ -48,9 +51,19 @@ public final class MixinPlugin implements IMixinConfigPlugin {
         "Sodium05MeshLiveMixin", "createRebuildTask(Lme/jellysquid/mods/sodium/client/render/chunk/RenderSection;I)"
             + "Lme/jellysquid/mods/sodium/client/render/chunk/compile/tasks/ChunkBuilderMeshingTask;"
             + "|processChunkBuildResults(Ljava/util/ArrayList;)V",
+        "SodiumMeshLive09Mixin", "createRebuildTask(Lnet/caffeinemc/mods/sodium/client/render/chunk/RenderSection;IZ)"
+            + "Lnet/caffeinemc/mods/sodium/client/render/chunk/compile/tasks/ChunkBuilderMeshingTask;"
+            + "|processChunkBuildResults(Ljava/util/ArrayList;Lnet/caffeinemc/mods/sodium/client/render/viewport/Viewport;"
+            + "Lnet/caffeinemc/mods/sodium/client/render/chunk/UniformBufferManager;)I",
         "SodiumMeshLiveMixin", "createRebuildTask(Lnet/caffeinemc/mods/sodium/client/render/chunk/RenderSection;I)"
             + "Lnet/caffeinemc/mods/sodium/client/render/chunk/compile/tasks/ChunkBuilderMeshingTask;"
             + "|processChunkBuildResults(Ljava/util/ArrayList;)Z");
+
+    private static Map<String, String> mapOf(String... kv) {
+        Map<String, String> m = new java.util.HashMap<>();
+        for (int i = 0; i < kv.length; i += 2) m.put(kv[i], kv[i + 1]);
+        return m;
+    }
 
     @Override
     public void onLoad(String mixinPackage) {
@@ -66,6 +79,9 @@ public final class MixinPlugin implements IMixinConfigPlugin {
         if (!mixinClassName.contains(".compat.")) return true;
 //? if >=1.21.2 {
         if (mixinClassName.endsWith(".SodiumMeshLiveMixin")) return false;
+//?}
+//? if >=26.3 || <1.21.2 {
+        if (mixinClassName.endsWith(".SodiumMeshLive09Mixin")) return false;
 //?}
         ClassNode node;
         try {

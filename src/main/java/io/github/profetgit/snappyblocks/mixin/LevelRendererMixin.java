@@ -61,6 +61,7 @@ import org.joml.Matrix4f;
 @Mixin(LevelRenderer.class)
 public abstract class LevelRendererMixin {
 //? if >=1.21.2 {
+//? if >=26.3 {
     /** The vanilla hand-off signal: a section mesh whose compile started at this time is now live. */
     @Inject(method = "removeTransientBlocksInSection", at = @At("HEAD"))
     private void snappy_blocks$meshLive(long sectionNode, long compileTaskStartTimeNs, CallbackInfo ci) {
@@ -78,6 +79,19 @@ public abstract class LevelRendererMixin {
         Ghosts.submit(pass);
         Ghosts.spentNanos += System.nanoTime() - t0;
     }
+//?}
+//? if >=1.21.2 && <26.3 {
+    /*@Inject(method = "submitBlockDestroyAnimation", at = @At("RETURN")) // RETURN, not TAIL: it returns early when nothing is being mined
+    private void snappy_blocks$submit(PoseStack ps, SubmitNodeCollector collector, LevelRenderState state, CallbackInfo ci) {
+        RenderPass pass = new RenderPass(ps, collector, state);
+        Pops.submit(pass);
+        Pulses.submit(pass);
+        Bursts.submit(pass);
+        long t0 = System.nanoTime();
+        Ghosts.submit(pass);
+        Ghosts.spentNanos += System.nanoTime() - t0;
+    }
+*///?}
 
     /** A block entity drawn only by its renderer (chest, sign, banner) pops through the renderer's pose. */
     @WrapOperation(method = "submitBlockEntities", at = @At(value = "INVOKE",

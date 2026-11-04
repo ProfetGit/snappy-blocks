@@ -92,11 +92,13 @@ public abstract class ClientLevelMixin {
         Pops.sound(x, y, z, sound.value());
     }
 
+//? if >=26.3 {
     /** A mining hit with its sound: the miner's own first hit, or the server's level event 2020 (PRD §5.2). */
     @Inject(method = "addBreakingBlockEffects", at = @At("HEAD"))
     private void snappy_blocks$hit(BlockPos pos, Direction direction, boolean withSound, CallbackInfo ci) {
         if (withSound) Pulses.hit(pos, direction);
     }
+//?}
 //?} else {
 /*    @Inject(method = "playSeededSound(Lnet/minecraft/world/entity/player/Player;DDDLnet/minecraft/core/Holder;Lnet/minecraft/sounds/SoundSource;FFJ)V", at = @At("HEAD"))
     private void snappy_blocks$sound(Player except, double x, double y, double z, Holder<SoundEvent> sound, SoundSource source, float volume, float pitch,

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.24 — 2026-11-04
+
+- **New: Minecraft 26.2** on Fabric, Quilt, NeoForge and Forge. On 26.2 the mining pulse follows your own hits only (the game sends no hit events for other players), and the place pop hands off to the new block when its chunk mesh is rebuilt. Works with Sodium 0.9 and Iris 1.11 on 26.2, including the growing block's shadow under shaders.
+
 ## 0.0.23 — 2026-11-04
 
 - **Fix: works with Get It Together, Drops!** (and any server that merges dropped items over a wider area). Items that merge into a stack farther away now slide into it instead of shrinking away.
