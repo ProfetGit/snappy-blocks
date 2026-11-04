@@ -2,12 +2,16 @@
 
 ## 0.0.21 — 2026-11-04
 
-- Fixed (26.3 with Iris shaders): no lighting pop when a block finishes placing. Sodium drew the growing copy with its corner shading baked in, while shader packs like Complementary and BSL shade the real block their own softer way. The copy is now shaded the same way.
-- Fixed (26.3 with Iris shaders): a block growing in casts its shadow while it grows, not only once it has landed.
-- Added (1.20.1 with Sodium): blocks pop into place with Sodium installed. Before, the place pop switched itself off next to Sodium on 1.20.1.
-- Fixed (1.20.1 with Sodium): a broken block no longer blinks out for a moment before its break animation.
-- Fixed (1.20.1 with Iris shaders): growing blocks are lit like the real block and cast their shadow.
-- Fixed (1.21.1 Fabric/Quilt with Iris shaders): growing blocks cast their shadow (the hook only applied on NeoForge and Forge before).
+Everything since 0.0.15, for all versions:
+
+- **New: Minecraft 1.20.1** on Fabric, Quilt, Forge and NeoForge (NeoForge 47.1 loads the Forge jar).
+- **New: the 26.3 build is updated** with every fix below (CurseForge had 0.0.13 for 26.3).
+- **Sodium:** blocks now pop into place and pulse under the pickaxe with Sodium installed (Sodium 0.8 on 1.21.1, Sodium 0.5 on 1.20.1). Embeddium and Rubidium: only the place pop stands aside.
+- **Shaders (Iris):** no more lighting pop when a block finishes placing, and growing blocks cast their shadow while they grow (26.3, 1.21.1, 1.20.1; tested with Complementary and BSL). The mining pulse no longer flashes the shaded side of a block.
+- Fixed: with Sodium or Embeddium, a broken block blinked out for a moment before its break animation.
+- Fixed: picked-up items flew off to the side while walking or sprinting (1.21.1).
+- Fixed (Forge): the crack overlay now grows with the mining pulse.
+- `pulse.shaded` in the `tune` section of `config/snappy_blocks.json` (default 1) turns the pulse bulge off under shaders if you prefer. An older config may still have it at 0 from 0.0.18: set it to 1 for the bulge.
 
 ## 0.0.20 — 2026-11-04
 

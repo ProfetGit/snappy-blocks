@@ -5,7 +5,7 @@
 <a href="https://ko-fi.com/profetgit"><img src="https://raw.githubusercontent.com/ProfetGit/assets/main/buttons/kofi.webp" alt="Ko-fi" width="23.96%"></a>
 </p>
 
-**Nothing blinks in or out anymore.** Snappy Blocks makes blocks pop into place, burst into their drops, and lets the drops bounce, settle and fly into your hotbar. A client-side mod for Minecraft Java 26.3 (Fabric) and 1.21.1 (Fabric, Quilt, NeoForge and Forge), so it works on any server.
+**Nothing blinks in or out anymore.** Snappy Blocks makes blocks pop into place, burst into their drops, and lets the drops bounce, settle and fly into your hotbar. A client-side mod for Minecraft Java 26.3 (Fabric), 1.21.1 and 1.20.1 (Fabric, Quilt, NeoForge and Forge), so it works on any server.
 
 ![Features](https://raw.githubusercontent.com/ProfetGit/snappy-blocks/main/docs/desc/title-features.webp)
 
@@ -40,7 +40,7 @@ Edit `config/snappy_blocks.json` in your game folder. It has a switch for each e
 
 ![Installation](https://raw.githubusercontent.com/ProfetGit/snappy-blocks/main/docs/desc/title-installation.webp)
 
-Put the jar for your Minecraft version and loader in your `mods` folder: 26.3 on Fabric, or 1.21.1 on Fabric, Quilt, NeoForge or Forge (the 1.21.1 Fabric jar also loads on Quilt). It does not need Fabric API. On 1.21.1, Sodium 0.8 is supported (tested on NeoForge); with other Sodium builds, Embeddium and Rubidium the place pop stands aside and everything else stays. Iris shaders work on 1.21.1 too (tested on NeoForge with Iris 1.8 and Complementary): growing blocks are lit like placed ones and cast their shadow. Other players' mining pulses don't show on 1.21.1.
+Put the jar for your Minecraft version and loader in your `mods` folder: 26.3 on Fabric, or 1.21.1 / 1.20.1 on Fabric, Quilt, NeoForge or Forge (the Fabric jar also loads on Quilt; on 1.20.1 NeoForge uses the Forge jar). It does not need Fabric API. Sodium is supported (0.9 on 26.3, 0.8 on 1.21.1, 0.5 on 1.20.1); with Embeddium or Rubidium the place pop stands aside and everything else stays. Iris shaders are supported on all three versions (tested with Complementary and BSL): growing blocks are lit like placed ones and cast their shadow. Other players' mining pulses don't show before 1.21.2.
 
 ![More from Profet](https://raw.githubusercontent.com/ProfetGit/snappy-blocks/main/docs/desc/title-more-from-profet.webp)
 
