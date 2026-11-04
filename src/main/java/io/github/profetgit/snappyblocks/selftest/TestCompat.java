@@ -47,9 +47,12 @@ final class TestCompat {
     }
 
     static void selectSlot(Player player, int slot) {
-//? if >=1.21.2 {
+//? if >=26.3 {
         player.getInventory().setSelectedSlot(slot);
-//?} else {
+//?} else if >=1.21.2 {
+/*        player.getInventory().setSelectedSlot(slot);
+        Minecraft.getInstance().getConnection().send(new net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket(slot));
+*///?} else {
 /*        player.getInventory().selected = slot;
         Minecraft.getInstance().getConnection().send(new net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket(slot));
 *///?}
