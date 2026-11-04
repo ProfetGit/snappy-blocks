@@ -4,6 +4,7 @@ pluginManagement {
         gradlePluginPortal()
         maven("https://maven.fabricmc.net/") { name = "Fabric" }
         maven("https://maven.neoforged.net/releases/") { name = "NeoForged" }
+        maven("https://maven.minecraftforge.net/") { name = "MinecraftForge" }
         maven("https://maven.kikugie.dev/releases") { name = "KikuGie" }
     }
 }
@@ -22,7 +23,7 @@ stonecutter {
         legacy("1.21.1")
         legacy("1.20.1")
         version("1.21.1-neoforge", "1.21.1").buildscript = "build.neoforge-legacy.gradle.kts"
-        target("26.3", "fabric")
+        target("26.3", "fabric", "neoforge", "forge")
         vcsVersion = "26.3-fabric"
     }
 }

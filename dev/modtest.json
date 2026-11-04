@@ -82,6 +82,14 @@
           "scenes": "all"
         },
         {
+          "mc": "26.3",
+          "loader": [
+            "neoforge",
+            "forge"
+          ],
+          "scenes": "smoke"
+        },
+        {
           "mc": "1.21.1",
           "loader": "fabric",
           "scenes": "all"
@@ -122,6 +130,14 @@
           "scenes": "all"
         },
         {
+          "mc": "26.3",
+          "loader": [
+            "neoforge",
+            "forge"
+          ],
+          "scenes": "smoke"
+        },
+        {
           "mc": "1.21.1",
           "loader": "fabric",
           "scenes": "all"
@@ -156,7 +172,11 @@
       "jobs": [
         {
           "mc": "26.3",
-          "loader": "fabric",
+          "loader": [
+            "fabric",
+            "neoforge",
+            "forge"
+          ],
           "scenes": [
             "smoke",
             "pop",

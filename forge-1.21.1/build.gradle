@@ -46,7 +46,8 @@ dependencies {
 def generated = file('../versions/1.21.1-fabric/build/generated/legacy/main/java')
 def prep = tasks.register('prepSources', Copy) {
     from generated
-    exclude 'io/github/profetgit/snappyblocks/platform/fabric/**', 'io/github/profetgit/snappyblocks/platform/neoforge/**'
+    exclude 'io/github/profetgit/snappyblocks/platform/fabric/**', 'io/github/profetgit/snappyblocks/platform/neoforge/**',
+        'io/github/profetgit/snappyblocks/platform/forge/**'
     into layout.buildDirectory.dir('src')
 }
 sourceSets.main.java.srcDirs = [layout.buildDirectory.dir('src'), file('src')]

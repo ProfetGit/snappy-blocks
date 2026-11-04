@@ -1,6 +1,6 @@
 package io.github.profetgit.snappyblocks.mixin;
 
-//? if fabric {
+//? if fabric || >=1.21.2 {
 import net.minecraft.client.Minecraft;
 import org.spongepowered.asm.mixin.Mixin;
 

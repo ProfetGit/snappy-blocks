@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.22 — 2026-11-04
+
+- **New: Minecraft 26.3 on NeoForge and Forge.** Same effects as the Fabric build: place pop, mining pulse, break burst and item effects.
+
 ## 0.0.21 — 2026-11-04
 
 Everything since 0.0.15, for all versions:

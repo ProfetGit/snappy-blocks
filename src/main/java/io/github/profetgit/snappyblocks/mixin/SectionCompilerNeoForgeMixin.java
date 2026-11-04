@@ -1,6 +1,6 @@
 package io.github.profetgit.snappyblocks.mixin;
 
-//? if fabric {
+//? if !neoforge {
 import net.minecraft.client.Minecraft;
 import org.spongepowered.asm.mixin.Mixin;
 

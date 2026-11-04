@@ -15,7 +15,8 @@ import net.minecraft.client.renderer.block.ModelBlockRenderer;
 /** Face culling in a mesh region: a face against a hidden block is drawn, so nothing behind a growing block is missing. */
 @Mixin(ModelBlockRenderer.class)
 public abstract class ModelBlockRendererMixin {
-    @WrapOperation(method = "shouldRenderFace", at = @At(value = "INVOKE",
+    // every overload: NeoForge meshes through its own shouldRenderFace(level, pos, state, direction, neighborPos)
+    @WrapOperation(method = "shouldRenderFace*", at = @At(value = "INVOKE",
         target = "Lnet/minecraft/client/renderer/block/BlockAndTintGetter;getBlockState(Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/block/state/BlockState;"))
     private BlockState snappy_blocks$neighbour(BlockAndTintGetter level, BlockPos pos, Operation<BlockState> original) {
         BlockState s = original.call(level, pos);
