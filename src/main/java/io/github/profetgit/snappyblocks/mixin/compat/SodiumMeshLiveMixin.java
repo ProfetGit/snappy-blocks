@@ -2,6 +2,7 @@ package io.github.profetgit.snappyblocks.mixin.compat;
 
 import io.github.profetgit.snappyblocks.burst.Bursts;
 import io.github.profetgit.snappyblocks.pop.Hidden;
+import io.github.profetgit.snappyblocks.pop.Pops;
 import java.util.ArrayList;
 import net.caffeinemc.mods.sodium.client.render.chunk.RenderSection;
 import net.caffeinemc.mods.sodium.client.render.chunk.compile.BuilderTaskOutput;
@@ -15,7 +16,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
  * Before 1.21.2 vanilla tells us when a section mesh is live (LevelRendererMixin); Sodium replaces that path and never
- * does, so a break burst would wait out its whole mesh limit and the block would blink out first. This is the same
+ * does, so a break burst would wait out its whole mesh limit and the block would blink out first, and a place pop would
+ * never hand its block back to the mesh. This is the same
  * signal from Sodium's side: the compile start is noted when a rebuild task is made, and a section is live once
  * its results are uploaded. Only on versions before 1.21.2 (MixinPlugin).
  */
@@ -32,7 +34,9 @@ public abstract class SodiumMeshLiveMixin {
         for (BuilderTaskOutput o : results) {
             RenderSection s = o.render;
             long node = SectionPos.asLong(s.getChunkX(), s.getChunkY(), s.getChunkZ());
-            Bursts.meshLive(node, Hidden.compileStart(node));
+            long start = Hidden.compileStart(node);
+            Pops.meshLive(node, start);
+            Bursts.meshLive(node, start);
         }
     }
 }

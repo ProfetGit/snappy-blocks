@@ -25,7 +25,10 @@ public final class Compat {
     /** Pickup animations: our pickup flight stands aside (merge and despawn stay). */
     private static final Set<String> PICKUP_IDS = Set.of("pickupanimations", "tiny_pickup_animation");
 
-    public static boolean placeAside, landAside, pickupAside;
+    public static boolean placeAside, pulseAside, landAside, pickupAside;
+    /** Sodium is installed but our hide path isn't wired into its mesher (no hook applied for this build): the pop stands aside. */
+    private static boolean sodiumPresent;
+    private static boolean unwiredLogged;
     /** A mod that meshes chunks itself (Sodium, Embeddium): vanilla's "section mesh is live" signal may never come. */
     public static boolean meshReplaced;
     /** Harvest Sweep animates crop harvests: crop breaks (#crops) are left to it. */
@@ -42,17 +45,19 @@ public final class Compat {
         for (String id : new String[] {"sodium", "embeddium", "rubidium"}) {
             meshReplaced |= SnappyBlocks.platform().isModLoaded(id);
         }
-//? if <1.21.2 {
-        /*// Sodium meshes on its own: the hide path isn't wired to it before 1.21.2 (untested there), so the pop and pulse stand aside
-        if (SnappyBlocks.platform().isModLoaded("sodium")) {
-            placeAside = true;
-            SnappyBlocks.LOG.info("Snappy Blocks: Sodium is installed, not supported on this Minecraft version: place pop and mining pulse stand aside");
+        sodiumPresent = SnappyBlocks.platform().isModLoaded("sodium");
+        for (String id : new String[] {"embeddium", "rubidium"}) {
+            if (SnappyBlocks.platform().isModLoaded(id)) {
+                // their meshers have no hide path from us (untested): the pop stands aside, the pulse draws over the mesh and needs none
+                placeAside = true;
+                SnappyBlocks.LOG.info("Snappy Blocks: {} is installed, not supported by the place pop: it stands aside, the mining pulse stays", id);
+            }
         }
-        *///?}
         for (ModInfo mod : SnappyBlocks.platform().mods()) {
             String id = mod.id(), name = mod.name().toLowerCase(Locale.ROOT).trim();
             if (PLACE_IDS.contains(id) || PLACE_NAMES.contains(name)) {
                 placeAside = true;
+                pulseAside = true;
                 found(mod, "our place pop and mining pulse stand aside");
             }
             if (LAND_IDS.contains(id)) {
@@ -82,6 +87,21 @@ public final class Compat {
     private static void found(ModInfo mod, String what) {
         found.add(mod.id());
         SnappyBlocks.LOG.info("Snappy Blocks: {} ({}) is installed: {}", mod.name(), mod.id(), what);
+    }
+
+    /**
+     * Whether the place pop stands aside. With Sodium it also does while no Sodium hook has run: the hide path needs the
+     * mesher hooks (compat mixins apply only to the builds whose methods match), and a pop with the block still in the
+     * mesh would show the block twice. The first Sodium mesh task has run long before a player can place anything.
+     */
+    public static boolean popAside() {
+        if (placeAside) return true;
+        if (!sodiumPresent || io.github.profetgit.snappyblocks.pop.SodiumHidden.wired) return false;
+        if (!unwiredLogged) {
+            unwiredLogged = true;
+            SnappyBlocks.LOG.warn("Snappy Blocks: Sodium is installed but this build of it has no hook for the place pop: the pop stands aside, the other effects stay");
+        }
+        return true;
     }
 
     /** True while Having a Blast keeps this item hidden. */

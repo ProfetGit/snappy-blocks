@@ -742,10 +742,10 @@ final class ScaleScenes {
         boolean stubbed = Compat.found.containsAll(stubs);
         int[] b = new int[4];
         s.check("aside_detect", mc -> {
-            SnappyBlocks.LOG.info("[selftest] aside: found {}, place {}, landing {}, pickup {}", Compat.found, Compat.placeAside, Compat.landAside, Compat.pickupAside);
-            if (stubbed) return Compat.placeAside && Compat.landAside && Compat.pickupAside ? null : "stand-ins loaded but a feature didn't stand aside";
+            SnappyBlocks.LOG.info("[selftest] aside: found {}, place {}, landing {}, pickup {}", Compat.found, Compat.placeAside && Compat.pulseAside, Compat.landAside, Compat.pickupAside);
+            if (stubbed) return Compat.placeAside && Compat.pulseAside && Compat.landAside && Compat.pickupAside ? null : "stand-ins loaded but a feature didn't stand aside";
             for (String id : stubs) if (Compat.found.contains(id)) return "only some stand-ins found: " + Compat.found;
-            return !Compat.placeAside && !Compat.landAside && !Compat.pickupAside ? null : "something stands aside with no such mod: " + Compat.found;
+            return !Compat.placeAside && !Compat.pulseAside && !Compat.landAside && !Compat.pickupAside ? null : "something stands aside with no such mod: " + Compat.found;
         });
         s.server(srv -> {
             Scenarios.clearArea(srv);

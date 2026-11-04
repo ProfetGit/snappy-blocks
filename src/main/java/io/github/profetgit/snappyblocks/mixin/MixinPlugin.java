@@ -21,6 +21,14 @@ public final class MixinPlugin implements IMixinConfigPlugin {
         "SodiumMeshingTaskMixin", "execute(Lnet/caffeinemc/mods/sodium/client/render/chunk/compile/ChunkBuildContext;"
             + "Lnet/caffeinemc/mods/sodium/client/util/task/CancellationToken;)"
             + "Lnet/caffeinemc/mods/sodium/client/render/chunk/compile/ChunkBuildOutput;",
+        "SodiumMeshingTaskInit8Mixin", "<init>(Lnet/caffeinemc/mods/sodium/client/render/chunk/RenderSection;ILorg/joml/Vector3dc;"
+            + "Lnet/caffeinemc/mods/sodium/client/world/cloned/ChunkRenderContext;"
+            + "Lnet/caffeinemc/mods/sodium/client/render/chunk/translucent_sorting/SortBehavior;ZZJ)V",
+        "SodiumMeshingTaskInit6Mixin", "<init>(Lnet/caffeinemc/mods/sodium/client/render/chunk/RenderSection;ILorg/joml/Vector3dc;"
+            + "Lnet/caffeinemc/mods/sodium/client/world/cloned/ChunkRenderContext;"
+            + "Lnet/caffeinemc/mods/sodium/client/render/chunk/translucent_sorting/SortBehavior;Z)V",
+        "SodiumOcclusionCacheMixin", "shouldDrawSide(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;"
+            + "Lnet/minecraft/core/BlockPos;Lnet/minecraft/core/Direction;)Z",
         "SodiumBlockRenderContextMixin", "shouldDrawSide(Lnet/minecraft/core/Direction;)Z",
         "SodiumMeshLiveMixin", "createRebuildTask(Lnet/caffeinemc/mods/sodium/client/render/chunk/RenderSection;I)"
             + "Lnet/caffeinemc/mods/sodium/client/render/chunk/compile/tasks/ChunkBuilderMeshingTask;"
@@ -38,10 +46,7 @@ public final class MixinPlugin implements IMixinConfigPlugin {
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
         if (!mixinClassName.contains(".compat.")) return true;
-//? if <1.21.2 {
-        /*// the other Sodium stand-ins are 26.x's; Sodium on this version isn't supported (Compat) except for the burst's mesh signal
-        if (!mixinClassName.endsWith(".SodiumMeshLiveMixin")) return false;
-        *///?} else {
+//? if >=1.21.2 {
         if (mixinClassName.endsWith(".SodiumMeshLiveMixin")) return false;
 //?}
         ClassNode node;

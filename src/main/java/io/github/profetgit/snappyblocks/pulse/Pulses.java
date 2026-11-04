@@ -77,7 +77,7 @@ public final class Pulses {
      * later: a hit on a block that is still pulsing is the same hit and is skipped.
      */
     public static void hit(BlockPos pos, Direction face) {
-        if (!Config.get().enabled || !Config.get().pulse || Compat.placeAside) return;
+        if (!Config.get().enabled || !Config.get().pulse || Compat.pulseAside) return;
         Pulse running = PULSES.get(pos.asLong());
         if (running != null && Clock.now() - running.t0 < Math.max(0.5, Tune.get(TICKS))) return;
         Minecraft mc = Minecraft.getInstance();

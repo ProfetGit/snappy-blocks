@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.17 — 2026-11-04
+
+- Added (1.21.1 with Sodium 0.8): blocks now pop into place and pulse under the pickaxe with Sodium installed. Before, Sodium switched both off on 1.21.1. Sodium builds the mod has no hook for (older 1.21.1 Sodium) still switch only the place pop off; the mining pulse, break burst and item effects stay on.
+- Embeddium and Rubidium: only the place pop stands aside now; the mining pulse stays.
+
 ## 0.0.16 — 2026-11-04
 
 - Fixed (1.21.1 with Sodium or Embeddium): a broken block blinked out for about a tenth of a second and then reappeared to play its break animation. Sodium never told the mod when its new mesh was ready, so the animation waited out a fixed timer; it now follows Sodium's own mesh upload.

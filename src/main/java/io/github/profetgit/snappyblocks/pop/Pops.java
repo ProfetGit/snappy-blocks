@@ -191,7 +191,7 @@ public final class Pops {
             }
             return;
         }
-        if (!Config.get().enabled || !Config.get().pop || Compat.placeAside) return;
+        if (!Config.get().enabled || !Config.get().pop || Compat.popAside()) return;
         if (!(Probe.empty(old) || old.canBeReplaced()) || Probe.empty(now) || now.canBeReplaced()) return;
         if (predicted) {
             start(pos.immutable(), now, Clock.now(), null, LOCAL);

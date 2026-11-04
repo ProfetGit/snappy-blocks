@@ -40,7 +40,7 @@ Edit `config/snappy_blocks.json` in your game folder. It has a switch for each e
 
 ![Installation](https://raw.githubusercontent.com/ProfetGit/snappy-blocks/main/docs/desc/title-installation.webp)
 
-Put the jar for your Minecraft version and loader in your `mods` folder: 26.3 on Fabric, or 1.21.1 on Fabric, Quilt, NeoForge or Forge (the 1.21.1 Fabric jar also loads on Quilt). It does not need Fabric API. On 1.21.1, Sodium and Iris are not supported yet, and other players' mining pulses don't show.
+Put the jar for your Minecraft version and loader in your `mods` folder: 26.3 on Fabric, or 1.21.1 on Fabric, Quilt, NeoForge or Forge (the 1.21.1 Fabric jar also loads on Quilt). It does not need Fabric API. On 1.21.1, Sodium 0.8 is supported (tested on NeoForge); with other Sodium builds, Embeddium and Rubidium the place pop stands aside and everything else stays. Iris shaders on 1.21.1 are not tested yet, and other players' mining pulses don't show.
 
 ![More from Profet](https://raw.githubusercontent.com/ProfetGit/snappy-blocks/main/docs/desc/title-more-from-profet.webp)
 

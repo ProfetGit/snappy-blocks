@@ -25,7 +25,10 @@
     "SectionCompilerNeoForgeMixin",
     "compat.SodiumBlockRenderContextMixin",
     "compat.SodiumMeshLiveMixin",
-    "compat.SodiumMeshingTaskMixin"
+    "compat.SodiumMeshingTaskInit6Mixin",
+    "compat.SodiumMeshingTaskInit8Mixin",
+    "compat.SodiumMeshingTaskMixin",
+    "compat.SodiumOcclusionCacheMixin"
   ],
   "injectors": {
     "defaultRequire": 1

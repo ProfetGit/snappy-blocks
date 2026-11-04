@@ -8,6 +8,8 @@ import it.unimi.dsi.fastutil.longs.LongSet;
  * face-culling hook (compat.SodiumBlockRenderContextMixin).
  */
 public final class SodiumHidden {
+    /** Set by the first mesh task that ran through our hooks: the hide path is wired into this Sodium. */
+    public static volatile boolean wired;
     public static final ThreadLocal<LongSet> CURRENT = new ThreadLocal<>();
 
     private SodiumHidden() {}
