@@ -41,6 +41,30 @@ public final class ShaderPack {
         }
     }
 
+    private static MethodHandle separateAo;
+    private static boolean aoTried;
+
+    /**
+     * Whether the shader pack asks for ambient occlusion in the vertex alpha (shaders.properties `separateAo`). Iris then
+     * stores it there in the chunk mesh but drops it from vanilla's block batches, so a block copy would be drawn without it.
+     */
+    public static boolean separateAo() {
+        if (!active()) return false;
+        try {
+            if (!aoTried) {
+                aoTried = true;
+                Class<?> w = Class.forName("net.irisshaders.iris.shaderpack.materialmap.WorldRenderingSettings");
+                Object instance = w.getField("INSTANCE").get(null);
+                separateAo = MethodHandles.publicLookup().findVirtual(w, "shouldUseSeparateAo", MethodType.methodType(boolean.class)).bindTo(instance);
+            }
+            return separateAo != null && (boolean) separateAo.invoke();
+        } catch (Throwable t) {
+            separateAo = null;
+            SnappyBlocks.LOG.warn("Snappy Blocks: can't ask Iris about separate ambient occlusion ({})", t.toString());
+            return false;
+        }
+    }
+
     public static boolean active() {
         if (!tried) {
             tried = true;

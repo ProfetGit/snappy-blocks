@@ -8,7 +8,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.client.renderer.block.MovingBlockRenderState;
 import net.minecraft.world.level.material.FluidState;
 //?} else {
-/*import net.minecraft.client.Minecraft;
+/*import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.util.RandomSource;
@@ -83,7 +84,8 @@ public final class PopRenderState extends MovingBlockRenderState {
     public void draw(RenderPass pass) {
         RenderType type = ItemBlockRenderTypes.getMovingBlockRenderType(blockState);
         RANDOM.setSeed(blockState.getSeed(pos));
-        Minecraft.getInstance().getBlockRenderer().renderBatched(blockState, pos, level, pass.ps, pass.buffers.getBuffer(type), true, RANDOM);
+        VertexConsumer out = AoConsumer.wrap(pass.buffers.getBuffer(type));
+        Minecraft.getInstance().getBlockRenderer().renderBatched(blockState, pos, level, pass.ps, out, true, RANDOM);
         pass.used(type);
     }
 }

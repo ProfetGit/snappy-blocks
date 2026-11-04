@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.20 — 2026-11-04
+
+- Fixed (1.21.1 with Iris shaders): the lighting no longer pops when a block finishes placing. Shader packs that ask for ambient occlusion in the vertex alpha (Complementary, BSL) got the real block with its soft corner shading, but the growing copy without it, so the sides and bottom looked lighter until the block landed. The copy now carries the same shading. The same applies to the mining pulse and the break burst.
+
 ## 0.0.19 — 2026-11-04
 
 - Fixed (1.21.1 with Iris shaders): a block growing in now casts its shadow while it grows. Before, the shadow popped in only once the block had finished placing, because Iris draws its shadow map from the chunk mesh and never saw the growing copy.
