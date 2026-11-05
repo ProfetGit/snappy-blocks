@@ -276,6 +276,16 @@
     }
   },
   "addons": {
+    "embeddium": {
+      "profile": {
+        "1.21.1": "/home/emppu/.cache/studio/addons/embeddium-1.21.1",
+        "1.20.1": "/home/emppu/.cache/studio/addons/embeddium-1.20.1"
+      },
+      "mods": [
+        "embeddium-*.jar"
+      ],
+      "packs": []
+    },
     "sodium": {
       "profile": {
         "26.3": "Fabric 26.3",
@@ -403,6 +413,17 @@
       "mods": [
         "sodium-*.jar",
         "iris-*.jar"
+      ],
+      "packs": [],
+      "shaders": true
+    },
+    "oculus": {
+      "profile": {
+        "1.20.1": "/home/emppu/.cache/studio/addons/oculus-1.20.1"
+      },
+      "mods": [
+        "embeddium-*.jar",
+        "oculus-*.jar"
       ],
       "packs": [],
       "shaders": true

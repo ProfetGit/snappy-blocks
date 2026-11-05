@@ -51,6 +51,15 @@ public final class MixinPlugin implements IMixinConfigPlugin {
         "Sodium05MeshLiveMixin", "createRebuildTask(Lme/jellysquid/mods/sodium/client/render/chunk/RenderSection;I)"
             + "Lme/jellysquid/mods/sodium/client/render/chunk/compile/tasks/ChunkBuilderMeshingTask;"
             + "|processChunkBuildResults(Ljava/util/ArrayList;)V",
+        "EmbeddiumMeshingTaskMixin", "<init>(Lorg/embeddedt/embeddium/impl/render/chunk/RenderSection;"
+            + "Lorg/embeddedt/embeddium/impl/world/cloned/ChunkRenderContext;I)V"
+            + "|execute(Lorg/embeddedt/embeddium/impl/render/chunk/compile/ChunkBuildContext;"
+            + "Lorg/embeddedt/embeddium/impl/util/task/CancellationToken;)Lorg/embeddedt/embeddium/impl/render/chunk/compile/ChunkBuildOutput;",
+        "EmbeddiumMeshLiveMixin", "createRebuildTask(Lorg/embeddedt/embeddium/impl/render/chunk/RenderSection;I)"
+            + "Lorg/embeddedt/embeddium/impl/render/chunk/compile/tasks/ChunkBuilderMeshingTask;"
+            + "|processChunkBuildResults(Ljava/util/ArrayList;)V",
+        "EmbeddiumOcclusionMixin", "shouldDrawSide(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;"
+            + "Lnet/minecraft/core/BlockPos;Lnet/minecraft/core/Direction;)Z",
         "SodiumMeshLive09Mixin", "createRebuildTask(Lnet/caffeinemc/mods/sodium/client/render/chunk/RenderSection;IZ)"
             + "Lnet/caffeinemc/mods/sodium/client/render/chunk/compile/tasks/ChunkBuilderMeshingTask;"
             + "|processChunkBuildResults(Ljava/util/ArrayList;Lnet/caffeinemc/mods/sodium/client/render/viewport/Viewport;"

@@ -71,7 +71,8 @@ public final class ShaderPack {
     public static boolean active() {
         if (!tried) {
             tried = true;
-            if (SnappyBlocks.platform().isModLoaded("iris")) {
+            // Oculus (Iris for Embeddium, 1.20.1 Forge) keeps Iris's classes under its own mod id
+            if (SnappyBlocks.platform().isModLoaded("iris") || SnappyBlocks.platform().isModLoaded("oculus")) {
                 try {
                     inUse = MethodHandles.publicLookup().findStatic(Class.forName("net.irisshaders.iris.Iris"), "isPackInUseQuick",
                         MethodType.methodType(boolean.class));

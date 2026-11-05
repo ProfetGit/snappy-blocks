@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.25 — 2026-11-05
+
+- **Embeddium:** blocks now pop into place with Embeddium too (1.21.1 NeoForge and 1.20.1 Forge), and a broken block no longer blinks out before its break animation on 1.21.1.
+- **Oculus shaders (1.20.1 Forge):** Snappy Blocks now notices an Oculus shader pack, so growing blocks are lit like placed ones (no lighting pop at the end) and cast their shadow, as with Iris.
+
 ## 0.0.24 — 2026-11-04
 
 - **New: Minecraft 26.2** on Fabric, Quilt, NeoForge and Forge. On 26.2 the mining pulse follows your own hits only (the game sends no hit events for other players), and the place pop hands off to the new block when its chunk mesh is rebuilt. Works with Sodium 0.9 and Iris 1.11 on 26.2, including the growing block's shadow under shaders.

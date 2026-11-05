@@ -45,14 +45,8 @@ public final class Compat {
         for (String id : new String[] {"sodium", "embeddium", "rubidium"}) {
             meshReplaced |= SnappyBlocks.platform().isModLoaded(id);
         }
-        sodiumPresent = SnappyBlocks.platform().isModLoaded("sodium");
-        for (String id : new String[] {"embeddium", "rubidium"}) {
-            if (SnappyBlocks.platform().isModLoaded(id)) {
-                // their meshers have no hide path from us (untested): the pop stands aside, the pulse draws over the mesh and needs none
-                placeAside = true;
-                SnappyBlocks.LOG.info("Snappy Blocks: {} is installed, not supported by the place pop: it stands aside, the mining pulse stays", id);
-            }
-        }
+        // Embeddium and Rubidium are Sodium 0.5 forks: same rule, the pop stands aside unless a mesher hook ran (compat.Embeddium*)
+        sodiumPresent = meshReplaced;
         for (ModInfo mod : SnappyBlocks.platform().mods()) {
             String id = mod.id(), name = mod.name().toLowerCase(Locale.ROOT).trim();
             if (PLACE_IDS.contains(id) || PLACE_NAMES.contains(name)) {
@@ -99,7 +93,7 @@ public final class Compat {
         if (!sodiumPresent || io.github.profetgit.snappyblocks.pop.SodiumHidden.wired) return false;
         if (!unwiredLogged) {
             unwiredLogged = true;
-            SnappyBlocks.LOG.warn("Snappy Blocks: Sodium is installed but this build of it has no hook for the place pop: the pop stands aside, the other effects stay");
+            SnappyBlocks.LOG.warn("Snappy Blocks: Sodium (or a fork) is installed but this build of it has no hook for the place pop: the pop stands aside, the other effects stay");
         }
         return true;
     }
