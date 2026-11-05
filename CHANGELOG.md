@@ -4,6 +4,7 @@
 
 - **Embeddium:** blocks now pop into place with Embeddium too (1.21.1 NeoForge and 1.20.1 Forge), and a broken block no longer blinks out before its break animation on 1.21.1.
 - **Oculus shaders (1.20.1 Forge):** Snappy Blocks now notices an Oculus shader pack, so growing blocks are lit like placed ones (no lighting pop at the end) and cast their shadow, as with Iris.
+- **Fix: modded plants and other cutout blocks** (Forge and NeoForge, 1.21.1 and 1.20.1) no longer show solid planes behind their leaves for a moment when they break, place or pulse. Their model sets the cutout layer itself, and the animation now reads it from there.
 
 ## 0.0.24 — 2026-11-04
 

@@ -64,7 +64,7 @@ final class Scenarios {
             return true;
         }).server(srv -> platform(srv)).waitTicks(40);
         String only = System.getProperty("snappy_blocks.selftest.scenes", "all");
-        List<String> names = new ArrayList<>(List.of("smoke", "pop", "burst", "pulse", "drops", "deny", "events", "bepop", "landing", "merge", "despawn", "farm1000", "pickup", "pickupwalk"));
+        List<String> names = new ArrayList<>(List.of("smoke", "pop", "burst", "pulse", "drops", "deny", "events", "bepop", "landing", "merge", "despawn", "farm1000", "pickup", "pickupwalk", "plants"));
         names.addAll(ScaleScenes.NAMES);
         for (String name : names) {
             if (!only.equals("all") && !Arrays.asList(only.split(",")).contains(name)) continue;
@@ -83,6 +83,7 @@ final class Scenarios {
                 case "farm1000" -> farm(s);
                 case "pickup" -> pickup(s);
                 case "pickupwalk" -> pickupWalk(s);
+                case "plants" -> plants(s);
                 default -> ScaleScenes.add(s, name);
             }
         }
@@ -247,6 +248,36 @@ final class Scenarios {
      * predicted survival break each burst; every drop that spawns at a burst's centre is claimed, hidden, then revealed
      * by the burst (not by the watchdog). Frames go to out/frames/burst.
      */
+    /**
+     * Cutout plants burst with their transparency (frames: no solid planes behind the leaves). Var `plants` takes block
+     * ids joined by + (a comma fans mt.py out into one job per value), e.g. modded ones (Forge/NeoForge give those their layer in the model, not in ItemBlockRenderTypes).
+     */
+    private static void plants(Script s) {
+        String[] plants = System.getProperty("snappy_blocks.plants", "minecraft:short_grass,minecraft:poppy,minecraft:fern,minecraft:dandelion").split("[+,]");
+        int[] base = new int[1];
+        s.server(srv -> {
+            cmd(srv, "fill -4 " + (Y - 1) + " -2 4 " + (Y - 1) + " 2 minecraft:grass_block");
+            cmd(srv, "fill -4 " + Y + " -2 4 " + (Y + 3) + " 2 minecraft:air");
+            cmd(srv, "kill @e[type=item]");
+            cmd(srv, "tp @p 0.5 " + Y + " -2.5 0 35");
+            cmd(srv, "gamemode survival @p");
+            for (int i = 0; i < plants.length; i++) cmd(srv, "setblock " + (i - plants.length / 2) + " " + Y + " 0 " + plants[i]);
+        }).waitTicks(20).run(mc -> {
+            base[0] = Bursts.started;
+            if (!TestCompat.hudHidden(mc)) TestCompat.toggleHud(mc);
+            SelfTest.startCapture("plants", 40 + plants.length * 12);
+        });
+        for (int i = 0; i < plants.length; i++) {
+            int x = i - plants.length / 2;
+            s.server(srv -> cmd(srv, "setblock " + x + " " + Y + " 0 minecraft:air destroy")).waitTicks(12);
+        }
+        s.waitTicks(20).check("plants_burst", mc -> {
+            int started = Bursts.started - base[0];
+            SnappyBlocks.LOG.info("[selftest] plants: {} bursts for {} plants {}", started, plants.length, Arrays.toString(plants));
+            return started == plants.length ? null : "bursts " + started + " of " + plants.length;
+        });
+    }
+
     private static void burst(Script s) {
         String[] blocks = {"dirt", "stone", "oak_log", "glass", "oak_planks"};
         int drops = 4; // glass drops nothing

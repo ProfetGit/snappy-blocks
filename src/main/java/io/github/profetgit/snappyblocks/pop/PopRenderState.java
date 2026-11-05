@@ -9,9 +9,15 @@ import net.minecraft.client.renderer.block.MovingBlockRenderState;
 import net.minecraft.world.level.material.FluidState;
 //?} else {
 /*import com.mojang.blaze3d.vertex.VertexConsumer;
+import io.github.profetgit.snappyblocks.SnappyBlocks;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
+import java.lang.reflect.Method;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.util.RandomSource;
 *///?}
 
@@ -82,11 +88,54 @@ public final class PopRenderState extends MovingBlockRenderState {
 
     // the piston's moving-block path: the real level around the block gives the chunk mesh's own light and shading
     public void draw(RenderPass pass) {
-        RenderType type = ItemBlockRenderTypes.getMovingBlockRenderType(blockState);
+        RANDOM.setSeed(blockState.getSeed(pos));
+        RenderType type = layer(blockState, RANDOM);
+        if (type == RenderType.translucent()) type = RenderType.translucentMovingBlock();
         RANDOM.setSeed(blockState.getSeed(pos));
         VertexConsumer out = AoConsumer.wrap(pass.buffers.getBuffer(type));
         Minecraft.getInstance().getBlockRenderer().renderBatched(blockState, pos, level, pass.ps, out, true, RANDOM);
         pass.used(type);
+    }
+
+    // Forge and NeoForge models can name their own layer (model JSON "render_type": "cutout"), which ItemBlockRenderTypes
+    // doesn't know: modded plants then came out solid (their transparent pixels as planes). Ask the model, reflectively,
+    // so this source builds on every loader.
+    private static MethodHandle modelTypes, setContains;
+    private static Object emptyData;
+    private static boolean tried;
+
+    public static RenderType layer(BlockState state, RandomSource random) {
+        RenderType vanilla = ItemBlockRenderTypes.getChunkRenderType(state);
+        if (!tried) {
+            tried = true;
+            for (String name : new String[] {"net.neoforged.neoforge.client.model.data.ModelData", "net.minecraftforge.client.model.data.ModelData"}) {
+                try {
+                    Class<?> data = Class.forName(name);
+                    Method m = BakedModel.class.getMethod("getRenderTypes", BlockState.class, RandomSource.class, data);
+                    emptyData = data.getField("EMPTY").get(null);
+                    modelTypes = MethodHandles.publicLookup().unreflect(m);
+                    setContains = MethodHandles.publicLookup().findVirtual(m.getReturnType(), "contains", MethodType.methodType(boolean.class, RenderType.class));
+                    break;
+                } catch (ClassNotFoundException absent) {
+                    // not this loader
+                } catch (Throwable t) {
+                    modelTypes = null;
+                    SnappyBlocks.LOG.warn("Snappy Blocks: can't read model render types, copies use the vanilla layer ({})", t.toString());
+                    break;
+                }
+            }
+        }
+        if (modelTypes == null) return vanilla;
+        try {
+            Object set = modelTypes.invoke(Minecraft.getInstance().getBlockRenderer().getBlockModel(state), state, random, emptyData);
+            for (RenderType t : new RenderType[] {RenderType.translucent(), RenderType.cutout(), RenderType.cutoutMipped()}) {
+                if ((boolean) setContains.invoke(set, t)) return t;
+            }
+        } catch (Throwable t) {
+            modelTypes = null;
+            SnappyBlocks.LOG.warn("Snappy Blocks: can't read model render types, copies use the vanilla layer ({})", t.toString());
+        }
+        return vanilla;
     }
 }
 *///?}

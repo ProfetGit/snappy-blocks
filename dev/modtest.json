@@ -10,7 +10,8 @@
     "snappy_blocks.selftest.gap": "{gap}",
     "snappy_blocks.selftest.rounds": "{rounds}",
     "snappy_blocks.selftest.capture": "{capture}",
-    "snappy_blocks.selftest.shadows": "{shadows}"
+    "snappy_blocks.selftest.shadows": "{shadows}",
+    "snappy_blocks.plants": "{plants}"
   },
   "defaults": {
     "mode": "full",
@@ -19,7 +20,8 @@
     "gap": "8",
     "rounds": "2",
     "capture": "",
-    "shadows": ""
+    "shadows": "",
+    "plants": "minecraft:short_grass+minecraft:poppy+minecraft:fern+minecraft:dandelion"
   },
   "fabric_api": false,
   "width": 1280,
@@ -427,6 +429,132 @@
       ],
       "packs": [],
       "shaders": true
+    },
+    "bop": {
+      "profile": {
+        "1.21.1": "/home/emppu/.cache/studio/addons/bop-1.21.1"
+      },
+      "mods": [
+        "BiomesOPlenty-*.jar",
+        "GlitchCore-*.jar",
+        "TerraBlender-*.jar"
+      ],
+      "packs": []
+    },
+    "bop-forge-1.20.1": {
+      "profile": {
+        "1.20.1": "/home/emppu/.cache/studio/addons/bop-forge-1.20.1"
+      },
+      "mods": [
+        "BiomesOPlenty-*.jar",
+        "TerraBlender-*.jar"
+      ],
+      "packs": []
+    },
+    "bop-fabric-1.20.1": {
+      "profile": {
+        "1.20.1": "/home/emppu/.cache/studio/addons/bop-fabric-1.20.1"
+      },
+      "mods": [
+        "BiomesOPlenty-*.jar",
+        "GlitchCore-*.jar",
+        "TerraBlender-*.jar",
+        "fabric-*.jar"
+      ],
+      "packs": []
+    },
+    "bop-forge-1.21.1": {
+      "profile": {
+        "1.21.1": "/home/emppu/.cache/studio/addons/bop-forge-1.21.1"
+      },
+      "mods": [
+        "BiomesOPlenty-*.jar",
+        "GlitchCore-*.jar",
+        "TerraBlender-*.jar"
+      ],
+      "packs": []
+    },
+    "bop-fabric-1.21.1": {
+      "profile": {
+        "1.21.1": "/home/emppu/.cache/studio/addons/bop-fabric-1.21.1"
+      },
+      "mods": [
+        "BiomesOPlenty-*.jar",
+        "GlitchCore-*.jar",
+        "TerraBlender-*.jar",
+        "fabric-*.jar"
+      ],
+      "packs": []
+    },
+    "bop-neoforge-1.21.1": {
+      "profile": {
+        "1.21.1": "/home/emppu/.cache/studio/addons/bop-1.21.1"
+      },
+      "mods": [
+        "BiomesOPlenty-*.jar",
+        "GlitchCore-*.jar",
+        "TerraBlender-*.jar"
+      ],
+      "packs": []
+    },
+    "bop-forge-26.2": {
+      "profile": {
+        "26.2": "/home/emppu/.cache/studio/addons/bop-forge-26.2"
+      },
+      "mods": [
+        "BiomesOPlenty-*.jar"
+      ],
+      "packs": []
+    },
+    "bop-fabric-26.2": {
+      "profile": {
+        "26.2": "/home/emppu/.cache/studio/addons/bop-fabric-26.2"
+      },
+      "mods": [
+        "BiomesOPlenty-*.jar",
+        "fabric-*.jar"
+      ],
+      "packs": []
+    },
+    "bop-neoforge-26.2": {
+      "profile": {
+        "26.2": "/home/emppu/.cache/studio/addons/bop-neoforge-26.2"
+      },
+      "mods": [
+        "BiomesOPlenty-*.jar"
+      ],
+      "packs": []
+    },
+    "bop-forge-26.3": {
+      "profile": {
+        "26.3": "/home/emppu/.cache/studio/addons/bop-forge-26.3"
+      },
+      "mods": [
+        "BiomesOPlenty-*.jar",
+        "GlitchCore-*.jar"
+      ],
+      "packs": []
+    },
+    "bop-fabric-26.3": {
+      "profile": {
+        "26.3": "/home/emppu/.cache/studio/addons/bop-fabric-26.3"
+      },
+      "mods": [
+        "BiomesOPlenty-*.jar",
+        "GlitchCore-*.jar",
+        "fabric-*.jar"
+      ],
+      "packs": []
+    },
+    "bop-neoforge-26.3": {
+      "profile": {
+        "26.3": "/home/emppu/.cache/studio/addons/bop-neoforge-26.3"
+      },
+      "mods": [
+        "BiomesOPlenty-*.jar",
+        "GlitchCore-*.jar"
+      ],
+      "packs": []
     }
   }
 }
