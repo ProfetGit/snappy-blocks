@@ -20,6 +20,8 @@ public final class RenderPass {
     public final PoseStack ps;
     public final Vec3 cam;
     public final Matrix4fc projection, viewRotation;
+    /** 1.21.11: the camera state carries no matrices; LevelRendererMixin copies them here at the start of renderLevel. */
+    public static final org.joml.Matrix4f FRAME_PROJECTION = new org.joml.Matrix4f(), FRAME_VIEW = new org.joml.Matrix4f();
 //? if >=1.21.2 {
     public final SubmitNodeCollector collector;
     public final CameraRenderState camera;
@@ -29,8 +31,13 @@ public final class RenderPass {
         this.collector = collector;
         this.camera = state.cameraRenderState;
         this.cam = state.cameraRenderState.pos;
+//? if >=26.2 {
         this.projection = state.cameraRenderState.projectionMatrix;
         this.viewRotation = state.cameraRenderState.viewRotationMatrix;
+//?} else {
+/*        this.projection = FRAME_PROJECTION;
+        this.viewRotation = FRAME_VIEW;
+*///?}
     }
 
     /** A pass with its own pose and camera position (Iris's shadow map): blocks only, no camera state. */

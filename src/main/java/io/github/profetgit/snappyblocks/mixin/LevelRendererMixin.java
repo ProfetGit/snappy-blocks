@@ -80,7 +80,7 @@ public abstract class LevelRendererMixin {
         Ghosts.spentNanos += System.nanoTime() - t0;
     }
 //?}
-//? if >=1.21.2 && <26.3 {
+//? if >=26.2 && <26.3 {
     /*@Inject(method = "submitBlockDestroyAnimation", at = @At("RETURN")) // RETURN, not TAIL: it returns early when nothing is being mined
     private void snappy_blocks$submit(PoseStack ps, SubmitNodeCollector collector, LevelRenderState state, CallbackInfo ci) {
         RenderPass pass = new RenderPass(ps, collector, state);
@@ -92,6 +92,55 @@ public abstract class LevelRendererMixin {
         Ghosts.spentNanos += System.nanoTime() - t0;
     }
 *///?}
+//? if >=1.21.2 && <26.2 {
+    /*// 1.21.11: render states and submit nodes like 26.x, but no transient blocks; the copies go into the submit storage after the block entities
+    @Inject(method = "renderLevel", at = @At("HEAD"))
+    private void snappy_blocks$matrices(com.mojang.blaze3d.resource.GraphicsResourceAllocator allocator, net.minecraft.client.DeltaTracker delta, boolean outline,
+        net.minecraft.client.Camera camera, org.joml.Matrix4f view, org.joml.Matrix4f projection, org.joml.Matrix4f cullProjection,
+        com.mojang.blaze3d.buffers.GpuBufferSlice fog, org.joml.Vector4f fogColor, boolean sky, CallbackInfo ci) {
+        RenderPass.FRAME_VIEW.set(view);
+        RenderPass.FRAME_PROJECTION.set(projection);
+    }
+
+    @Inject(method = "submitBlockEntities", at = @At("RETURN"))
+    private void snappy_blocks$submit(PoseStack ps, LevelRenderState state, net.minecraft.client.renderer.SubmitNodeStorage storage, CallbackInfo ci) {
+        RenderPass pass = new RenderPass(ps, storage, state);
+        Pops.submit(pass);
+        Pulses.submit(pass);
+        Bursts.submit(pass);
+        long t0 = System.nanoTime();
+        Ghosts.submit(pass);
+        Ghosts.spentNanos += System.nanoTime() - t0;
+    }
+
+    // the crack overlay follows the block: popping, or pulsing under the pickaxe (the pose is at the block's corner here, as before 1.21.2)
+    @WrapOperation(method = "renderBlockDestroyAnimation", require = 0, at = @At(value = "INVOKE",
+        target = "Lnet/minecraft/client/renderer/block/BlockRenderDispatcher;renderBreakingTexture(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/BlockAndTintGetter;Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;)V"))
+    private void snappy_blocks$crack(net.minecraft.client.renderer.block.BlockRenderDispatcher dispatcher, net.minecraft.world.level.block.state.BlockState state, BlockPos pos,
+        net.minecraft.world.level.BlockAndTintGetter level, PoseStack ps, com.mojang.blaze3d.vertex.VertexConsumer consumer, Operation<Void> original) {
+        Probe.cracks++;
+        Pops.transform(ps, pos);
+        Pulses.transform(ps, pos);
+        original.call(dispatcher, state, pos, level, ps, consumer);
+    }
+
+    // renderHitOutline takes the block's offset from the camera as arguments, not from the pose: scale about the block there
+    @WrapOperation(method = "renderBlockOutline", at = @At(value = "INVOKE",
+        target = "Lnet/minecraft/client/renderer/LevelRenderer;renderHitOutline(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;DDDLnet/minecraft/client/renderer/state/BlockOutlineRenderState;IF)V"))
+    private void snappy_blocks$outline(LevelRenderer self, PoseStack ps, com.mojang.blaze3d.vertex.VertexConsumer consumer, double x, double y, double z,
+        net.minecraft.client.renderer.state.BlockOutlineRenderState outline, int color, float width, Operation<Void> original) {
+        Probe.outlines++;
+        BlockPos pos = outline.pos();
+        double dx = pos.getX() - x, dy = pos.getY() - y, dz = pos.getZ() - z;
+        ps.pushPose();
+        ps.translate(dx, dy, dz);
+        Pops.transform(ps, pos);
+        Pulses.transform(ps, pos);
+        ps.translate(-dx, -dy, -dz);
+        original.call(self, ps, consumer, x, y, z, outline, color, width);
+        ps.popPose();
+    }
+*///?}
 
     /** A block entity drawn only by its renderer (chest, sign, banner) pops through the renderer's pose. */
     @WrapOperation(method = "submitBlockEntities", at = @At(value = "INVOKE",
@@ -101,6 +150,7 @@ public abstract class LevelRendererMixin {
         Pops.transform(ps, state.blockPos);
         original.call(dispatcher, state, ps, collector, camera);
     }
+//? if >=26.2 {
 
     /** The crack overlay follows the block: popping, or pulsing under the pickaxe. */
     @WrapOperation(method = "submitBlockDestroyAnimation", at = @At(value = "INVOKE",
@@ -120,6 +170,7 @@ public abstract class LevelRendererMixin {
         Pops.transform(ps, pos);
         Pulses.transform(ps, pos);
     }
+//?}
 //?} else if >=1.21 {
 /*    // no transient blocks before 1.21.2: a section mesh is live when its upload is done (setCompiled -> here)
     @Inject(method = "addRecentlyCompiledSection", at = @At("HEAD"))

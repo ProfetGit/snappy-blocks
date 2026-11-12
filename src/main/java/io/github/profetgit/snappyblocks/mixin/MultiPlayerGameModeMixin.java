@@ -33,7 +33,7 @@ public abstract class MultiPlayerGameModeMixin {
     }
 
     *///?}
-//? if >=26.2 && <26.3 {
+//? if >=1.21.2 && <26.3 {
     /*// 26.2 sends no level events for other miners' hits either: the player's own hit, as the hit sound plays
     @Inject(method = "continueDestroyBlock", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/sounds/SoundManager;play(Lnet/minecraft/client/resources/sounds/SoundInstance;)Lnet/minecraft/client/sounds/SoundEngine$PlayResult;"))
     private void snappy_blocks$hit262(BlockPos pos, Direction direction, CallbackInfoReturnable<Boolean> cir) {

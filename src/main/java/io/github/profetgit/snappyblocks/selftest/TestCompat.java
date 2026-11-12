@@ -26,11 +26,16 @@ final class TestCompat {
     private TestCompat() {}
 
     static void createWorld(Minecraft mc, String name) {
-//? if >=1.21.2 {
+//? if >=26.2 {
         mc.createWorldOpenFlows().createFreshLevel(name,
             new LevelSettings(name, GameType.SURVIVAL, new LevelSettings.DifficultySettings(Difficulty.PEACEFUL, false, false), true, WorldDataConfiguration.DEFAULT),
             new WorldOptions(42L, false, false), WorldPresets::createTestWorldDimensions, mc.gui.screen());
-//?} else {
+//?} else if >=1.21.2 {
+/*        mc.createWorldOpenFlows().createFreshLevel(name,
+            new LevelSettings(name, GameType.SURVIVAL, false, Difficulty.PEACEFUL, true,
+                new net.minecraft.world.level.gamerules.GameRules(net.minecraft.world.flag.FeatureFlags.DEFAULT_FLAGS), WorldDataConfiguration.DEFAULT),
+            new WorldOptions(42L, false, false), WorldPresets::createFlatWorldDimensions, mc.screen);
+*///?} else {
 /*        mc.createWorldOpenFlows().createFreshLevel(name,
             new LevelSettings(name, GameType.SURVIVAL, false, Difficulty.PEACEFUL, true, new GameRules(), WorldDataConfiguration.DEFAULT),
             new WorldOptions(42L, false, false),

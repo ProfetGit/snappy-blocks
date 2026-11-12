@@ -7,7 +7,7 @@
   {
     "regex": "net\\.minecraft\\.util\\.Util\\b",
     "to": "net.minecraft.Util",
-    "when": "<26.2"
+    "when": "<1.21.2"
   },
   {
     "from": "EntityTypes",
@@ -32,7 +32,7 @@
   {
     "from": "getSelectedItem",
     "to": "getSelected",
-    "when": "<26.2"
+    "when": "<1.21.2"
   },
   {
     "from": "levelExtractor",
@@ -42,7 +42,7 @@
   {
     "regex": "\\.getMainCamera\\(\\)\\.position\\(\\)",
     "to": ".getMainCamera().getPosition()",
-    "when": "<26.2"
+    "when": "<1.21.2"
   },
   {
     "regex": "\\.gui\\.isHidden\\(\\)",
@@ -52,7 +52,7 @@
   {
     "from": "RenderSectionRegion",
     "to": "RenderChunkRegion",
-    "when": "<26.2"
+    "when": "<1.21.2"
   },
   {
     "from": "Hud",
@@ -68,7 +68,7 @@
   {
     "regex": "Lnet/minecraft/network/PacketProcessor;",
     "to": "Lnet/minecraft/util/thread/BlockableEventLoop;",
-    "when": "<26.2"
+    "when": "<1.21.2"
   },
   {
     "regex": "\\.entityIds\\(\\)",
@@ -162,5 +162,84 @@
     "regex": "case \"freeze\" -> freeze\\(s\\);",
     "to": "case \"freeze\" -> s.waitTicks(1); // no /tick command before 1.20.3",
     "when": "<1.21"
+  },
+  {
+    "regex": "net\\.minecraft\\.client\\.renderer\\.state\\.level\\.",
+    "to": "net.minecraft.client.renderer.state.",
+    "when": "<26.2"
+  },
+  {
+    "regex": "net/minecraft/client/renderer/state/level/",
+    "to": "net/minecraft/client/renderer/state/",
+    "when": "<26.2"
+  },
+  {
+    "regex": "net\\.minecraft\\.client\\.renderer\\.block\\.dispatch\\.BlockStateModelPart\\b",
+    "to": "net.minecraft.client.renderer.block.model.BlockModelPart",
+    "when": "<26.2"
+  },
+  {
+    "regex": "\\bBlockStateModelPart\\b",
+    "to": "BlockModelPart",
+    "when": "<26.2"
+  },
+  {
+    "regex": "net\\.minecraft\\.client\\.renderer\\.block\\.dispatch\\.",
+    "to": "net.minecraft.client.renderer.block.model.",
+    "when": "<26.2"
+  },
+  {
+    "regex": "net/minecraft/client/renderer/block/dispatch/",
+    "to": "net/minecraft/client/renderer/block/model/",
+    "when": "<26.2"
+  },
+  {
+    "regex": "getModelManager\\(\\)\\.getBlockStateModelSet\\(\\)\\.get\\(",
+    "to": "getBlockRenderer().getBlockModel(",
+    "when": "<26.2"
+  },
+  {
+    "regex": "submitMovingBlock\\(pass\\.ps, this, 0\\)",
+    "to": "submitMovingBlock(pass.ps, this)",
+    "when": "<26.2"
+  },
+  {
+    "regex": "this\\.cardinalLighting = level\\.cardinalLighting\\(\\);",
+    "to": "((MovingBlockRenderState) this).level = level;",
+    "when": "<26.2"
+  },
+  {
+    "regex": "this\\.lightEngine = level\\.getLightEngine\\(\\);",
+    "to": "",
+    "when": "<26.2"
+  },
+  {
+    "regex": "ClientLevel level, long sectionNode",
+    "to": "net.minecraft.world.level.Level level, long sectionNode",
+    "when": "<26.2"
+  },
+  {
+    "regex": "callback\\.CallbackInfoReturnable;",
+    "to": "callback.CallbackInfo;",
+    "when": "<26.2",
+    "files": "^SectionMeshLiveMixin\\.java$"
+  },
+  {
+    "regex": "CallbackInfoReturnable<SectionMesh> cir",
+    "to": "CallbackInfo cir",
+    "when": "<26.2",
+    "files": "^SectionMeshLiveMixin\\.java$"
+  },
+  {
+    "regex": "ModList\\.isLoaded\\(",
+    "to": "ModList.get().isLoaded(",
+    "when": "<26.1",
+    "files": "^ForgeEntry\\.java$"
+  },
+  {
+    "regex": "ModList\\.getMods\\(\\)",
+    "to": "ModList.get().getMods()",
+    "when": "<26.1",
+    "files": "^ForgeEntry\\.java$"
   }
 ]

@@ -1,0 +1,44 @@
+package io.github.profetgit.snappyblocks.mixin;
+
+//? if !neoforge || <1.21.2 || >=26.2 {
+import net.minecraft.client.Minecraft;
+import org.spongepowered.asm.mixin.Mixin;
+
+/** Placeholder: NeoForge 1.21.11's BlockFeatureRenderer draws moving blocks through a tesselateBlock overload that takes a Function. */
+@Mixin(Minecraft.class)
+public abstract class MovingBlockFeatureRendererNeoForgeMixin {
+}
+//?} else {
+/*import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import io.github.profetgit.snappyblocks.pop.PopRenderState;
+import io.github.profetgit.snappyblocks.pop.ShaderPack;
+import java.util.List;
+import java.util.function.Function;
+import net.minecraft.client.renderer.block.ModelBlockRenderer;
+import net.minecraft.client.renderer.block.model.BlockModelPart;
+import net.minecraft.client.renderer.feature.BlockFeatureRenderer;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.BlockAndTintGetter;
+import net.minecraft.world.level.block.state.BlockState;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+
+@Mixin(BlockFeatureRenderer.class)
+public abstract class MovingBlockFeatureRendererNeoForgeMixin {
+    @WrapOperation(method = "render", require = 0, at = @At(value = "INVOKE",
+        target = "Lnet/minecraft/client/renderer/block/ModelBlockRenderer;tesselateBlock(Lnet/minecraft/world/level/BlockAndTintGetter;Ljava/util/List;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/BlockPos;Lcom/mojang/blaze3d/vertex/PoseStack;Ljava/util/function/Function;ZI)V"))
+    private void snappy_blocks$copy(ModelBlockRenderer renderer, BlockAndTintGetter level, List<BlockModelPart> parts, BlockState state, BlockPos pos, PoseStack ps,
+                                    Function<RenderType, VertexConsumer> out, boolean cull, int overlay, Operation<Void> original) {
+        ShaderPack.aoCopy = level instanceof PopRenderState && ShaderPack.separateAo();
+        try {
+            original.call(renderer, level, parts, state, pos, ps, out, cull, overlay);
+        } finally {
+            ShaderPack.aoCopy = false;
+        }
+    }
+}
+*///?}
