@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.26 — 2026-11-12
+
+- **New: Minecraft 1.21.11** on Fabric, Quilt, NeoForge and Forge. Same effects as the other versions: place pop, mining pulse, break burst and item effects. Sodium, Iris and Embeddium are not supported on 1.21.11 yet.
+
 ## 0.0.25 — 2026-11-05
 
 - **Embeddium:** blocks now pop into place with Embeddium too (1.21.1 NeoForge and 1.20.1 Forge), and a broken block no longer blinks out before its break animation on 1.21.1.
