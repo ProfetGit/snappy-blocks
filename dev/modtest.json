@@ -632,6 +632,26 @@
       ],
       "packs": [],
       "shaders": true
+    },
+    "sodium-fabric": {
+      "profile": {
+        "1.21.1": "/home/emppu/.cache/studio/addons/sodium-fabric-1.21.1"
+      },
+      "mods": [
+        "sodium-*.jar"
+      ],
+      "packs": []
+    },
+    "iris-fabric": {
+      "profile": {
+        "1.21.1": "/home/emppu/.cache/studio/addons/iris-fabric-1.21.1"
+      },
+      "mods": [
+        "sodium-*.jar",
+        "iris-*.jar"
+      ],
+      "packs": [],
+      "shaders": true
     }
   }
 }
