@@ -652,6 +652,48 @@
       ],
       "packs": [],
       "shaders": true
+    },
+    "sodium-neoforge": {
+      "profile": {
+        "1.21.11": "/home/emppu/.cache/studio/addons/sodium-neoforge-1.21.11"
+      },
+      "mods": [
+        "sodium-*.jar"
+      ],
+      "packs": []
+    },
+    "iris-neoforge": {
+      "profile": {
+        "1.21.11": "/home/emppu/.cache/studio/addons/iris-neoforge-1.21.11"
+      },
+      "mods": [
+        "sodium-*.jar",
+        "iris-*.jar"
+      ],
+      "packs": [],
+      "shaders": true
+    },
+    "sodium-hab-neoforge": {
+      "profile": {
+        "1.21.11": "/home/emppu/.cache/studio/addons/sodium-hab-neoforge-1.21.11"
+      },
+      "mods": [
+        "sodium-*.jar",
+        "havingablast-*.jar"
+      ],
+      "packs": []
+    },
+    "iris-hab-neoforge": {
+      "profile": {
+        "1.21.11": "/home/emppu/.cache/studio/addons/iris-hab-neoforge-1.21.11"
+      },
+      "mods": [
+        "sodium-*.jar",
+        "iris-*.jar",
+        "havingablast-*.jar"
+      ],
+      "packs": [],
+      "shaders": true
     }
   }
 }
