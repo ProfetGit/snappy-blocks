@@ -18,7 +18,9 @@ import org.spongepowered.asm.service.MixinService;
 public final class MixinPlugin implements IMixinConfigPlugin {
 //? if >=1.21.2 {
     private static final String IRIS_SHADOWS = "renderShadows(Lnet/irisshaders/iris/mixin/LevelRendererAccessor;Lnet/minecraft/client/Camera;"
-        + "Lnet/minecraft/client/renderer/state/level/CameraRenderState;)V";
+        + "Lnet/minecraft/client/renderer/state/level/CameraRenderState;)V"
+        // 1.21.11 Fabric and Quilt run intermediary names (class_4184 = Camera, class_12075 = CameraRenderState)
+        + "~renderShadows(Lnet/irisshaders/iris/mixin/LevelRendererAccessor;Lnet/minecraft/class_4184;Lnet/minecraft/class_12075;)V";
 //?} else {
     /*// Fabric and Quilt run intermediary names (class_4184 = Camera), NeoForge and Forge Mojang names
     private static final String IRIS_SHADOWS = "renderShadows(Lnet/irisshaders/iris/mixin/LevelRendererAccessor;Lnet/minecraft/client/Camera;)V"
@@ -39,9 +41,10 @@ public final class MixinPlugin implements IMixinConfigPlugin {
             + "Lnet/caffeinemc/mods/sodium/client/world/cloned/ChunkRenderContext;"
             + "Lnet/caffeinemc/mods/sodium/client/render/chunk/translucent_sorting/SortBehavior;Z)V",
         "SodiumOcclusionCacheMixin", "shouldDrawSide(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;"
-            + "Lnet/minecraft/core/BlockPos;Lnet/minecraft/core/Direction;)Z",
+            + "Lnet/minecraft/core/BlockPos;Lnet/minecraft/core/Direction;)Z"
+            + "~shouldDrawSide(Lnet/minecraft/class_2680;Lnet/minecraft/class_1922;Lnet/minecraft/class_2338;Lnet/minecraft/class_2350;)Z",
         "IrisShadowMixin", IRIS_SHADOWS,
-        "SodiumBlockRenderContextMixin", "shouldDrawSide(Lnet/minecraft/core/Direction;)Z",
+        "SodiumBlockRenderContextMixin", "shouldDrawSide(Lnet/minecraft/core/Direction;)Z~shouldDrawSide(Lnet/minecraft/class_2350;)Z",
         "SodiumNonTerrainAoMixin", "shadeQuad(Lnet/caffeinemc/mods/sodium/client/render/model/MutableQuadViewImpl;"
             + "Lnet/caffeinemc/mods/sodium/client/model/light/LightMode;ZLnet/caffeinemc/mods/sodium/client/render/model/SodiumShadeMode;)V",
         "Sodium05MeshingTaskMixin", "<init>(Lme/jellysquid/mods/sodium/client/render/chunk/RenderSection;"
@@ -86,10 +89,10 @@ public final class MixinPlugin implements IMixinConfigPlugin {
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
         if (!mixinClassName.contains(".compat.")) return true;
-//? if >=1.21.2 {
+//? if >=26.2 {
         if (mixinClassName.endsWith(".SodiumMeshLiveMixin")) return false;
 //?}
-//? if >=26.3 || <1.21.2 {
+//? if >=26.3 || <26.2 {
         if (mixinClassName.endsWith(".SodiumMeshLive09Mixin")) return false;
 //?}
         ClassNode node;

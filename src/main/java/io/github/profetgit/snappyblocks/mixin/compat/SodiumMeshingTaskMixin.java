@@ -42,7 +42,7 @@ public abstract class SodiumMeshingTaskMixin implements HiddenHolder {
         SodiumHidden.CURRENT.remove();
     }
 
-    @WrapOperation(method = "execute", remap = false, at = @At(value = "INVOKE", remap = false,
+    @WrapOperation(method = "execute", remap = false, require = 0, at = @At(value = "INVOKE", remap = true,
         target = "Lnet/caffeinemc/mods/sodium/client/world/LevelSlice;getBlockState(III)Lnet/minecraft/world/level/block/state/BlockState;"))
     private BlockState snappy_blocks$skipHidden(LevelSlice slice, int x, int y, int z, Operation<BlockState> original) {
         BlockState s = original.call(slice, x, y, z);

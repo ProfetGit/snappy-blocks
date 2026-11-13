@@ -15,7 +15,7 @@ import org.spongepowered.asm.mixin.injection.At;
 @Pseudo
 @Mixin(targets = "net.caffeinemc.mods.sodium.client.render.model.AbstractBlockRenderContext", remap = false)
 public abstract class SodiumBlockRenderContextMixin {
-    @WrapOperation(method = "shouldDrawSide", remap = false, at = @At(value = "INVOKE", remap = false,
+    @WrapOperation(method = "shouldDrawSide", remap = false, require = 0, at = @At(value = "INVOKE", remap = true,
         target = "Lnet/minecraft/client/renderer/block/BlockAndTintGetter;getBlockState(Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/block/state/BlockState;"))
     private BlockState snappy_blocks$neighbour(BlockAndTintGetter level, BlockPos pos, Operation<BlockState> original) {
         BlockState s = original.call(level, pos);

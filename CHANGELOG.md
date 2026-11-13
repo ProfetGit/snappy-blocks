@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.27 — 2026-11-13
+
+- **Fix: crash when joining a world on Minecraft 1.21.11 with Sodium** (Fabric and Quilt). The world could not be entered at all. Snappy Blocks now works with Sodium 0.8 and Iris 1.10 shaders on 1.21.11, including the growing block's shadow.
+- A hook into another mod that does not match its version now switches off quietly instead of crashing the game.
+
 ## 0.0.26 — 2026-11-12
 
 - **New: Minecraft 1.21.11** on Fabric, Quilt, NeoForge and Forge. Same effects as the other versions: place pop, mining pulse, break burst and item effects. Sodium, Iris and Embeddium are not supported on 1.21.11 yet.

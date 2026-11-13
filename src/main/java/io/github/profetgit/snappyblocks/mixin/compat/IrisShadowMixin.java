@@ -67,5 +67,15 @@ public abstract class IrisShadowMixin {
                                              @Local(ordinal = 0) double cameraX, @Local(ordinal = 1) double cameraY, @Local(ordinal = 2) double cameraZ) {
         Pops.submitShadow(new RenderPass(modelView, submitNodeStorage, new Vec3(cameraX, cameraY, cameraZ)));
     }
+//? if <26.2 {
+
+    /*// Iris 1.10 on 1.21.11 draws the same storage with the no-argument renderAllFeatures()
+    @Inject(method = "renderShadows", remap = false, require = 0, at = @At(value = "INVOKE", remap = true,
+        target = "Lnet/minecraft/client/renderer/feature/FeatureRenderDispatcher;renderAllFeatures()V"))
+    private void snappy_blocks$shadowPops1211(CallbackInfo ci, @Local PoseStack modelView,
+                                              @Local(ordinal = 0) double cameraX, @Local(ordinal = 1) double cameraY, @Local(ordinal = 2) double cameraZ) {
+        Pops.submitShadow(new RenderPass(modelView, submitNodeStorage, new Vec3(cameraX, cameraY, cameraZ)));
+    }
+*///?}
 }
 //?}

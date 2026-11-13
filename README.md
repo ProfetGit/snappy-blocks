@@ -40,7 +40,7 @@ Edit `config/snappy_blocks.json` in your game folder. It has a switch for each e
 
 ![Installation](https://raw.githubusercontent.com/ProfetGit/snappy-blocks/main/docs/desc/title-installation.webp)
 
-Put the jar for your Minecraft version and loader in your `mods` folder: 26.3, 26.2, 1.21.11, 1.21.1 or 1.20.1 on Fabric, Quilt, NeoForge or Forge (the Fabric jar also loads on Quilt; on 1.20.1 NeoForge uses the Forge jar). It does not need Fabric API. Sodium is supported (0.9 on 26.3 and 26.2, 0.8 on 1.21.1, 0.5 on 1.20.1); Embeddium is supported (1.21.1 NeoForge, 1.20.1 Forge). On 1.21.11 the mod runs without Sodium, Iris or Embeddium for now. Iris shaders are supported on 26.3, 26.2, 1.21.1 and 1.20.1, and Oculus on 1.20.1 Forge (tested with Complementary and BSL): growing blocks are lit like placed ones and cast their shadow. Other players' mining pulses show on 26.3 only.
+Put the jar for your Minecraft version and loader in your `mods` folder: 26.3, 26.2, 1.21.11, 1.21.1 or 1.20.1 on Fabric, Quilt, NeoForge or Forge (the Fabric jar also loads on Quilt; on 1.20.1 NeoForge uses the Forge jar). It does not need Fabric API. Sodium is supported (0.9 on 26.3 and 26.2, 0.8 on 1.21.1, 0.5 on 1.20.1); Embeddium is supported (1.21.1 NeoForge, 1.20.1 Forge). Sodium 0.8 and Iris shaders work on 1.21.11 (Fabric); Embeddium is not tested there. Iris shaders are supported on 26.3, 26.2, 1.21.11, 1.21.1 and 1.20.1, and Oculus on 1.20.1 Forge (tested with Complementary and BSL): growing blocks are lit like placed ones and cast their shadow. Other players' mining pulses show on 26.3 only.
 
 ![More from Profet](https://raw.githubusercontent.com/ProfetGit/snappy-blocks/main/docs/desc/title-more-from-profet.webp)
 
