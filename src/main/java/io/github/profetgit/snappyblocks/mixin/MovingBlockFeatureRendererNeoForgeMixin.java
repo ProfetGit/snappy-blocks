@@ -20,7 +20,7 @@ import java.util.function.Function;
 import net.minecraft.client.renderer.block.ModelBlockRenderer;
 import net.minecraft.client.renderer.block.model.BlockModelPart;
 import net.minecraft.client.renderer.feature.BlockFeatureRenderer;
-import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.block.state.BlockState;
@@ -32,10 +32,11 @@ public abstract class MovingBlockFeatureRendererNeoForgeMixin {
     @WrapOperation(method = "render", require = 0, at = @At(value = "INVOKE",
         target = "Lnet/minecraft/client/renderer/block/ModelBlockRenderer;tesselateBlock(Lnet/minecraft/world/level/BlockAndTintGetter;Ljava/util/List;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/BlockPos;Lcom/mojang/blaze3d/vertex/PoseStack;Ljava/util/function/Function;ZI)V"))
     private void snappy_blocks$copy(ModelBlockRenderer renderer, BlockAndTintGetter level, List<BlockModelPart> parts, BlockState state, BlockPos pos, PoseStack ps,
-                                    Function<RenderType, VertexConsumer> out, boolean cull, int overlay, Operation<Void> original) {
+                                    Function<ChunkSectionLayer, VertexConsumer> out, boolean cull, int overlay, Operation<Void> original) {
         ShaderPack.aoCopy = level instanceof PopRenderState && ShaderPack.separateAo();
         try {
-            original.call(renderer, level, parts, state, pos, ps, out, cull, overlay);
+            Function<ChunkSectionLayer, VertexConsumer> wrapped = level instanceof PopRenderState ? rt -> io.github.profetgit.snappyblocks.pop.AoConsumer.wrap(out.apply(rt)) : out;
+            original.call(renderer, level, parts, state, pos, ps, wrapped, cull, overlay);
         } finally {
             ShaderPack.aoCopy = false;
         }

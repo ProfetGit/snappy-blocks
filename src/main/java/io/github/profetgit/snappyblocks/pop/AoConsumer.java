@@ -1,7 +1,50 @@
 package io.github.profetgit.snappyblocks.pop;
 
-//? if >=1.21.2 {
-//?} else if >=1.21 {
+//? if >=26.2 {
+//?} else if >=1.21.2 {
+/*import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.model.geom.builders.UVPair;
+import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.util.ARGB;
+import org.joml.Matrix4f;
+import org.joml.Vector3f;
+import org.joml.Vector3fc;
+
+// 1.21.11: Iris with `separateAo` wipes the brightness of vanilla's quad writes (MixinBufferBuilder_SeparateAo) and the chunk mesh keeps the
+// ambient occlusion in the vertex alpha, so a copy drawn with smooth lighting on had none (a pop of colour at the hand-off). This writes the
+// quads like VertexConsumer.putBulkData with the ambient occlusion as the alpha.
+public record AoConsumer(VertexConsumer d) implements VertexConsumer {
+    public static VertexConsumer wrap(VertexConsumer out) {
+        return ShaderPack.separateAo() ? new AoConsumer(out) : out;
+    }
+
+    @Override public VertexConsumer addVertex(float x, float y, float z) { return d.addVertex(x, y, z); }
+    @Override public VertexConsumer setColor(int r, int g, int b, int a) { return d.setColor(r, g, b, a); }
+    @Override public VertexConsumer setColor(int argb) { return d.setColor(argb); }
+    @Override public VertexConsumer setUv(float u, float v) { return d.setUv(u, v); }
+    @Override public VertexConsumer setUv1(int u, int v) { return d.setUv1(u, v); }
+    @Override public VertexConsumer setUv2(int u, int v) { return d.setUv2(u, v); }
+    @Override public VertexConsumer setNormal(float x, float y, float z) { return d.setNormal(x, y, z); }
+    @Override public VertexConsumer setLineWidth(float w) { return d.setLineWidth(w); }
+
+    @Override
+    public void putBulkData(PoseStack.Pose pose, BakedQuad quad, float[] ao, float red, float green, float blue, float alpha, int[] light, int overlay) {
+        Vector3fc dir = quad.direction().getUnitVec3f();
+        Matrix4f m = pose.pose();
+        Vector3f n = pose.transformNormal(dir, new Vector3f());
+        int emission = quad.lightEmission();
+        for (int i = 0; i < 4; i++) {
+            long uv = quad.packedUV(i);
+            Vector3f p = m.transformPosition(quad.position(i), new Vector3f());
+            float a = Math.max(0f, Math.min(1f, ao[i] * alpha));
+            d.addVertex(p.x(), p.y(), p.z(), ARGB.colorFromFloat(a, red, green, blue), UVPair.unpackU(uv), UVPair.unpackV(uv), overlay,
+                LightTexture.lightCoordsWithEmission(light[i], emission), n.x(), n.y(), n.z());
+        }
+    }
+}
+*///?} else if >=1.21 {
 /*import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.block.model.BakedQuad;

@@ -46,17 +46,33 @@ import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.block.state.BlockState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 // Marks the tesselation of a block copy under a separateAo shader pack, for compat.SodiumNonTerrainAoMixin (1.21.11: BlockFeatureRenderer draws moving blocks).
 @Mixin(BlockFeatureRenderer.class)
 public abstract class MovingBlockFeatureRendererMixin {
+    // Fabric API's renderer (bundled in Sodium) draws the moving blocks before vanilla's own loop runs, through Sodium's non-terrain context:
+    // the flag stays up for the whole draw so that path writes the ambient occlusion as alpha too (compat.SodiumNonTerrainAoMixin)
+    @Inject(method = "render", require = 0, at = @At("HEAD"))
+    private void snappy_blocks$aoBegin(net.minecraft.client.renderer.SubmitNodeCollection collection, net.minecraft.client.renderer.MultiBufferSource.BufferSource buffers,
+                                       net.minecraft.client.renderer.block.BlockRenderDispatcher dispatcher, net.minecraft.client.renderer.OutlineBufferSource outline, CallbackInfo ci) {
+        ShaderPack.aoCopy = ShaderPack.separateAo();
+    }
+
+    @Inject(method = "render", require = 0, at = @At("RETURN"))
+    private void snappy_blocks$aoEnd(net.minecraft.client.renderer.SubmitNodeCollection collection, net.minecraft.client.renderer.MultiBufferSource.BufferSource buffers,
+                                     net.minecraft.client.renderer.block.BlockRenderDispatcher dispatcher, net.minecraft.client.renderer.OutlineBufferSource outline, CallbackInfo ci) {
+        ShaderPack.aoCopy = false;
+    }
+
     @WrapOperation(method = "render", require = 0, at = @At(value = "INVOKE",
         target = "Lnet/minecraft/client/renderer/block/ModelBlockRenderer;tesselateBlock(Lnet/minecraft/world/level/BlockAndTintGetter;Ljava/util/List;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/BlockPos;Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;ZI)V"))
     private void snappy_blocks$copy(ModelBlockRenderer renderer, BlockAndTintGetter level, List<BlockModelPart> parts, BlockState state, BlockPos pos, PoseStack ps,
                                     VertexConsumer out, boolean cull, int overlay, Operation<Void> original) {
         ShaderPack.aoCopy = level instanceof PopRenderState && ShaderPack.separateAo();
         try {
-            original.call(renderer, level, parts, state, pos, ps, out, cull, overlay);
+            original.call(renderer, level, parts, state, pos, ps, level instanceof PopRenderState ? io.github.profetgit.snappyblocks.pop.AoConsumer.wrap(out) : out, cull, overlay);
         } finally {
             ShaderPack.aoCopy = false;
         }

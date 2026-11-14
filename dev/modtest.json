@@ -11,7 +11,8 @@
     "snappy_blocks.selftest.rounds": "{rounds}",
     "snappy_blocks.selftest.capture": "{capture}",
     "snappy_blocks.selftest.shadows": "{shadows}",
-    "snappy_blocks.plants": "{plants}"
+    "snappy_blocks.plants": "{plants}",
+    "snappy_blocks.selftest.time": "{time}"
   },
   "defaults": {
     "mode": "full",
@@ -21,7 +22,8 @@
     "rounds": "2",
     "capture": "",
     "shadows": "",
-    "plants": "minecraft:short_grass+minecraft:poppy+minecraft:fern+minecraft:dandelion"
+    "plants": "minecraft:short_grass+minecraft:poppy+minecraft:fern+minecraft:dandelion",
+    "time": "6000"
   },
   "fabric_api": false,
   "width": 1280,
@@ -691,6 +693,28 @@
         "sodium-*.jar",
         "iris-*.jar",
         "havingablast-*.jar"
+      ],
+      "packs": [],
+      "shaders": true
+    },
+    "iris-bsl": {
+      "profile": {
+        "1.21.11": "/home/emppu/.cache/studio/addons/iris-bsl-1.21.11"
+      },
+      "mods": [
+        "sodium-*.jar",
+        "iris-*.jar"
+      ],
+      "packs": [],
+      "shaders": true
+    },
+    "iris-unb": {
+      "profile": {
+        "1.21.11": "/home/emppu/.cache/studio/addons/iris-unb-1.21.11"
+      },
+      "mods": [
+        "sodium-*.jar",
+        "iris-*.jar"
       ],
       "packs": [],
       "shaders": true

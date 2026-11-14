@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.28 — 2026-11-14
+
+- **Fix: colour and shadow popping in after a block is placed** (1.21.11 with Sodium and Iris shaders, smooth lighting on). The growing block now has the same ambient occlusion as the finished block, so nothing changes shade when the placement ends (Fabric and NeoForge).
+
 ## 0.0.27 — 2026-11-13
 
 - **Fix: crash when joining a world on Minecraft 1.21.11 with Sodium** (Fabric and Quilt). The world could not be entered at all. Snappy Blocks now works with Sodium 0.8 and Iris 1.10 shaders on 1.21.11, including the growing block's shadow.

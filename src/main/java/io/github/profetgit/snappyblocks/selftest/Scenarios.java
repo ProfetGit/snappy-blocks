@@ -56,7 +56,7 @@ final class Scenarios {
         s.server(srv -> {
             cmd(srv, "gamerule random_tick_speed 0");
             cmd(srv, "gamerule advance_time false");
-            cmd(srv, "time set 6000");
+            cmd(srv, "time set " + System.getProperty("snappy_blocks.selftest.time", "6000"));
             cmd(srv, "forceload add -16 -16 16 16");
         }).until("platform chunks", 1200, mc -> {
             ServerLevel l = mc.getSingleplayerServer().overworld();
