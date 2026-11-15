@@ -30,7 +30,7 @@ Install it and play. Nothing to press and nothing to learn.
 
 ![Settings](https://raw.githubusercontent.com/ProfetGit/snappy-blocks/main/docs/desc/title-settings.webp)
 
-Edit `config/snappy_blocks.json` in your game folder. It has a switch for each effect, an intensity from 50 to 150, and **Calm** for reduced motion (smaller movement, no hit-stop, no hop). Every timing is a number in the same file, and changes apply while the game is running.
+Open the settings screen from Mod Menu (Fabric, Quilt; Mod Menu is optional) or from the NeoForge and Forge mod list. It has a master switch, a switch for each effect (place pop, mining pulse, break burst, item drops, pickup flight), an intensity from 50 to 150%, and **Reduced motion** (smaller movement, no hit-stop, no hop). Changes show at once. The same settings live in `config/snappy_blocks.json`, where every timing is also a number you can tune.
 
 ![Compatibility](https://raw.githubusercontent.com/ProfetGit/snappy-blocks/main/docs/desc/title-compatibility.webp)
 
