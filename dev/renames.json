@@ -241,5 +241,11 @@
     "to": "ModList.get().getMods()",
     "when": "<26.1",
     "files": "^ForgeEntry\\.java$"
+  },
+  {
+    "regex": "screens\\.options\\.OptionsSubScreen",
+    "to": "screens.OptionsSubScreen",
+    "when": "<1.21",
+    "files": "^SettingsScreen\\.java$"
   }
 ]

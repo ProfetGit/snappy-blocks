@@ -9,7 +9,8 @@
   "license": "LicenseRef-All-Rights-Reserved",
   "environment": "client",
   "entrypoints": {
-    "client": ["io.github.profetgit.snappyblocks.platform.fabric.FabricEntry"]
+    "client": ["io.github.profetgit.snappyblocks.platform.fabric.FabricEntry"],
+    "modmenu": ["io.github.profetgit.snappyblocks.platform.fabric.ModMenuEntry"]
   },
   "mixins": ["snappy_blocks.mixins.json"],
   "depends": {

@@ -862,6 +862,23 @@ final class ScaleScenes {
             }
             return null;
         }).waitTicks(100).check("config_restored", mc -> Config.get().calm || !Config.get().pop || Config.get().intensity != 100
-            ? "restored file not read" : null);
+            ? "restored file not read" : null)
+        .run(mc -> mc.gui.setScreen(new io.github.profetgit.snappyblocks.SettingsScreen(null))).waitTicks(6)
+        .run(mc -> SelfTest.startCapture("settings", 1)).waitTicks(4)
+        .check("config_screen_open", mc -> mc.gui.screen() instanceof io.github.profetgit.snappyblocks.SettingsScreen && !mc.gui.screen().children().isEmpty()
+            ? null : "settings screen not open: " + mc.gui.screen())
+        .run(mc -> {
+            Config.get().pickup = false;
+            mc.gui.setScreen(null);
+        }).waitTicks(10).check("config_screen_saved", mc -> {
+            try {
+                String text = java.nio.file.Files.readString(file);
+                Config.get().pickup = true;
+                Config.save();
+                return text.replaceAll("\\s", "").contains("\"pickup\":false") ? null : "closing the screen did not write pickup=false";
+            } catch (java.io.IOException e) {
+                return e.toString();
+            }
+        });
     }
 }

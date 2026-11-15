@@ -7,14 +7,18 @@ import java.nio.file.Path;
 import java.util.List;
 import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.fml.loading.FMLPaths;
 
 // Forge 26.x; Forge 1.21.1 and 1.20.1 build their own entry in forge-<mc>/
 @Mod(SnappyBlocks.ID)
 public final class ForgeEntry implements Platform {
-    public ForgeEntry() {
-        if (FMLEnvironment.dist.isClient()) SnappyBlocks.init(this);
+    public ForgeEntry(FMLJavaModLoadingContext context) {
+        if (FMLEnvironment.dist.isClient()) {
+            SnappyBlocks.init(this);
+            ForgeClient.register(context);
+        }
     }
 
     @Override

@@ -61,6 +61,24 @@ public final class Config {
         if (c.tune == null) c.tune = new LinkedHashMap<>();
         for (var e : Tune.DEFAULTS.entrySet()) c.tune.putIfAbsent(e.getKey(), e.getValue());
         current = c;
+        write(c, raw);
+    }
+
+    /** Writes the settings screen's changes: unknown keys in the file stay. */
+    public static synchronized void save() {
+        JsonObject raw = new JsonObject();
+        try {
+            if (Files.exists(FILE)) {
+                JsonElement e = JsonParser.parseString(Files.readString(FILE));
+                if (e.isJsonObject()) raw = e.getAsJsonObject();
+            }
+        } catch (IOException | RuntimeException ignored) {
+        }
+        current.intensity = Math.clamp(current.intensity, 50, 150);
+        write(current, raw);
+    }
+
+    private static void write(Config c, JsonObject raw) {
         JsonObject merged = GSON.toJsonTree(c).getAsJsonObject();
         for (String k : raw.keySet()) if (!merged.has(k)) merged.add(k, raw.get(k));
         try {

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.29 — 2026-11-15
+
+- **New: in-game settings.** A settings button in Mod Menu (Fabric, Quilt) and in the NeoForge and Forge mod lists: turn Snappy Blocks off, turn on Reduced motion, switch each effect on or off (place pop, mining pulse, break burst, item drops, pickup flight) and set the intensity from 50 to 150%. Changes show at once. Mod Menu is optional.
+
 ## 0.0.28 — 2026-11-14
 
 - **Fix: colour and shadow popping in after a block is placed** (1.21.11 with Sodium and Iris shaders, smooth lighting on). The growing block now has the same ambient occlusion as the finished block, so nothing changes shade when the placement ends (Fabric and NeoForge).
