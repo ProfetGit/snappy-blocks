@@ -25,7 +25,7 @@ public abstract class LevelRendererForgeMixin {
         ModelData modelData, Operation<Void> original) {
         Probe.cracks++;
         Pops.transform(ps, pos);
-        Pulses.transform(ps, pos);
+        Pulses.transformCrack(ps, pos);
         original.call(dispatcher, state, pos, level, ps, consumer, modelData);
     }
 }

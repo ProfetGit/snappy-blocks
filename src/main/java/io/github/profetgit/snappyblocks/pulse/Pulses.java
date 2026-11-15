@@ -36,6 +36,7 @@ public final class Pulses {
     /** The copy never sits closer to the block than this, so it never z-fights with it (24 blocks out). */
     static final double FLOOR = 1.004;
     static final double RANGE = 24;
+    static final double CRACK_OUT = 1.002;
 
     static final class Pulse {
         final BlockPos pos;
@@ -142,12 +143,24 @@ public final class Pulses {
      * at the block's corner.
      */
     public static void transform(PoseStack ps, BlockPos pos) {
+        transform(ps, pos, 1);
+    }
+
+    /**
+     * The crack overlay: the copy's size (FLOOR included, or the crack sits inside the copy) and a hair outside it, so the
+     * crack, drawn after the copy, doesn't z-fight with its faces.
+     */
+    public static void transformCrack(PoseStack ps, BlockPos pos) {
+        transform(ps, pos, CRACK_OUT);
+    }
+
+    private static void transform(PoseStack ps, BlockPos pos, double out) {
         if (PULSES.isEmpty()) return;
         Pulse p = PULSES.get(pos.asLong());
         if (p == null) return;
         double s = scale(Clock.now() - p.t0);
-        if (s == 1) return;
-        float f = (float) Math.max(FLOOR, s);
+        if (s == 1 && out == 1) return;
+        float f = (float) (Math.max(FLOOR, s) * out);
         ps.translate(0.5f, 0.5f, 0.5f);
         ps.scale(f, f, f);
         ps.translate(-0.5f, -0.5f, -0.5f);
@@ -162,6 +175,8 @@ public final class Pulses {
             Vec3 cam = pass.cam;
             double now = Clock.now(), ticks = Math.max(0.5, Tune.get(TICKS));
             ClientLevel level = Minecraft.getInstance().level;
+            // before vanilla's order 0: the crack overlay (same solid phase, no depth write) must be drawn over the copy, not under it
+            pass.order = -1;
             for (Iterator<Pulse> it = PULSES.values().iterator(); it.hasNext(); ) {
                 Pulse p = it.next();
                 double t = now - p.t0;
@@ -178,6 +193,7 @@ public final class Pulses {
                 ps.popPose();
             }
         } finally {
+            pass.order = 0;
             spentNanos += System.nanoTime() - t0;
         }
     }

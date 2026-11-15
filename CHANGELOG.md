@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.30 — 2026-11-15
+
+- **Fix: the crack texture flickered while mining** (Minecraft 26.3, 26.2 and 1.21.11). On every hit the bulging block hid the crack for a moment; the crack now stays on the block through the whole pulse.
+
 ## 0.0.29 — 2026-11-15
 
 - **New: in-game settings.** A settings button in Mod Menu (Fabric, Quilt) and in the NeoForge and Forge mod lists: turn Snappy Blocks off, turn on Reduced motion, switch each effect on or off (place pop, mining pulse, break burst, item drops, pickup flight) and set the intensity from 50 to 150%. Changes show at once. Mod Menu is optional.

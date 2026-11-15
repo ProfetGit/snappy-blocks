@@ -20,6 +20,8 @@ public final class RenderPass {
     public final PoseStack ps;
     public final Vec3 cam;
     public final Matrix4fc projection, viewRotation;
+    /** Submit order for the copies (render-state path): below 0 draws before vanilla's features. */
+    public int order;
     /** 1.21.11: the camera state carries no matrices; LevelRendererMixin copies them here at the start of renderLevel. */
     public static final org.joml.Matrix4f FRAME_PROJECTION = new org.joml.Matrix4f(), FRAME_VIEW = new org.joml.Matrix4f();
 //? if >=1.21.2 {

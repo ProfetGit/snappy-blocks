@@ -120,7 +120,7 @@ public abstract class LevelRendererMixin {
         net.minecraft.world.level.BlockAndTintGetter level, PoseStack ps, com.mojang.blaze3d.vertex.VertexConsumer consumer, Operation<Void> original) {
         Probe.cracks++;
         Pops.transform(ps, pos);
-        Pulses.transform(ps, pos);
+        Pulses.transformCrack(ps, pos);
         original.call(dispatcher, state, pos, level, ps, consumer);
     }
 
@@ -157,9 +157,10 @@ public abstract class LevelRendererMixin {
         target = "Lcom/mojang/blaze3d/vertex/PoseStack;translate(Lnet/minecraft/world/phys/Vec3;)V"))
     private void snappy_blocks$crack(PoseStack ps, Vec3 offset, Operation<Void> original, @Local BlockPos pos) {
         Probe.cracks++;
-        Pops.transform(ps, pos);
-        Pulses.transform(ps, pos);
+        // after the move to the block: scaling first would scale the block's offset from the camera and push the crack behind the bulge
         original.call(ps, offset);
+        Pops.transform(ps, pos);
+        Pulses.transformCrack(ps, pos);
     }
 
     /** The selection outline follows the block too. */
@@ -216,7 +217,7 @@ public abstract class LevelRendererMixin {
         Operation<Void> original) {
         Probe.cracks++;
         Pops.transform(ps, pos);
-        Pulses.transform(ps, pos);
+        Pulses.transformCrack(ps, pos);
         original.call(dispatcher, state, pos, level, ps, consumer);
     }
 
@@ -280,7 +281,7 @@ public abstract class LevelRendererMixin {
         Operation<Void> original) {
         Probe.cracks++;
         Pops.transform(ps, pos);
-        Pulses.transform(ps, pos);
+        Pulses.transformCrack(ps, pos);
         original.call(dispatcher, state, pos, level, ps, consumer);
     }
 

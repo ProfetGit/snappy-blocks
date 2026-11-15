@@ -46,7 +46,7 @@ public final class PopRenderState extends MovingBlockRenderState {
 
     /** With the pose at the block's corner. */
     public void draw(RenderPass pass) {
-        pass.collector.submitMovingBlock(pass.ps, this, 0);
+        (pass.order == 0 ? pass.collector : pass.collector.order(pass.order)).submitMovingBlock(pass.ps, this, 0);
     }
 
     @Override
