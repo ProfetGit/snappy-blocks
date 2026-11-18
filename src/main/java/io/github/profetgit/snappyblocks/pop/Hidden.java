@@ -24,15 +24,15 @@ public final class Hidden {
 
     private Hidden() {}
 
-    static void add(long pos) {
+    public static void add(long pos) {
         if (SET.add(pos)) snapshot = null;
     }
 
-    static void remove(long pos) {
+    public static void remove(long pos) {
         if (SET.remove(pos)) snapshot = null;
     }
 
-    static void clear() {
+    public static void clear() {
         SET.clear();
         snapshot = null;
         COMPILE_STARTS.clear();
