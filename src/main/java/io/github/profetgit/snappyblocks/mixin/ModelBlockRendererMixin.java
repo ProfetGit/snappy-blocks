@@ -9,7 +9,7 @@ import net.minecraft.client.renderer.block.BlockAndTintGetter;
 import net.minecraft.world.level.block.state.BlockState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
-//? if >=26.2 {
+//? if >=26.1 {
 import net.minecraft.client.renderer.block.ModelBlockRenderer;
 
 /** Face culling in a mesh region: a face against a hidden block is drawn, so nothing behind a growing block is missing. */

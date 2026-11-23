@@ -26,7 +26,7 @@ final class TestCompat {
     private TestCompat() {}
 
     static void createWorld(Minecraft mc, String name) {
-//? if >=26.2 {
+//? if >=26.1 {
         mc.createWorldOpenFlows().createFreshLevel(name,
             new LevelSettings(name, GameType.SURVIVAL, new LevelSettings.DifficultySettings(Difficulty.PEACEFUL, false, false), true, WorldDataConfiguration.DEFAULT),
             new WorldOptions(42L, false, false), WorldPresets::createTestWorldDimensions, mc.gui.screen());

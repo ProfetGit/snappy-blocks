@@ -21,6 +21,7 @@
     "MovingBlockFeatureRendererMixin",
     "MovingBlockFeatureRendererNeoForgeMixin",
     "MultiPlayerGameModeMixin",
+    "RenderTypeFeatureRendererMixin",
     "RenderRegionCacheMixin",
     "RenderRegionCacheNeoForgeMixin",
     "RenderSectionRegionMixin",

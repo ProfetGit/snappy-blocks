@@ -1,6 +1,6 @@
 package io.github.profetgit.snappyblocks.mixin;
 
-//? if !forge || >=26.2 {
+//? if !forge || >=26.1 {
 import net.minecraft.client.Minecraft;
 import org.spongepowered.asm.mixin.Mixin;
 

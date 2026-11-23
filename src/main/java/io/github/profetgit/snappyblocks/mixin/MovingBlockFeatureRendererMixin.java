@@ -22,15 +22,51 @@ public abstract class MovingBlockFeatureRendererMixin {
         target = "Lnet/minecraft/client/renderer/block/ModelBlockRenderer;tesselateBlock(Lnet/minecraft/client/renderer/block/BlockQuadOutput;FFFLnet/minecraft/client/renderer/block/BlockAndTintGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/client/renderer/block/dispatch/BlockStateModel;J)V"))
     private void snappy_blocks$copy(ModelBlockRenderer renderer, BlockQuadOutput output, float x, float y, float z, BlockAndTintGetter level, BlockPos pos,
                                     BlockState state, BlockStateModel model, long seed, Operation<Void> original) {
-        ShaderPack.aoCopy = level instanceof PopRenderState && ShaderPack.separateAo();
+        boolean copy = level instanceof PopRenderState;
+        ShaderPack.aoCopy = copy && ShaderPack.separateAo();
+        if (copy) ShaderPack.tagging(state, pos);
         try {
             original.call(renderer, output, x, y, z, level, pos, state, model, seed);
         } finally {
             ShaderPack.aoCopy = false;
+            ShaderPack.tagging(null, null);
         }
     }
 }
-//?} else if >=1.21.2 {
+//?} else if >=26.1 {
+/*import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import io.github.profetgit.snappyblocks.pop.PopRenderState;
+import io.github.profetgit.snappyblocks.pop.ShaderPack;
+import net.minecraft.client.renderer.block.BlockAndTintGetter;
+import net.minecraft.client.renderer.block.BlockQuadOutput;
+import net.minecraft.client.renderer.block.ModelBlockRenderer;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
+import net.minecraft.client.renderer.feature.BlockFeatureRenderer;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.state.BlockState;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+
+// 26.1.2: BlockFeatureRenderer draws the moving blocks (26.2 moved that to MovingBlockFeatureRenderer.buildGroup); marks the tesselation of a block copy under a separateAo shader pack
+@Mixin(BlockFeatureRenderer.class)
+public abstract class MovingBlockFeatureRendererMixin {
+    @WrapOperation(method = "renderMovingBlockSubmits", at = @At(value = "INVOKE",
+        target = "Lnet/minecraft/client/renderer/block/ModelBlockRenderer;tesselateBlock(Lnet/minecraft/client/renderer/block/BlockQuadOutput;FFFLnet/minecraft/client/renderer/block/BlockAndTintGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/client/renderer/block/dispatch/BlockStateModel;J)V"))
+    private void snappy_blocks$copy(ModelBlockRenderer renderer, BlockQuadOutput output, float x, float y, float z, BlockAndTintGetter level, BlockPos pos,
+                                    BlockState state, BlockStateModel model, long seed, Operation<Void> original) {
+        boolean copy = level instanceof PopRenderState;
+        ShaderPack.aoCopy = copy && ShaderPack.separateAo();
+        if (copy) ShaderPack.tagging(state, pos);
+        try {
+            original.call(renderer, output, x, y, z, level, pos, state, model, seed);
+        } finally {
+            ShaderPack.aoCopy = false;
+            ShaderPack.tagging(null, null);
+        }
+    }
+}
+*///?} else if >=1.21.2 {
 /*import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.vertex.PoseStack;

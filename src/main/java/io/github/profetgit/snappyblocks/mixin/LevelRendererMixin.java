@@ -80,7 +80,7 @@ public abstract class LevelRendererMixin {
         Ghosts.spentNanos += System.nanoTime() - t0;
     }
 //?}
-//? if >=26.2 && <26.3 {
+//? if >=26.1 && <26.3 {
     /*@Inject(method = "submitBlockDestroyAnimation", at = @At("RETURN")) // RETURN, not TAIL: it returns early when nothing is being mined
     private void snappy_blocks$submit(PoseStack ps, SubmitNodeCollector collector, LevelRenderState state, CallbackInfo ci) {
         RenderPass pass = new RenderPass(ps, collector, state);
@@ -92,7 +92,7 @@ public abstract class LevelRendererMixin {
         Ghosts.spentNanos += System.nanoTime() - t0;
     }
 *///?}
-//? if >=1.21.2 && <26.2 {
+//? if >=1.21.2 && <26.1 {
     /*// 1.21.11: render states and submit nodes like 26.x, but no transient blocks; the copies go into the submit storage after the block entities
     @Inject(method = "renderLevel", at = @At("HEAD"))
     private void snappy_blocks$matrices(com.mojang.blaze3d.resource.GraphicsResourceAllocator allocator, net.minecraft.client.DeltaTracker delta, boolean outline,
@@ -172,6 +172,33 @@ public abstract class LevelRendererMixin {
         Pulses.transform(ps, pos);
     }
 //?}
+//? if >=26.1 && <26.2 {
+    /*// 26.1.2: submitBlockDestroyAnimation moves with translate(DDD), and the outline is still drawn by renderBlockOutline -> renderHitOutline
+    @WrapOperation(method = "submitBlockDestroyAnimation", at = @At(value = "INVOKE",
+        target = "Lcom/mojang/blaze3d/vertex/PoseStack;translate(DDD)V"))
+    private void snappy_blocks$crack(PoseStack ps, double x, double y, double z, Operation<Void> original, @Local BlockPos pos) {
+        Probe.cracks++;
+        original.call(ps, x, y, z);
+        Pops.transform(ps, pos);
+        Pulses.transformCrack(ps, pos);
+    }
+
+    @WrapOperation(method = "renderBlockOutline", at = @At(value = "INVOKE",
+        target = "Lnet/minecraft/client/renderer/LevelRenderer;renderHitOutline(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;DDDLnet/minecraft/client/renderer/state/level/BlockOutlineRenderState;IF)V"))
+    private void snappy_blocks$outline(LevelRenderer self, PoseStack ps, com.mojang.blaze3d.vertex.VertexConsumer consumer, double x, double y, double z,
+        net.minecraft.client.renderer.state.level.BlockOutlineRenderState outline, int color, float width, Operation<Void> original) {
+        Probe.outlines++;
+        BlockPos pos = outline.pos();
+        double dx = pos.getX() - x, dy = pos.getY() - y, dz = pos.getZ() - z;
+        ps.pushPose();
+        ps.translate(dx, dy, dz);
+        Pops.transform(ps, pos);
+        Pulses.transform(ps, pos);
+        ps.translate(-dx, -dy, -dz);
+        original.call(self, ps, consumer, x, y, z, outline, color, width);
+        ps.popPose();
+    }
+*///?}
 //?} else if >=1.21 {
 /*    // no transient blocks before 1.21.2: a section mesh is live when its upload is done (setCompiled -> here)
     @Inject(method = "addRecentlyCompiledSection", at = @At("HEAD"))

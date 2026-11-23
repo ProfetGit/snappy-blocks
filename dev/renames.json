@@ -63,6 +63,11 @@
   {
     "from": "extractSlot",
     "to": "renderSlot",
+    "when": "<26.1"
+  },
+  {
+    "from": "createTestWorldDimensions",
+    "to": "createFlatWorldDimensions",
     "when": "<26.2"
   },
   {
@@ -78,12 +83,12 @@
   {
     "regex": "net\\.minecraft\\.client\\.renderer\\.block\\.BlockAndTintGetter",
     "to": "net.minecraft.world.level.BlockAndTintGetter",
-    "when": "<26.2"
+    "when": "<26.1"
   },
   {
     "regex": "net/minecraft/client/renderer/block/BlockAndTintGetter",
     "to": "net/minecraft/world/level/BlockAndTintGetter",
-    "when": "<26.2"
+    "when": "<26.1"
   },
   {
     "regex": "import net\\.minecraft\\.client\\.DeltaTracker;\\n",
@@ -166,37 +171,37 @@
   {
     "regex": "net\\.minecraft\\.client\\.renderer\\.state\\.level\\.",
     "to": "net.minecraft.client.renderer.state.",
-    "when": "<26.2"
+    "when": "<26.1"
   },
   {
     "regex": "net/minecraft/client/renderer/state/level/",
     "to": "net/minecraft/client/renderer/state/",
-    "when": "<26.2"
+    "when": "<26.1"
   },
   {
     "regex": "net\\.minecraft\\.client\\.renderer\\.block\\.dispatch\\.BlockStateModelPart\\b",
     "to": "net.minecraft.client.renderer.block.model.BlockModelPart",
-    "when": "<26.2"
+    "when": "<26.1"
   },
   {
     "regex": "\\bBlockStateModelPart\\b",
     "to": "BlockModelPart",
-    "when": "<26.2"
+    "when": "<26.1"
   },
   {
     "regex": "net\\.minecraft\\.client\\.renderer\\.block\\.dispatch\\.",
     "to": "net.minecraft.client.renderer.block.model.",
-    "when": "<26.2"
+    "when": "<26.1"
   },
   {
     "regex": "net/minecraft/client/renderer/block/dispatch/",
     "to": "net/minecraft/client/renderer/block/model/",
-    "when": "<26.2"
+    "when": "<26.1"
   },
   {
     "regex": "getModelManager\\(\\)\\.getBlockStateModelSet\\(\\)\\.get\\(",
     "to": "getBlockRenderer().getBlockModel(",
-    "when": "<26.2"
+    "when": "<26.1"
   },
   {
     "regex": "submitMovingBlock\\(pass\\.ps, this, 0\\)",
@@ -206,28 +211,28 @@
   {
     "regex": "this\\.cardinalLighting = level\\.cardinalLighting\\(\\);",
     "to": "((MovingBlockRenderState) this).level = level;",
-    "when": "<26.2"
+    "when": "<26.1"
   },
   {
     "regex": "this\\.lightEngine = level\\.getLightEngine\\(\\);",
     "to": "",
-    "when": "<26.2"
+    "when": "<26.1"
   },
   {
     "regex": "ClientLevel level, long sectionNode",
     "to": "net.minecraft.world.level.Level level, long sectionNode",
-    "when": "<26.2"
+    "when": "<26.1"
   },
   {
     "regex": "callback\\.CallbackInfoReturnable;",
     "to": "callback.CallbackInfo;",
-    "when": "<26.2",
+    "when": "<26.1",
     "files": "^SectionMeshLiveMixin\\.java$"
   },
   {
     "regex": "CallbackInfoReturnable<SectionMesh> cir",
     "to": "CallbackInfo cir",
-    "when": "<26.2",
+    "when": "<26.1",
     "files": "^SectionMeshLiveMixin\\.java$"
   },
   {

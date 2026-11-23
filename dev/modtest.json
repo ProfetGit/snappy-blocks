@@ -13,7 +13,14 @@
     "snappy_blocks.selftest.capture": "{capture}",
     "snappy_blocks.selftest.shadows": "{shadows}",
     "snappy_blocks.plants": "{plants}",
-    "snappy_blocks.selftest.time": "{time}"
+    "snappy_blocks.selftest.time": "{time}",
+    "snappy_blocks.selftest.block": "{block}",
+    "snappy_blocks.tune.pulse.peak": "{peak}",
+    "snappy_blocks.selftest.cave": "{cave}",
+    "snappy_blocks.tune.pulse.shaded": "{shaded}",
+    "snappy_blocks.selftest.embed": "{embed}",
+    "snappy_blocks.selftest.still": "{still}",
+    "snappy_blocks.selftest.notorch": "{notorch}"
   },
   "defaults": {
     "mode": "full",
@@ -25,7 +32,14 @@
     "capture": "",
     "shadows": "",
     "plants": "minecraft:short_grass+minecraft:poppy+minecraft:fern+minecraft:dandelion",
-    "time": "6000"
+    "time": "6000",
+    "block": "minecraft:stone",
+    "peak": "",
+    "cave": "false",
+    "shaded": "",
+    "embed": "false",
+    "still": "false",
+    "notorch": "false"
   },
   "fabric_api": false,
   "width": 1280,
@@ -92,6 +106,20 @@
           "loader": [
             "neoforge",
             "forge"
+          ],
+          "scenes": "smoke"
+        },
+        {
+          "mc": "26.1.2",
+          "loader": "fabric",
+          "scenes": "all"
+        },
+        {
+          "mc": "26.1.2",
+          "loader": [
+            "neoforge",
+            "forge",
+            "quilt"
           ],
           "scenes": "smoke"
         },
@@ -168,6 +196,20 @@
           "loader": [
             "neoforge",
             "forge"
+          ],
+          "scenes": "smoke"
+        },
+        {
+          "mc": "26.1.2",
+          "loader": "fabric",
+          "scenes": "all"
+        },
+        {
+          "mc": "26.1.2",
+          "loader": [
+            "neoforge",
+            "forge",
+            "quilt"
           ],
           "scenes": "smoke"
         },
@@ -469,7 +511,8 @@
         "26.2": "/home/emppu/.cache/studio/clients/SnappyBlocks-26.2-fabric",
         "1.21.1": "/home/emppu/.cache/studio/addons/iris-1.21.1",
         "1.20.1": "/home/emppu/.cache/studio/addons/iris-1.20.1",
-        "1.21.11": "/home/emppu/.cache/studio/addons/iris-1.21.11"
+        "1.21.11": "/home/emppu/.cache/studio/addons/iris-1.21.11",
+        "26.3": "/home/emppu/.cache/studio/addons/iris-26.3"
       },
       "mods": [
         "sodium-*.jar",
@@ -721,5 +764,6 @@
       "packs": [],
       "shaders": true
     }
-  }
+  },
+  "shader_options": "#Thu Nov 12 20:47:17 EET 2026\nAMBIENT_MULT=150\nATM_COLOR_MULTS=true\nATM_END_G=0.50\nATM_END_I=0.30\nATM_END_R=0.70\nATM_FOG_ALTITUDE=100\nATM_FOG_MULT=0.50\nATM_NIGHT_B=1.30\nATM_NOON_G=0.95\nATM_NOON_I=0.90\nATM_NOON_R=0.75\nATM_RAIN_B=1.20\nAURORA_CONDITION=1\nAURORA_STYLE_DEFINE=0\nBLOCK_REFLECT_QUALITY=0\nBLOOM_STRENGTH=0.027\nCAVE_FOG=false\nCLOUD_B=120\nCLOUD_G=120\nCLOUD_QUALITY=3\nCLOUD_R=120\nCLOUD_SHADOWS=true\nCLOUD_SPEED_MULT=300\nCLOUD_STYLE_DEFINE=3\nCONNECTED_GLASS_EFFECT=false\nDETAIL_QUALITY=0\nEND_FLASHES=false\nENTITY_GN_AND_CT=false\nGLOWING_ORE_GILDEDBLACKSTONE=false\nGLOWING_ORE_MASTER=2\nGLOWING_ORE_MODDED=false\nLENSFLARE_I=0.05\nLIGHTSHAFT_BEHAVIOUR=2\nLIGHTSHAFT_SMOKE=true\nLIGHT_COLOR_MULTS=true\nLIGHT_END_B=1.10\nLIGHT_END_G=1.20\nLIGHT_END_I=1.40\nLIGHT_END_R=1.10\nLIGHT_NIGHT_B=1.20\nLIGHT_NIGHT_I=0.90\nLIGHT_NOON_I=0.80\nMOTION_BLURRING_STRENGTH=0\nNETHER_STORM=false\nNETHER_VIEW_LIMIT=512.0\nNIGHT_STAR_AMOUNT=4\nPIXELATED_SHADOWS=true\nRAINBOWS=0\nRAINBOW_STYLE_DEFINE=1\nSHADOW_SMOOTHING=3\nSSAO_QUALI_DEFINE=0\nSUN_ANGLE=0\nSUN_MOON_DURING_RAIN=false\nSUN_MOON_STYLE_DEFINE=1\nT_SATURATION=1.10\nUNDERWATER_DISTORTION=false\nVIGNETTE_R=false\nWATERCOLOR_B=150\nWATER_ALPHA_MULT=150\nWATER_FOAM_I=0\nWATER_REFLECT_QUALITY=-1\nWATER_STYLE_DEFINE=1\nWAVING_SPEED=0.75\nWB_DB_DAY_I=1.0\nWB_DB_END_I=1.0\nWB_DB_NETHER_I=1.0\nWB_DB_NIGHT_I=1.0\nWB_DB_RAIN_I=1.0\nWB_DB_WATER_I=1.0\nWB_DOF_I=1.0\nWORLD_OUTLINE=true\nWORLD_OUTLINE_THICKNESS=2\nGLOWING_ORE_DIAMOND=true\n"
 }

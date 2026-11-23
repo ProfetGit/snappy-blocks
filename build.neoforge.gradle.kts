@@ -72,3 +72,9 @@ tasks.named<Jar>("jar") {
     // compile-time stand-ins for Sodium classes (src/main/java/net/caffeinemc): the real ones come from Sodium
     exclude("net/caffeinemc/**")
 }
+
+// 26.1 is older than 26.2 and uses the pre-26.2 names for most of what dev/renames.json lists: run the same rename pass.
+if (mc.startsWith("26.1")) {
+    extra["mcVersion"] = mc
+    apply(from = rootProject.file("../../tools/Backport/renames.gradle.kts"))
+}

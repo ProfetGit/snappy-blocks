@@ -4,6 +4,9 @@ import io.github.profetgit.snappyblocks.SnappyBlocks;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.state.BlockState;
 
 /** Whether an Iris shader pack is in use (reflective, no Iris dependency). Pattern from Seamless Displays' IrisCompat. */
 public final class ShaderPack {
@@ -62,6 +65,49 @@ public final class ShaderPack {
             separateAo = null;
             SnappyBlocks.LOG.warn("Snappy Blocks: can't ask Iris about separate ambient occlusion ({})", t.toString());
             return false;
+        }
+    }
+
+    private static MethodHandle stateIds, idOf, beginBlock;
+    private static Class<?> sensitive;
+    private static boolean tagTried;
+    private static BlockState tagState;
+    private static BlockPos tagPos;
+
+    /** The block copy being tesselated (null when none), for {@link #tag}. */
+    public static void tagging(BlockState state, BlockPos pos) {
+        tagState = state;
+        tagPos = pos;
+    }
+
+    /**
+     * Gives the buffer of a block copy the block's id in the shader pack (Iris's per-vertex mc_Entity, plus emission and position in
+     * the section). Iris writes those from {@code BlockSensitiveBufferBuilder.beginBlock}, which only its own chunk meshing calls;
+     * moving blocks (our copies) are drawn with the terrain program but arrived with no id, so id-driven looks such as a pack's ore
+     * glow were missing on them. Called for every buffer a copy's quads are written to.
+     */
+    public static void tag(VertexConsumer vc) {
+        if (tagState == null || !active()) return;
+        try {
+            if (!tagTried) {
+                tagTried = true;
+                MethodHandles.Lookup l = MethodHandles.publicLookup();
+                Class<?> w = Class.forName("net.irisshaders.iris.shaderpack.materialmap.WorldRenderingSettings");
+                stateIds = l.findVirtual(w, "getBlockStateIds", MethodType.methodType(Class.forName("it.unimi.dsi.fastutil.objects.Object2IntMap")))
+                    .bindTo(w.getField("INSTANCE").get(null));
+                idOf = l.findVirtual(Class.forName("it.unimi.dsi.fastutil.objects.Object2IntFunction"), "getOrDefault", MethodType.methodType(int.class, Object.class, int.class));
+                sensitive = Class.forName("net.irisshaders.iris.vertices.BlockSensitiveBufferBuilder");
+                beginBlock = l.findVirtual(sensitive, "beginBlock", MethodType.methodType(void.class, int.class, byte.class, byte.class, int.class, int.class, int.class));
+            }
+            if (beginBlock == null || !sensitive.isInstance(vc)) return;
+            Object ids = stateIds.invoke();
+            if (ids == null) return;
+            int id = (int) idOf.invoke(ids, tagState, -1);
+            if (id < 0) return;
+            beginBlock.invoke(vc, id, (byte) 0, (byte) tagState.getLightEmission(), tagPos.getX() & 15, tagPos.getY() & 15, tagPos.getZ() & 15);
+        } catch (Throwable t) {
+            beginBlock = null;
+            SnappyBlocks.LOG.warn("Snappy Blocks: can't give block copies their shader-pack id ({})", t.toString());
         }
     }
 

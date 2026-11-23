@@ -604,8 +604,23 @@ final class Scenarios {
         int[] base = new int[4];
         s.server(srv -> {
             clearArea(srv);
-            cmd(srv, "setblock 0 " + Y + " 0 minecraft:stone");
+            cmd(srv, "setblock 0 " + Y + " 0 " + System.getProperty("snappy_blocks.selftest.block", "minecraft:stone"));
             cmd(srv, "tp @p 0.5 " + Y + " -2.0 0 30");
+            if (Boolean.getBoolean("snappy_blocks.selftest.cave")) {
+                cmd(srv, "fill -4 " + (Y + 3) + " -6 4 " + (Y + 3) + " 4 minecraft:stone");
+                cmd(srv, "fill -4 " + (Y + 3) + " -6 -4 " + Y + " 4 minecraft:stone");
+                cmd(srv, "fill 4 " + (Y + 3) + " -6 4 " + Y + " 4 minecraft:stone");
+                cmd(srv, "fill -4 " + (Y + 3) + " -6 4 " + Y + " -6 minecraft:stone");
+                if (!Boolean.getBoolean("snappy_blocks.selftest.notorch")) cmd(srv, "setblock 2 " + (Y + 1) + " -2 minecraft:torch");
+            }
+            if (Boolean.getBoolean("snappy_blocks.selftest.embed")) {
+                cmd(srv, "fill -1 " + (Y - 1) + " 0 1 " + (Y + 1) + " 1 minecraft:deepslate");
+                cmd(srv, "fill -1 " + (Y - 1) + " -1 -1 " + (Y + 1) + " -1 minecraft:deepslate");
+                cmd(srv, "fill 1 " + (Y - 1) + " -1 1 " + (Y + 1) + " -1 minecraft:deepslate");
+                cmd(srv, "fill -1 " + (Y + 1) + " -1 1 " + (Y + 1) + " -1 minecraft:deepslate");
+                cmd(srv, "fill -1 " + (Y - 1) + " -1 1 " + (Y - 1) + " -1 minecraft:deepslate");
+                cmd(srv, "setblock 0 " + Y + " 0 " + System.getProperty("snappy_blocks.selftest.block", "minecraft:stone"));
+            }
             cmd(srv, "gamemode survival @p");
             cmd(srv, "clear @p");
         }).waitTicks(20).run(mc -> {
@@ -621,10 +636,19 @@ final class Scenarios {
             if (!TestCompat.hudHidden(mc)) TestCompat.toggleHud(mc);
             SelfTest.startCapture("pulse", 120);
         }).waitTicks(4);
-        mine(s, at, 400);
+        if (Boolean.getBoolean("snappy_blocks.selftest.still")) {
+            // no mining: the camera stays put and no crack is drawn, so a pulse copy can be compared with the plain block
+            s.run(mc -> aim(mc, at));
+            for (int i = 0; i < 8; i++) {
+                s.run(mc -> Pulses.hit(at, net.minecraft.core.Direction.NORTH)).waitTicks(12);
+            }
+        } else {
+            mine(s, at, 400);
+        }
         s.waitTicks(10).check("pulse_hits", mc -> {
             SelfTest.stopCapture();
             if (TestCompat.hudHidden(mc)) TestCompat.toggleHud(mc);
+            if (Boolean.getBoolean("snappy_blocks.selftest.still")) return null;
             int pulses = Pulses.started - base[0], hits = Probe.hitEvents - base[1];
 //? if <26.3 {
             /*hits = pulses; // no server hit events before 1.21.2: the player's own hits are the pulses

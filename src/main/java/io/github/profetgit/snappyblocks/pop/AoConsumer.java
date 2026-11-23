@@ -1,6 +1,6 @@
 package io.github.profetgit.snappyblocks.pop;
 
-//? if >=26.2 {
+//? if >=26.1 {
 //?} else if >=1.21.2 {
 /*import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;

@@ -1,8 +1,12 @@
 # Changelog
 
+## 0.0.31 — 2026-11-23
+
+- **Fix: ores under shader packs** (Minecraft 26.3 with Iris and Sodium, e.g. Complementary). Mining an ore now makes it bulge like any other block, and the ore keeps its glow and its colour while it pulses. Before, the bulging copy lost the pack's gem glow and flickered darker on every hit.
+
 ## 0.0.30 — 2026-11-15
 
-- **Fix: the crack texture flickered while mining** (Minecraft 26.3, 26.2 and 1.21.11). On every hit the bulging block hid the crack for a moment; the crack now stays on the block through the whole pulse.
+- **Fix: the crack texture flickered while mining** (every version: 26.3, 26.2, 1.21.11, 1.21.1 and 1.20.1, all loaders). On every hit the bulging block hid the crack for a moment; the crack now stays on the block through the whole pulse.
 
 ## 0.0.29 — 2026-11-15
 
