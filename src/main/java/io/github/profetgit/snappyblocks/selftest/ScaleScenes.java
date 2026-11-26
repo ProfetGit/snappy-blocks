@@ -784,7 +784,7 @@ final class ScaleScenes {
      */
     private static void config(Script s) {
         BlockPos cell = new BlockPos(0, Y, 0);
-        int[] base = new int[4];
+        int[] base = new int[5];
         String[] saved = new String[1];
         java.nio.file.Path file = SnappyBlocks.platform().configDir().resolve(SnappyBlocks.ID + ".json");
         s.server(srv -> {
@@ -802,11 +802,12 @@ final class ScaleScenes {
             new Trial("burst_off", c -> c.burst = false, true, false, true, true),
             new Trial("items_off", c -> c.items = false, true, true, false, false),
             new Trial("pickup_off", c -> c.pickup = false, true, true, true, false),
+            new Trial("chips_off", c -> c.chips = false, true, true, true, true),
             new Trial("calm", c -> c.calm = true, true, true, true, true));
         for (Trial t : trials) {
             s.run(mc -> {
                 Config c = Config.get();
-                c.enabled = c.pop = c.pulse = c.burst = c.items = c.pickup = true;
+                c.enabled = c.pop = c.pulse = c.burst = c.chips = c.items = c.pickup = true;
                 c.calm = false;
                 c.intensity = 100;
                 t.set().accept(c);
@@ -814,6 +815,7 @@ final class ScaleScenes {
                 base[1] = Bursts.started;
                 base[2] = ItemFx.thrown;
                 base[3] = Ghosts.pickups;
+                base[4] = Bursts.chipsMade + io.github.profetgit.snappyblocks.pulse.Pulses.chipsMade;
                 TestCompat.selectSlot(mc.player, 0);
                 place(mc, cell.below(), Direction.UP);
             }).waitTicks(8).run(mc -> {
@@ -829,6 +831,9 @@ final class ScaleScenes {
                 for (int i = 0; i < 4; i++) {
                     if (got[i] != want[i]) return what[i] + (got[i] ? " ran" : " did not run") + " (expected " + (want[i] ? "yes" : "no") + ")";
                 }
+                int chips = Bursts.chipsMade + io.github.profetgit.snappyblocks.pulse.Pulses.chipsMade - base[4];
+                if (t.name().equals("all_on") && chips <= 0) return "no chips with everything on";
+                if (t.name().equals("chips_off") && chips != 0) return chips + " chips with Snappy chips off";
                 if (t.name().equals("calm")) {
                     double amp = Config.get().amplitude();
                     if (Math.abs(amp - 0.3) > 1e-9) return "calm amplitude " + amp;
@@ -841,7 +846,7 @@ final class ScaleScenes {
         }
         s.run(mc -> {
             Config c = Config.get();
-            c.enabled = c.pop = c.pulse = c.burst = c.items = c.pickup = true;
+            c.enabled = c.pop = c.pulse = c.burst = c.chips = c.items = c.pickup = true;
             c.calm = false;
             try {
                 saved[0] = java.nio.file.Files.readString(file);
@@ -863,9 +868,9 @@ final class ScaleScenes {
             return null;
         }).waitTicks(100).check("config_restored", mc -> Config.get().calm || !Config.get().pop || Config.get().intensity != 100
             ? "restored file not read" : null)
-        .run(mc -> mc.gui.setScreen(new io.github.profetgit.snappyblocks.SettingsScreen(null))).waitTicks(6)
+        .run(mc -> mc.gui.setScreen(io.github.profetgit.snappyblocks.ConfigScreens.create(null))).waitTicks(6)
         .run(mc -> SelfTest.startCapture("settings", 1)).waitTicks(4)
-        .check("config_screen_open", mc -> mc.gui.screen() instanceof io.github.profetgit.snappyblocks.SettingsScreen && !mc.gui.screen().children().isEmpty()
+        .check("config_screen_open", mc -> io.github.profetgit.snappyblocks.ConfigScreens.isConfigScreen(mc.gui.screen())
             ? null : "settings screen not open: " + mc.gui.screen())
         .run(mc -> {
             Config.get().pickup = false;

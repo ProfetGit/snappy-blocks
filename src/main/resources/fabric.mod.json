@@ -7,6 +7,7 @@
   "authors": ["${author}"],
   "contact": { "homepage": "${homepage}" },
   "license": "LicenseRef-All-Rights-Reserved",
+  "icon": "assets/snappy_blocks/icon.png",
   "environment": "client",
   "entrypoints": {
     "client": ["io.github.profetgit.snappyblocks.platform.fabric.FabricEntry"],

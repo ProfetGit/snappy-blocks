@@ -45,7 +45,8 @@ public final class Ghosts {
     static final int MERGE_WAIT = 2;
     /** How far in front of the eye the slot flight ends: the point on the ray through the slot's centre. */
     static final double SLOT_DEPTH = 0.9;
-    static final double ARC = 0.35, SLOT_ARC = 0.12;
+    static final double ARC = 0.35;
+    public static final double SLOT_ARC = 0.12, MERGE_SCALE = 0.8;
 
     enum Kind { PICKUP, SLOT, PENDING, MERGE, DESPAWN }
 
@@ -107,6 +108,26 @@ public final class Ghosts {
     static final long HIDE_LIMIT_TICKS = 6;
 
     private Ghosts() {}
+
+    /** The ease of a pickup into its hotbar slot and of a merge slide. */
+    public static double smooth(double u) {
+        return u * u * (3 - 2 * u);
+    }
+
+    /** Ticks a pickup takes to reach the player or the slot. */
+    public static double pickupTicks() {
+        return Math.max(1, Tune.get(PICKUP_TICKS));
+    }
+
+    /** Ticks a merge slide takes (a longer slide adds a little). */
+    public static double mergeTicks() {
+        return Math.max(1, Tune.get(MERGE_TICKS));
+    }
+
+    /** Ticks a despawning item takes to shrink away. */
+    public static double despawnTicks() {
+        return Math.max(1, Tune.get(DESPAWN_TICKS));
+    }
 
     public static void clear() {
         for (Ghost g : GHOSTS) g.hidden = null;
@@ -391,7 +412,7 @@ public final class Ghosts {
                     double tx = cam.x + SLOT_AT.x, ty = cam.y + SLOT_AT.y, tz = cam.z + SLOT_AT.z;
                     double size = s.size();
                     double k = 32 * SLOT_DEPTH / (Math.max(0.1, size) * pass.projection.m11() * mc.getWindow().getGuiScaledHeight());
-                    double e = u * u * (3 - 2 * u);
+                    double e = smooth(u);
                     cx += (tx - cx) * e;
                     cy += (ty - cy) * e + SLOT_ARC * 4 * u * (1 - u);
                     cz += (tz - cz) * e;
@@ -410,11 +431,11 @@ public final class Ghosts {
                 case MERGE -> {
                     Entity t = g.target;
                     double tx = Mth.lerp(partial, t.xo, t.getX()), ty = Mth.lerp(partial, t.yo, t.getY()) + s.lift(), tz = Mth.lerp(partial, t.zo, t.getZ());
-                    double e = u * u * (3 - 2 * u);
+                    double e = smooth(u);
                     cx += (tx - cx) * e;
                     cy += (ty - cy) * e;
                     cz += (tz - cz) * e;
-                    scale += (0.8 - scale) * e;
+                    scale += (MERGE_SCALE - scale) * e;
                 }
                 case DESPAWN -> scale *= 1 - u * u * (3 - 2 * u);
                 case PENDING -> {

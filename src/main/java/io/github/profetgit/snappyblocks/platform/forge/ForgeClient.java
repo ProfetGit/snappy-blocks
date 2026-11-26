@@ -1,7 +1,7 @@
 package io.github.profetgit.snappyblocks.platform.forge;
 
 //? forge {
-/*import io.github.profetgit.snappyblocks.SettingsScreen;
+/*import io.github.profetgit.snappyblocks.ConfigScreens;
 import net.minecraftforge.client.ConfigScreenHandler;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
@@ -12,7 +12,7 @@ final class ForgeClient {
 
     static void register(FMLJavaModLoadingContext context) {
         context.registerExtensionPoint(ConfigScreenHandler.ConfigScreenFactory.class,
-            () -> new ConfigScreenHandler.ConfigScreenFactory((mc, parent) -> new SettingsScreen(parent)));
+            () -> new ConfigScreenHandler.ConfigScreenFactory((mc, parent) -> ConfigScreens.create(parent)));
     }
 }
 *///?}

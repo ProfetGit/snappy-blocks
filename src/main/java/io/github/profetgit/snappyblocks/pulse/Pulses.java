@@ -31,6 +31,12 @@ public final class Pulses {
     static final String PEAK = Tune.def("pulse.peak", 1.03);
     static final String TICKS = Tune.def("pulse.ticks", 2);
     static final String CHIPS = Tune.def("pulse.chips", 2);
+    /** Further chips per hit as the block gives way: one more every third hit, up to this many. */
+    static final String CHIPS_MORE = Tune.def("pulse.chipsMore", 2);
+    /** A block's hits count as one mining while they are this close together, and its face is remembered this long. */
+    static final long HIT_GAP_TICKS = 12, FACE_TICKS = 20;
+    /** A hit chip lasts this many ticks, plus up to the spread. */
+    public static final int LIFE = 12, LIFE_SPREAD = 8;
     /** 0: under a shader pack the bulge copy stays out (it can be lit brighter than the chunk mesh, a flicker each hit); 1: draw it. */
     static final String SHADED = Tune.def("pulse.shaded", 1);
     /** The copy never sits closer to the block than this, so it never z-fights with it (24 blocks out). */
@@ -54,13 +60,41 @@ public final class Pulses {
     private static final Long2ObjectOpenHashMap<Pulse> PULSES = new Long2ObjectOpenHashMap<>();
     private static final RandomSource RANDOM = RandomSource.create();
 
+    private static final class Mined {
+        Direction face;
+        int hits;
+        long tick;
+    }
+
+    /** The blocks being mined: the face last hit (the burst throws chips out of it) and the hits so far. */
+    private static final Long2ObjectOpenHashMap<Mined> MINED = new Long2ObjectOpenHashMap<>();
+
     public static int started;
+    /** Chips made by mining hits (test hook). */
+    public static int chipsMade;
     public static long spentNanos;
 
     private Pulses() {}
 
     public static void clear() {
         PULSES.clear();
+        MINED.clear();
+    }
+
+    /** The face {@code pos} was last mined from, or null (broken in one hit, or long ago). */
+    public static Direction minedFace(BlockPos pos) {
+        Mined m = MINED.get(pos.asLong());
+        return m == null || Clock.ticks() - m.tick > FACE_TICKS ? null : m.face;
+    }
+
+    private static int count(BlockPos pos, Direction face) {
+        long now = Clock.ticks();
+        if (MINED.size() > 32) MINED.values().removeIf(m -> now - m.tick > FACE_TICKS);
+        Mined m = MINED.get(pos.asLong());
+        if (m == null || now - m.tick > HIT_GAP_TICKS) MINED.put(pos.asLong(), m = new Mined());
+        m.face = face;
+        m.tick = now;
+        return m.hits++;
     }
 
     public static int active() {
@@ -97,7 +131,7 @@ public final class Pulses {
             PULSES.put(at.asLong(), p);
             started++;
         }
-        chips(level, at, state, face);
+        chips(level, at, state, face, count(at, face));
     }
 
     /** A block changed (broken, replaced): its pulse ends at once, the burst or the new block takes over. */
@@ -105,32 +139,60 @@ public final class Pulses {
         if (!PULSES.isEmpty()) PULSES.remove(pos.asLong());
     }
 
-    private static void chips(ClientLevel level, BlockPos pos, BlockState state, Direction face) {
+    private static void chips(ClientLevel level, BlockPos pos, BlockState state, Direction face, int hits) {
         if (!state.shouldSpawnTerrainParticles()) return;
-        int n = (int) Math.round(Tune.get(CHIPS));
-        switch (Minecraft.getInstance().options.particles().get()) {
-            case MINIMAL -> n = 0;
-            case DECREASED -> n = Math.min(n, 1);
-            default -> {
-            }
-        }
+        int n = hitChips(hits);
         double amp = Config.get().amplitude();
         for (int i = 0; i < n; i++) {
             double u = RANDOM.nextDouble() - 0.5, v = RANDOM.nextDouble() - 0.5;
-            double x = pos.getX() + 0.5 + face.getStepX() * 0.52, y = pos.getY() + 0.5 + face.getStepY() * 0.52, z = pos.getZ() + 0.5 + face.getStepZ() * 0.52;
+            float size = 1.3f + 0.6f * RANDOM.nextFloat();
+            double out = 0.51 + Chip.half(size);
+            double x = pos.getX() + 0.5 + face.getStepX() * out, y = pos.getY() + 0.5 + face.getStepY() * out, z = pos.getZ() + 0.5 + face.getStepZ() * out;
             // spread across the face, flung out of it
             if (face.getAxis() != Direction.Axis.X) x += u * 0.8;
             if (face.getAxis() != Direction.Axis.Y) y += (face.getAxis() == Direction.Axis.X ? u : v) * 0.8;
             if (face.getAxis() != Direction.Axis.Z) z += v * 0.8;
-            double out = 0.12 * amp;
-            Chip c = new Chip(level, x, y, z, face.getStepX() * out + u * 0.05, face.getStepY() * out + 0.08, face.getStepZ() * out + v * 0.05, state, pos);
-            c.scale(1.4f + 0.4f * RANDOM.nextFloat());
+            double[] s = chipSpeed(face, u, v, amp * hitForce(hits));
+            Chip c = new Chip(level, x, y, z, 0, 0, 0, state, pos);
+            c.sized(size);
+            c.fly(Chip.Material.of(state), s[0], s[1], s[2], LIFE + RANDOM.nextInt(LIFE_SPREAD));
             Minecraft.getInstance().particleEngine.add(c);
+            chipsMade++;
         }
     }
 
+    /** Chips per hit, after the particles video setting. */
+    public static int chipCount() {
+        if (!Config.get().chips) return 0;
+        int n = (int) Math.round(Tune.get(CHIPS));
+        return switch (Minecraft.getInstance().options.particles().get()) {
+            case MINIMAL -> 0;
+            case DECREASED -> Math.min(n, 1);
+            default -> n;
+        };
+    }
+
+    /** Chips of the hit after {@code hits} earlier ones on the same block. */
+    public static int hitChips(int hits) {
+        int n = chipCount();
+        // Chips off, or the particles video setting turned down: no ramp
+        if (n < (int) Math.round(Tune.get(CHIPS)) || n == 0) return n;
+        return n + Math.min((int) Math.round(Tune.get(CHIPS_MORE)), hits / 3);
+    }
+
+    /** Later hits throw harder, up to 1.5x. */
+    public static double hitForce(int hits) {
+        return 1 + 0.5 * Math.min(1, hits / 9.0);
+    }
+
+    /** A hit chip's speed (blocks per tick): out of {@code face}, a little up; {@code u}, {@code v} in -0.5..0.5 spread it. */
+    public static double[] chipSpeed(Direction face, double u, double v, double amp) {
+        double out = 0.12 * amp;
+        return new double[] {face.getStepX() * out + u * 0.05, face.getStepY() * out + 0.08, face.getStepZ() * out + v * 0.05};
+    }
+
     /** Scale at {@code t} ticks into a pulse: out to the peak in the first third, back by the end. */
-    static double scale(double t) {
+    public static double scale(double t) {
         double ticks = Math.max(0.5, Tune.get(TICKS));
         if (t <= 0 || t >= ticks) return 1;
         double u = t / ticks;

@@ -21,3 +21,4 @@ dev-out/
 forge-*/build/
 forge-*/run/
 forge-*/.gradle/
+dev/preview/out/

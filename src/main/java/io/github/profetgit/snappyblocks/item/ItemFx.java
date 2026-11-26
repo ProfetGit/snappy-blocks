@@ -5,6 +5,7 @@ import io.github.profetgit.snappyblocks.Compat;
 import io.github.profetgit.snappyblocks.Config;
 import io.github.profetgit.snappyblocks.Rtt;
 import io.github.profetgit.snappyblocks.Tune;
+import io.github.profetgit.snappyblocks.burst.Bursts;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
@@ -248,34 +249,53 @@ public final class ItemFx {
         if (t == null) return;
         double now = Clock.now();
         if (!Double.isNaN(t.throwAt)) {
-            double u = (now - t.throwAt) / Math.max(1, Tune.get(THROW_SPRING));
+            double u = (now - t.throwAt) / throwTicks();
             if (u >= 1) {
                 t.throwAt = Double.NaN;
             } else {
-                double k = (1 - u) * (1 - u) * (1 - u);
+                double k = Bursts.springBack(u);
                 // the hand point is the item's centre; the state is at its feet
                 state.x += (t.hx - state.x) * k;
                 state.y += (t.hy - 0.2 - state.y) * k;
                 state.z += (t.hz - state.z) * k;
-                float grow = (float) (1 - 0.75 * k);
+                float grow = throwGrow(k);
                 state.squash(grow, grow);
             }
         }
         if (Double.isNaN(t.landedAt)) return;
         double dt = now - t.landedAt;
-        double amp = Config.get().calm ? 0 : Config.get().amplitude();
-        if (dt >= SQUASH_TICKS + HOP_TICKS || amp <= 0) {
+        double[] pose = landing(dt);
+        if (pose == null) {
             if (dt >= SQUASH_TICKS + HOP_TICKS) t.landedAt = Double.NaN;
             return;
         }
+        state.y += pose[2];
+        state.squash((float) pose[0], (float) pose[1]);
+    }
+
+    /** Ticks a thrown stack takes from the hand to its own path. */
+    public static double throwTicks() {
+        return Math.max(1, Tune.get(THROW_SPRING));
+    }
+
+    /** A thrown stack's size while {@code k} of the throw offset is left: small in the hand. */
+    public static float throwGrow(double k) {
+        return (float) (1 - 0.75 * k);
+    }
+
+    /**
+     * The landing pose {@code dt} ticks after touchdown: {width scale, height scale, lift in blocks}, a squash then a hop;
+     * null once it is over, and always in Calm.
+     */
+    public static double[] landing(double dt) {
+        double amp = Config.get().calm ? 0 : Config.get().amplitude();
+        if (dt >= SQUASH_TICKS + HOP_TICKS || amp <= 0) return null;
         if (dt < SQUASH_TICKS) {
             double s = Math.sin(Math.PI * dt / SQUASH_TICKS) * amp;
-            state.squash((float) (1 + 0.06 * s), (float) (1 - 0.12 * s));
-        } else {
-            double v = (dt - SQUASH_TICKS) / HOP_TICKS;
-            state.y += Tune.get(LAND_HOP) * amp * 4 * v * (1 - v);
-            double s = Math.sin(Math.PI * v) * amp;
-            state.squash((float) (1 - 0.02 * s), (float) (1 + 0.04 * s));
+            return new double[] {1 + 0.06 * s, 1 - 0.12 * s, 0};
         }
+        double v = (dt - SQUASH_TICKS) / HOP_TICKS;
+        double s = Math.sin(Math.PI * v) * amp;
+        return new double[] {1 - 0.02 * s, 1 + 0.04 * s, Tune.get(LAND_HOP) * amp * 4 * v * (1 - v)};
     }
 }

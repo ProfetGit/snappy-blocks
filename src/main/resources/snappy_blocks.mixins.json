@@ -28,6 +28,7 @@
     "SectionCompilerMixin",
     "SectionCompilerNeoForgeMixin",
     "SectionMeshLiveMixin",
+    "SingleQuadParticleMixin",
     "compat.IrisShadowMixin",
     "compat.EmbeddiumMeshLiveMixin",
     "compat.EmbeddiumMeshingTaskMixin",

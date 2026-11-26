@@ -21,6 +21,7 @@ import io.github.profetgit.snappyblocks.pop.PopRenderState;
 import io.github.profetgit.snappyblocks.pop.Pops;
 import io.github.profetgit.snappyblocks.pulse.Pulses;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.SectionPos;
 import net.minecraft.util.Util;
 import net.minecraft.util.RandomSource;
@@ -45,7 +46,7 @@ public final class Bursts {
     /** Squash at the end of the hold: height shrinks by this share, width grows by half of it. */
     static final String SQUASH = Tune.def("burst.squash", 0.12);
     static final String SHRINK = Tune.def("burst.shrink", 4);
-    static final String CHIPS = Tune.def("burst.chips", 10);
+    static final String CHIPS = Tune.def("burst.bits", 12);
     static final String CHIP_SIZE = Tune.def("burst.chipSize", 2.2);
     static final String CHIP_SPEED = Tune.def("burst.chipSpeed", 1.6);
     static final String DROP_SPRING = Tune.def("drop.spring", 6);
@@ -65,6 +66,8 @@ public final class Bursts {
      * user's 42-mod profile: 80 chips, 4.4 ms in one frame), so a mass break's chips spread over a few frames.
      */
     static final int CHIPS_PER_FRAME = 16;
+    /** A burst chip lasts this many ticks, plus up to the spread. */
+    public static final int LIFE = 18, LIFE_SPREAD = 12;
     private static int frameChips;
     /** Several drops leave the burst one after another, this many ticks apart (the fan). */
     static final double FAN_STEP = 0.5;
@@ -72,6 +75,8 @@ public final class Bursts {
     static final class Burst {
         final BlockPos pos;
         final BlockState state;
+        /** The face the block was mined from, null for a break in one hit. */
+        Direction face;
         /** When the burst's timeline starts: once the chunk mesh without the block is live (see {@link #live}). */
         double t0;
         final double born;
@@ -154,6 +159,8 @@ public final class Bursts {
 
     public static int started, claimed, revealed, watchdogs, overBudget, lite, fades, denied, meshWaits, stopReveals;
     public static Chip.Material lastMaterial;
+    /** Chips made by bursts (test hook). */
+    public static int chipsMade;
     /** Ticks from a burst's start to the arrival of a drop it claimed: the round trip as the player sees it. */
     public static double maxClaimDelay;
     public static long spentNanos;
@@ -163,6 +170,7 @@ public final class Bursts {
     private Bursts() {}
 
     public static void clear() {
+        Puff.clear();
         BURSTS.clear();
         EVENTS.clear();
         REMOVED.clear();
@@ -234,6 +242,7 @@ public final class Bursts {
         }
         double now = Clock.now();
         Burst b = new Burst(pos, state, now, now + Rtt.ticks() + 4);
+        b.face = Pulses.minedFace(pos);
         b.lite = !full;
         b.bare = !Pops.hasQuads(state);
 
@@ -304,7 +313,7 @@ public final class Bursts {
         if (Math.abs(dx) > 0.55 || Math.abs(dy) > 0.6 || Math.abs(dz) > 0.55) return false;
         int i = b.claims++;
         maxClaimDelay = Math.max(maxClaimDelay, Clock.now() - b.born);
-        double open = b.bare ? 0 : Tune.get(HOLD) + 1;
+        double open = revealAfter(b.bare);
         Claim c = new Claim(b, open + i * FAN_STEP);
         if (i > 0) {
             c.arc = 0.35;
@@ -335,11 +344,31 @@ public final class Bursts {
         if (c == null || Double.isNaN(c.shownAt)) return;
         double u = (Clock.now() - c.shownAt) / Math.max(1, Tune.get(DROP_SPRING));
         if (u >= 1) return;
-        double k = 1 - u;
-        k = k * k * k;
+        double k = springBack(u);
         state.x += (c.ox - state.x) * k;
         state.y += (c.oy - state.y) * k + c.arc * 4 * u * (1 - u);
         state.z += (c.oz - state.z) * k;
+    }
+
+    /** Ticks after the burst starts at which its first drop shows. */
+    public static double revealAfter(boolean bare) {
+        return bare ? 0 : Tune.get(HOLD) + 1;
+    }
+
+    /** How much of a spring's start offset is left at {@code u} (0..1): drops from the burst, thrown stacks from the hand. */
+    public static double springBack(double u) {
+        double k = 1 - Math.min(1, Math.max(0, u));
+        return k * k * k;
+    }
+
+    /** Ticks a drop takes from the burst centre to its own place. */
+    public static double dropSpringTicks() {
+        return Math.max(1, Tune.get(DROP_SPRING));
+    }
+
+    /** Ticks from the start of a burst until the block is gone. */
+    public static double burstTicks() {
+        return hold(false) + Math.max(1, Tune.get(SHRINK));
     }
 
     /** A section mesh went live (any thread). */
@@ -397,33 +426,86 @@ public final class Bursts {
      * Chunky chips cut from the block's texture, outward from the centre. Their flight follows the material (glass
      * flatter and faster, leaves drift, sand and gravel fall sooner, wool soft).
      */
+    /** Chips another effect may still make this frame ({@link Puff}), out of the same budget. */
+    static int spend(int want) {
+        if (frameChips >= CHIPS_PER_FRAME) return 0;
+        frameChips += want;
+        return want;
+    }
+
     /** End of every frame: a new chip budget. */
     public static void frame() {
         frameChips = 0;
+    }
+
+    /** Chips per full burst, after the particles video setting. */
+    public static int chipCount() {
+        if (!Config.get().chips) return 0;
+        int n = (int) Math.round(Tune.get(CHIPS));
+        return switch (Minecraft.getInstance().options.particles().get()) {
+            case MINIMAL -> 0;
+            case DECREASED -> n / 2;
+            default -> n;
+        };
+    }
+
+    /** The burst chips' base speed (blocks per tick). */
+    public static double chipSpeed() {
+        return 0.2 * Tune.get(CHIP_SPEED) * Config.get().amplitude();
+    }
+
+    /**
+     * A burst mixes a couple of big chunks (the first sixth), medium chips and many small bits (the last half). Even the
+     * big ones stay near a quarter block: larger, they read as copies of the block and their pixels swell.
+     */
+    public static double sizeFactor(int i, int n) {
+        return i * 6 < n ? 0.85 : i * 2 < n ? 0.7 : 0.5;
+    }
+
+    /** Big chunks are heavy and slow, small bits fly. */
+    public static double speedFactor(int i, int n) {
+        return i * 6 < n ? 0.75 : i * 2 < n ? 1 : 1.3;
+    }
+
+    /**
+     * A burst chip's speed before its material: outward from the centre ({@code ox, oy, oz} in -0.5..0.5), up, and
+     * out of the face that was mined (null: broken in one hit).
+     */
+    public static double[] burstSpeed(double ox, double oy, double oz, double speed, Direction face) {
+        double x = ox * speed * 2, y = (oy + 0.6) * speed, z = oz * speed * 2;
+        if (face != null) {
+            x += face.getStepX() * speed * 0.6;
+            y += Math.max(0, face.getStepY()) * speed * 0.35;
+            z += face.getStepZ() * speed * 0.6;
+        }
+        return new double[] {x, y, z};
+    }
+
+    /** The burst chips' base size factor (each varies from 0.9x to 1.1x, times {@link #sizeFactor}). */
+    public static double chipSize() {
+        return Tune.get(CHIP_SIZE);
     }
 
     /** Returns how many chips it made. */
     private static int chips(Burst b) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || b.lite || !b.state.shouldSpawnTerrainParticles()) return 0;
-        int n = (int) Math.round(Tune.get(CHIPS));
-        switch (mc.options.particles().get()) {
-            case MINIMAL -> n = 0;
-            case DECREASED -> n /= 2;
-            default -> {
-            }
-        }
+        int n = chipCount();
         Chip.Material m = Chip.Material.of(b.state);
         lastMaterial = m;
-        float size = (float) Tune.get(CHIP_SIZE);
-        double speed = 0.2 * Tune.get(CHIP_SPEED) * Config.get().amplitude();
+        double speed = chipSpeed();
         for (int i = 0; i < n; i++) {
             double ox = RANDOM.nextDouble() - 0.5, oy = RANDOM.nextDouble() - 0.5, oz = RANDOM.nextDouble() - 0.5;
-            Chip c = new Chip(mc.level, b.cx + ox * 0.8, b.cy + oy * 0.8, b.cz + oz * 0.8, 0, 0, 0, b.state, b.pos);
-            c.fly(m, ox * speed * 2, (oy + 0.6) * speed, oz * speed * 2);
-            c.scale(size * (0.75f + 0.5f * RANDOM.nextFloat()));
+            float size = (float) (chipSize() * sizeFactor(i, n) * (0.9 + 0.2 * RANDOM.nextDouble()));
+            // never starting inside the floor, or it would fall through it
+            double y = Math.max(b.pos.getY() + Chip.half(size) + 0.01, b.cy + oy * 0.7);
+            Chip c = new Chip(mc.level, b.cx + ox * 0.7, y, b.cz + oz * 0.7, 0, 0, 0, b.state, b.pos);
+            double[] v = burstSpeed(ox, oy, oz, speed * speedFactor(i, n), b.face);
+            c.sized(size);
+            c.fly(m, v[0], v[1], v[2], LIFE + RANDOM.nextInt(LIFE_SPREAD));
             mc.particleEngine.add(c);
         }
+        chipsMade += n;
         return n;
     }
 
@@ -441,7 +523,12 @@ public final class Bursts {
             double u = Math.min(1, t / FADE_TICKS);
             return new double[] {1, 1, b.from * (1 - u * u)};
         }
-        double hold = hold(b.bare), shrink = Math.max(1, Tune.get(SHRINK));
+        return shape(b.bare, t);
+    }
+
+    /** The break burst's shape at {@code t} ticks (see above). */
+    public static double[] shape(boolean bare, double t) {
+        double hold = hold(bare), shrink = Math.max(1, Tune.get(SHRINK));
         double squash = Tune.get(SQUASH) * Config.get().amplitude();
         if (t < hold) {
             double a = t / Math.max(0.05, hold);
@@ -458,6 +545,7 @@ public final class Bursts {
         long t0 = System.nanoTime();
         try {
             update();
+            Puff.update();
             if (BURSTS.isEmpty()) return;
             PoseStack ps = pass.ps;
             Vec3 cam = pass.cam;

@@ -32,6 +32,9 @@ public final class SnappyBlocks {
         Ghosts.clear();
         Config.load();
         Compat.detect();
+        //? if >=26.3 {
+        io.github.profetgit.profetsettings.ProfetSettings.register(ID, io.github.profetgit.snappyblocks.ui.SnappySettings::create);
+        //?}
         LOG.info("Snappy Blocks loaded on {} (enabled={}, intensity={}%)", p.loader(), Config.get().enabled, Config.get().intensity);
     }
 

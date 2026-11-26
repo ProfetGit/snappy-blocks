@@ -23,6 +23,14 @@ public final class Config {
     public boolean pop = true;
     public boolean pulse = true;
     public boolean burst = true;
+    /** The mod's own chips of a break and of mining hits ("Snappy chips"). Off leaves vanilla's and other mods'. */
+    public boolean chips = true;
+    /** What happens where a block is placed: "off", "bits", "poof", "shockwave" or "explosion" ({@code burst/Puff}). */
+    public String placeEffect = "off";
+    /** 25-200 (%): how strong the placing effect is: how many pieces or clouds, how far they go, how solid dust is. */
+    public int placeStrength = 100;
+    /** Block particles (the mod's chips and vanilla's crumbs) as small cubes instead of flat quads. */
+    public boolean cubes = false;
     public boolean items = true;
     public boolean pickup = true;
     /** 50-150 (%), scales every amplitude. */
@@ -58,6 +66,7 @@ public final class Config {
             c = new Config();
         }
         c.intensity = Math.clamp(c.intensity, 50, 150);
+        c.placeStrength = Math.clamp(c.placeStrength, 25, 200);
         if (c.tune == null) c.tune = new LinkedHashMap<>();
         for (var e : Tune.DEFAULTS.entrySet()) c.tune.putIfAbsent(e.getKey(), e.getValue());
         current = c;
@@ -75,6 +84,7 @@ public final class Config {
         } catch (IOException | RuntimeException ignored) {
         }
         current.intensity = Math.clamp(current.intensity, 50, 150);
+        current.placeStrength = Math.clamp(current.placeStrength, 25, 200);
         write(current, raw);
     }
 

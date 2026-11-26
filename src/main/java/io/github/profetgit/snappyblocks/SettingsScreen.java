@@ -1,5 +1,6 @@
 package io.github.profetgit.snappyblocks;
 
+import io.github.profetgit.snappyblocks.burst.Puff;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.OptionInstance;
 import net.minecraft.client.gui.screens.Screen;
@@ -42,6 +43,8 @@ public final class SettingsScreen extends OptionsSubScreen {
     }
 *///?}
 
+    private static final String[] EFFECT_NAMES = {"Off", "Bits", "Poof", "Shockwave", "Explosion"};
+
     static OptionInstance<?>[] options() {
         Config c = Config.get();
         return new OptionInstance<?>[] {
@@ -58,6 +61,16 @@ public final class SettingsScreen extends OptionsSubScreen {
                 c.pulse, v -> c.pulse = v),
             OptionInstance.createBoolean("Break burst", OptionInstance.cachedConstantTooltip(Component.literal("A broken block squashes and shrinks into its drop, with chips.")),
                 c.burst, v -> c.burst = v),
+            OptionInstance.createBoolean("Snappy chips", OptionInstance.cachedConstantTooltip(Component.literal("Bigger bouncing bits on top of vanilla's particles. Turn off if another mod does block particles.")),
+                c.chips, v -> c.chips = v),
+            new OptionInstance<>("Placing effect", OptionInstance.cachedConstantTooltip(Component.literal("What happens where you place a block: bits of it round the foot, a dust poof, a dust shockwave, or an explosion of its bits.")),
+                (caption, v) -> Component.literal("Placing effect: " + EFFECT_NAMES[v]), new OptionInstance.IntRange(0, 4),
+                Math.max(0, java.util.Arrays.asList(Puff.EFFECTS).indexOf(c.placeEffect)), v -> c.placeEffect = Puff.EFFECTS[v]),
+            new OptionInstance<>("Effect strength", OptionInstance.cachedConstantTooltip(Component.literal("How strong the placing effect is.")),
+                (caption, v) -> Component.literal("Effect strength: " + v * 25 + "%"), new OptionInstance.IntRange(1, 8),
+                Math.max(1, Math.min(8, Math.round(c.placeStrength / 25f))), v -> c.placeStrength = v * 25),
+            OptionInstance.createBoolean("3D block particles", OptionInstance.cachedConstantTooltip(Component.literal("Block bits, vanilla's crumbs too, are small tumbling cubes.")),
+                c.cubes, v -> c.cubes = v),
             OptionInstance.createBoolean("Item drops", OptionInstance.cachedConstantTooltip(Component.literal("Drops spring out, items land with a hop, thrown stacks leave your hand.")),
                 c.items, v -> c.items = v),
             OptionInstance.createBoolean("Pickup flight", OptionInstance.cachedConstantTooltip(Component.literal("Picked-up items fly into their hotbar slot.")),

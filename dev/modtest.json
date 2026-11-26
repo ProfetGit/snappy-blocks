@@ -5,6 +5,7 @@
   "scenes_prop": "snappy_blocks.selftest.scenes",
   "props": {
     "snappy_blocks.selftest.mode": "{mode}",
+    "snappy_blocks.selftest.pvdense": "{pvdense}",
     "snappy_blocks.trace": "{trace}",
     "snappy_blocks.tune.pop.ticks": "{popticks}",
     "snappy_blocks.tune.pulse.chips": "{chips}",
@@ -75,7 +76,8 @@
     "blast",
     "sweep",
     "aside",
-    "replay"
+    "replay",
+    "particles"
   ],
   "smoke": [
     "smoke"

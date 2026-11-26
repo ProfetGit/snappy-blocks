@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.0.36 — unreleased
+
+- **New: Report bug** button in the settings screen (Minecraft 26.3): write what happened and send it from inside the game. It attaches your Minecraft, loader, mod list, changed settings and recent errors (your name, home folder and IPs hidden) and posts it as a public GitHub issue. If sending fails, the report is copied and GitHub opens instead.
+- **Better block chips** (every version): chips spin as they fly, bounce off the ground (glass skitters, wool hops softly, sand and leaves stay where they land), turn flat as they settle and shrink away. A break throws a mix of big chunks, medium chips and small bits, out of the side you mined. Mining hits throw more, and harder, as the block gives way.
+- **New: Effect strength** slider (25-200%) for the placing effect.
+- **New: Placing effect** (off by default), played where you place a block: **Bits** of it puff out round its foot, a dust **Poof** or **Shockwave** (new cloud art, tinted like the block), or an **Explosion** of its pieces in every direction.
+- **New: 3D block particles** (off by default): block bits are small tumbling cubes, the mod's chips and vanilla's own breaking, mining, running and landing crumbs. Smoke, flames and other particles stay as they are.
+- The break chip count moved to the `burst.bits` number in the config file (default 12; the old `burst.chips` entry is no longer read).
+
+## 0.0.32 — unreleased
+
+- **New: Snappy chips switch** (every version). Turn off the chunky bits of the block that fly off when mining and breaking, for example when another mod such as Physics Mod does block particles. The pulse, the burst and the drops stay.
+- **New settings screen on Minecraft 26.3**: Snappy Blocks has live previews of every effect in the shared Profet Mods screen (also opened by the copper golem button in the Game Menu on Fabric and Quilt), together with the other Profet mods you have installed. Cancel puts every option back.
+
 ## 0.0.31 — 2026-11-23
 
 - **Fix: ores under shader packs** (Minecraft 26.3 with Iris and Sodium, e.g. Complementary). Mining an ore now makes it bulge like any other block, and the ore keeps its glow and its colour while it pulses. Before, the bulging copy lost the pack's gem glow and flickered darker on every hit.

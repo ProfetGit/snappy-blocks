@@ -135,7 +135,8 @@ Edge cases:
   server's level event 2020 every 4 ticks. Remote miners pulse the same way. The server echoes the first hit back
   one round trip later; a hit on a block that is still pulsing is skipped.
 - Look: an outward pulse to 103% for 2 ticks (the bulge path: a copy never below 1.004 over the real block, within
-  24 blocks), and 2 chips cut from the block's own texture, flung out of the hit face.
+  24 blocks), and chips cut from the block's own texture, flung out of the hit face: 2, one more every third hit up to
+  4, thrown up to 1.5x harder as the block gives way (0.0.33).
 - Only opaque blocks without a block entity pulse; under a shader pack, the place pop's material rule applies.
 - The crack overlay follows the pulse.
 - Instant breaks (creative mode, insta-mining) skip the pulse.
@@ -154,8 +155,10 @@ Frame 0, punch and shrink (the user's pick 2026-10-29; mini copies of the block 
 spawned smaller"):
 - The block holds for 1 tick where it stood (the hit-stop), squashing about its floor by 12%.
 - Then it shrinks away about its centre in 4 ticks, accelerating, while the squash springs back.
-- As the shrink starts, 10 chunky chips cut from its own texture (vanilla terrain particles, 2.2x size, faster) spray
-  outward. Vanilla's crumbs stay.
+- As the shrink starts, 12 chips cut from its own texture spray outward and out of the mined face: a sixth big and
+  slow, the last half small and fast (0.0.33). They spin, bounce twice by material (glass skitters, wool hops softly,
+  sand and leaves stay), turn square to the floor, rest and shrink (18-29 ticks). Vanilla's crumbs stay. No chip is
+  much over a quarter block: bigger ones read as copies of the block.
 
 Drops: items that arrive within the measured round trip + 4 ticks of the break (or up to 2 ticks before it: a
 server sends the drops before the block update) are claimed.
@@ -181,6 +184,23 @@ Edge cases:
   chains and piston arrays. Lite means vanilla crumbs and the shrink only (drops still claimed).
 - Distance: full effect up to 32 blocks, lite up to 64, nothing beyond.
 - With the particle setting at Minimal: no chips; at Decreased: half.
+
+### 5.3a Placing effect and 3D block particles (0.0.36, asked 2026-11-25)
+- **Placing effect** (`placeEffect`, default `off`; one at a time, the director's merge 2026-11-25), at the peak of the
+  pop, round the face the block was set against (another player's block: its floor); one per door or bed; works with the
+  pop off; Minimal none, Decreased half:
+  - `bits`: 12 small pieces from the edges of that face, along it. Sides with a full block beside them get none.
+  - `poof`: 8 clouds of the mod's own pixel dust round the foot; they swell and tear apart in about half a second.
+  - `shockwave`: a flat ring of cloud (only where at least 5 of the 8 blocks under it are solid) rolls out to 1.4
+    blocks in 0.4 s with 14 wisps on its front.
+  - `explosion`: 20 small pieces of the block hop off every free side and settle (softened from 40 hard-thrown ones, the
+    director 2026-11-25: "too violent").
+  - Dust art: `dev/art/dust/dust.lua` (Aseprite), 16 px per block, tinted 68% white and 32% the block's map colour.
+- **Effect strength** (`placeStrength`, 25-200, asked 2026-11-25): scales every effect's piece or cloud count and how
+  far they go; dust also gets more or less solid. The art's pixel size never changes.
+- **3D block particles** (`cubes`, default off): every vanilla terrain particle (the mod's chips and vanilla's break,
+  hit, sprint and fall crumbs) is drawn as a tumbling cube that settles onto a face. Smoke, flames and other particles
+  stay flat. Drawn through vanilla's particle pipeline, so shaders and Sodium treat it as a particle.
 
 ### 5.4 Item life
 These are offsets on the render only; the entity's position is never changed.
@@ -227,6 +247,11 @@ These are offsets on the render only; the entity's position is never changed.
 - A JSON file in `config/`, re-read when it changes.
 - A Mod Menu screen when Mod Menu is installed.
 - A toggle per feature (5.1-5.5) and an intensity from 50 to 150%.
+- **Snappy chips** (key `chips`, renamed from "Block chips" 2026-11-25: the director read it as a duplicate of vanilla's particles; default on, added 2026-11-25 on a CurseForge request: Physics Mod's block particles): off means no chips
+  from a mining hit or a break; the pulse, the burst and vanilla's crumbs stay. Placing particles and 3D block
+  particles (§5.3a) have their own switches.
+- 26.3: the options are shown in the shared Profet Settings screen (`tools/ProfetSettings`), older versions keep the
+  vanilla-style screen.
 - **Calm**: amplitudes ×0.3, no hit-stop, no hop (reduced motion).
 - Feel numbers live in the config's `tune` object (re-read within 2 s of saving the file), so feel notes become numbers
   without a rebuild. No client command: that needs Fabric API, which the mod doesn't depend on (changed 2026-10-29, M1).
@@ -338,7 +363,7 @@ Feel check 1 (end of M1, ~3 minutes, Fabric 26.3 profile, a fresh survival world
 4. Break glass and a leaf block.
 Judge: the size of the pop, the hold before the pieces fly, where the drop comes from.
 Tunables: `config/snappy_blocks.json` → `tune`: `pop.start`, `pop.peak`, `pop.ticks`, `burst.hold`, `burst.squash`,
-`burst.shrink`, `burst.chips`, `burst.chipSize`, `burst.chipSpeed`, `drop.spring`.
+`burst.shrink`, `burst.bits`, `burst.chipSize`, `burst.chipSpeed`, `drop.spring`.
 
 Feel check 2 (end of M3, ~3 minutes, sound on):
 1. Mine 10 coal ore and walk over the drops.

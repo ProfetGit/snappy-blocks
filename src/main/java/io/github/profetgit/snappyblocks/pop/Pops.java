@@ -9,6 +9,7 @@ import io.github.profetgit.snappyblocks.RenderPass;
 import io.github.profetgit.snappyblocks.SnappyBlocks;
 import io.github.profetgit.snappyblocks.Tune;
 import io.github.profetgit.snappyblocks.burst.Bursts;
+import io.github.profetgit.snappyblocks.burst.Puff;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Reference2BooleanOpenHashMap;
@@ -33,6 +34,7 @@ import net.minecraft.util.Util;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.phys.Vec3;
@@ -145,11 +147,12 @@ public final class Pops {
         Minecraft mc = Minecraft.getInstance();
         if (u == null || u.tick != Clock.ticks() || mc.level == null || mc.level.getBlockState(pos) != u.state || !placeSound(pos, u.state)) return;
         UNSOUNDED.remove(pos.asLong());
-        if (!start(pos, u.state, Clock.now(), null, REMOTE)) return;
+        if (!placed(pos, u.state, Clock.now(), null, REMOTE)) return;
         remote++;
         lateSounds++;
         // the other half of a door or bed came before the sound too
         Pop first = POPS.get(pos.asLong());
+        if (first == null) return;
         for (Direction d : Direction.values()) {
             BlockPos n = pos.relative(d);
             Unsounded h = UNSOUNDED.get(n.asLong());
@@ -193,10 +196,10 @@ public final class Pops {
             }
             return;
         }
-        if (!Config.get().enabled || !Config.get().pop || Compat.popAside()) return;
+        if (!Config.get().enabled || !popOn() && !Puff.on()) return;
         if (!(Probe.empty(old) || old.canBeReplaced()) || Probe.empty(now) || now.canBeReplaced()) return;
         if (predicted) {
-            start(pos.immutable(), now, Clock.now(), null, LOCAL);
+            placed(pos.immutable(), now, Clock.now(), null, LOCAL);
             return;
         }
         Minecraft mc = Minecraft.getInstance();
@@ -211,7 +214,7 @@ public final class Pops {
         if (half != null) {
             start(pos.immutable(), now, half.t0, half, REMOTE);
         } else if (placeSound(pos, now)) {
-            if (start(pos.immutable(), now, Clock.now(), null, REMOTE)) remote++;
+            if (placed(pos.immutable(), now, Clock.now(), null, REMOTE)) remote++;
         } else {
             UNSOUNDED.put(pos.asLong(), new Unsounded(now, Clock.ticks()));
         }
@@ -302,6 +305,24 @@ public final class Pops {
 
     private static final int LOCAL = 0, REMOTE = 1, REGROW = 2;
 
+    private static boolean popOn() {
+        return Config.get().pop && !Compat.popAside();
+    }
+
+    /** A block was placed: its puff of particles, and its pop (true when the pop started). */
+    private static boolean placed(BlockPos pos, BlockState state, double t0, Pop half, int mode) {
+        // one puff per door or bed
+        boolean second = state.hasProperty(BlockStateProperties.DOUBLE_BLOCK_HALF) && state.getValue(BlockStateProperties.DOUBLE_BLOCK_HALF) == DoubleBlockHalf.UPPER
+            || state.hasProperty(BlockStateProperties.BED_PART) && state.getValue(BlockStateProperties.BED_PART) == BedPart.HEAD;
+        if (!second && drawnLikeModel(state)) Puff.queue(pos, state, support(mode), t0);
+        return popOn() && start(pos, state, t0, half, mode);
+    }
+
+    /** The face a placed block was set against. Another player's click isn't known: the floor. */
+    private static Direction support(int mode) {
+        return mode == LOCAL && lastFaceTick == Clock.ticks() && lastFace != null ? lastFace.getOpposite() : Direction.DOWN;
+    }
+
     private static boolean start(BlockPos pos, BlockState state, double t0, Pop half, int mode) {
         Kind kind = kind(pos, state);
         if (kind == Kind.NONE) return false;
@@ -311,8 +332,8 @@ public final class Pops {
         }
         Minecraft mc = Minecraft.getInstance();
         ClientLevel level = mc.level;
-        // another player's placement: the face they clicked isn't known, so it grows from the floor
-        Direction support = mode == LOCAL && lastFaceTick == Clock.ticks() && lastFace != null ? lastFace.getOpposite() : Direction.DOWN;
+        // another player's placement grows from the floor
+        Direction support = support(mode);
         float px = 0.5f + 0.5f * support.getStepX(), py = 0.5f + 0.5f * support.getStepY(), pz = 0.5f + 0.5f * support.getStepZ();
         if (mode == REGROW) {
             py = 0.5f;
@@ -428,7 +449,7 @@ public final class Pops {
     }
 
     /** Scale at {@code t} ticks into the pop: grows from pop.start past pop.peak, then settles to 1. */
-    static double scale(double t) {
+    public static double scale(double t) {
         double ticks = Tune.get(Tune.POP_TICKS), peakAt = Math.max(0.05, Tune.get(Tune.POP_PEAK_AT)) * ticks;
         double start = 1 - (1 - Tune.get(Tune.POP_START)) * Config.get().amplitude();
         double peak = 1 + (Tune.get(Tune.POP_PEAK) - 1) * Config.get().amplitude();

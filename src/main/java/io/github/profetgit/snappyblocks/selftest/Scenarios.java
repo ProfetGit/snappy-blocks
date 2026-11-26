@@ -64,8 +64,10 @@ final class Scenarios {
             return true;
         }).server(srv -> platform(srv)).waitTicks(40);
         String only = System.getProperty("snappy_blocks.selftest.scenes", "all");
-        List<String> names = new ArrayList<>(List.of("smoke", "pop", "burst", "pulse", "drops", "deny", "events", "bepop", "landing", "merge", "despawn", "farm1000", "pickup", "pickupwalk", "plants"));
+        List<String> names = new ArrayList<>(List.of("smoke", "pop", "burst", "pulse", "drops", "deny", "events", "bepop", "landing", "merge", "despawn", "farm1000", "pickup", "pickupwalk", "plants", "particles"));
         names.addAll(ScaleScenes.NAMES);
+        // the settings screen scene needs a 1920x1080 window: only when named
+        if (Arrays.asList(only.split(",")).contains("ui")) names.add("ui");
         for (String name : names) {
             if (!only.equals("all") && !Arrays.asList(only.split(",")).contains(name)) continue;
             switch (name) {
@@ -84,6 +86,12 @@ final class Scenarios {
                 case "pickup" -> pickup(s);
                 case "pickupwalk" -> pickupWalk(s);
                 case "plants" -> plants(s);
+                case "particles" -> ParticleScenes.add(s);
+                case "ui" -> {
+                    //? if >=26.3 {
+                    UiScenes.add(s);
+                    //?}
+                }
                 default -> ScaleScenes.add(s, name);
             }
         }

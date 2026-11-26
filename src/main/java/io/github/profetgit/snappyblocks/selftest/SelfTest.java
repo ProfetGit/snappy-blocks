@@ -139,6 +139,10 @@ public final class SelfTest {
         captureFrame = 0;
     }
 
+    static boolean capturing() {
+        return captureLeft > 0;
+    }
+
     static void stopCapture() {
         captureLeft = 0;
         if (HANDOFFS.isEmpty()) return;
