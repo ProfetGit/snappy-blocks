@@ -3,6 +3,7 @@
 ## 0.0.36 — unreleased
 
 - **New: Report bug** button in the settings screen (Minecraft 26.3): write what happened and send it from inside the game. It attaches your Minecraft, loader, mod list, changed settings and recent errors (your name, home folder and IPs hidden) and posts it as a public GitHub issue. If sending fails, the report is copied and GitHub opens instead.
+- Bug reports have short fields for what happened, the steps and what you expected; a **View report** link shows exactly what gets sent; your draft is kept until it is sent. After a crash caused by a Profet mod, the title screen offers to report it with the crash attached. New **Ko-fi** button in the settings footer.
 - **Better block chips** (every version): chips spin as they fly, bounce off the ground (glass skitters, wool hops softly, sand and leaves stay where they land), turn flat as they settle and shrink away. A break throws a mix of big chunks, medium chips and small bits, out of the side you mined. Mining hits throw more, and harder, as the block gives way.
 - **New: Effect strength** slider (25-200%) for the placing effect.
 - **New: Placing effect** (off by default), played where you place a block: **Bits** of it puff out round its foot, a dust **Poof** or **Shockwave** (new cloud art, tinted like the block), or an **Explosion** of its pieces in every direction.

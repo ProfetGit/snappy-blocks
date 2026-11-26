@@ -342,6 +342,7 @@ final class UiScenes {
         java.util.function.Consumer<java.net.URI>[] prevOpener = new java.util.function.Consumer[1];
         s.run(mc -> {
                 gui(mc, 2);
+                ProfetSettings.debugResetBugState();
                 mc.gui.setScreen(ConfigScreens.create(null));
                 prevOpener[0] = ProfetSettings.uriOpener;
                 ProfetSettings.reportEndpoint = ""; // never file real issues from tests
@@ -407,7 +408,7 @@ final class UiScenes {
                 if (opened.size() != 1) return "opened=" + opened.size();
                 String u = opened.get(0).toString();
                 if (!u.startsWith("https://github.com/ProfetGit/snappy-blocks/issues/new?")) return "url=" + u;
-                if (!u.contains("title=Pop%20glitch")) return "missing title in url: " + u;
+                if (!u.contains("title=%5B") || !u.contains("%5D%20Pop%20glitch")) return "title not [version] Pop glitch: " + u;
                 if (!u.contains("labels=bug")) return "missing bug label in url: " + u;
                 return null;
             })
@@ -415,6 +416,152 @@ final class UiScenes {
             .waitTicks(10)
             .check("bug: Escape closes modal and returns to settings", mc -> !hub(mc).debugBugModalOpen() && ProfetSettings.isScreen(mc.gui.screen()) ? null : "modal=" + hub(mc).debugBugModalOpen());
         bugDirect(s);
+        bugV2(s);
+    }
+
+    // Guided fields, greyed Send, version in the title, View report, saved draft, IME area, Ko-fi, crash prompt.
+    private static void bugV2(Script s) {
+        List<java.net.URI> opened = new ArrayList<>();
+        java.util.function.Consumer<java.net.URI>[] prevOpener = new java.util.function.Consumer[1];
+        Path[] crash = new Path[1];
+        s.run(mc -> {
+                prevOpener[0] = ProfetSettings.uriOpener;
+                ProfetSettings.uriOpener = opened::add;
+                ProfetSettings.reportEndpoint = "";
+            })
+            .run(mc -> press(mc, hub(mc).debugBugButton()))
+            .waitTicks(10)
+            .check("bug v2: Send is greyed out while every field is empty", mc -> {
+                String[] f = hub(mc).debugBugFields();
+                if (!String.join("", f).isEmpty()) return "fields not empty: " + String.join("|", f);
+                return hub(mc).debugBugSendEnabled() ? "send enabled" : null;
+            })
+            .run(mc -> press(mc, hub(mc).debugBugSend()))
+            .waitTicks(5)
+            .check("bug v2: pressing greyed Send does nothing (no error)", mc -> opened.isEmpty() && hub(mc).debugBugStatus().isEmpty() ? null : "opened=" + opened + " status=" + hub(mc).debugBugStatus())
+            .run(mc -> hub(mc).debugSetBugDraft("Guided", "It blinks.", "1. Place stone\n2. Look at it", "No blink"))
+            .waitTicks(5)
+            .check("bug v2: Send turns on with text", mc -> hub(mc).debugBugSendEnabled() ? null : "still greyed")
+            .check("bug v2: guided fields become report sections", mc -> {
+                String b = hub(mc).debugBugBody();
+                for (String want : new String[] {"### What happened\nIt blinks.", "### Steps to reproduce\n1. Place stone\n2. Look at it", "### Expected\nNo blink"}) {
+                    if (!b.contains(want)) return "missing " + want.replace("\n", "/");
+                }
+                return null;
+            })
+            .check("bug v2: the issue title starts with the mod version", mc -> {
+                String u = hub(mc).debugBugUrl();
+                String v = ProfetSettings.modVersion(SnappyBlocks.ID);
+                return u.contains("title=%5B" + v) ? null : "version " + v + " not in " + u.substring(0, Math.min(160, u.length()));
+            })
+            .run(mc -> {
+                int[] tp = hub(mc).debugBugTitle();
+                click(mc, tp[0], tp[1]);
+            })
+            .waitTicks(5)
+            .check("bug v2: the IME popup area follows the caret", mc -> {
+                try {
+                    var f = com.mojang.blaze3d.platform.TextInputManager.class.getDeclaredField("hasTextInputArea");
+                    f.setAccessible(true);
+                    return (boolean) f.get(mc.textInputManager()) ? null : "no text input area set";
+                } catch (ReflectiveOperationException ex) {
+                    return "reflect: " + ex;
+                }
+            })
+            .run(mc -> hub(mc).debugSetBugDraft("Guided", "It blinks. " + "x".repeat(1250), "1. Place stone\n2. Look at it", "No blink"));
+        capture(s, "ui-bug-fields");
+        s.run(mc -> press(mc, hub(mc).debugBugView()))
+            .waitTicks(10)
+            .check("bug v2: View report shows the exact report, read-only", mc -> {
+                if (!hub(mc).debugBugViewing()) return "not viewing";
+                String t = hub(mc).debugBugViewText();
+                if (!t.contains("Guided") || !t.contains("### Steps to reproduce") || !t.contains("## Environment")) return "view text: " + t.substring(0, Math.min(200, t.length()));
+                String home = System.getProperty("user.home", "");
+                if (!home.isEmpty() && t.contains(home)) return "home path visible";
+                return null;
+            });
+        capture(s, "ui-bug-view");
+        s.run(mc -> hub(mc).keyPressed(new net.minecraft.client.input.KeyEvent(io.github.profetgit.profetsettings.UiKeys.ESC, 0, 0)))
+            .waitTicks(5)
+            .check("bug v2: Escape in the view goes back to editing", mc -> !hub(mc).debugBugViewing() && hub(mc).debugBugModalOpen() ? null : "viewing=" + hub(mc).debugBugViewing())
+            .run(mc -> {
+                hub(mc).debugSetBugDraft("Kept", "Draft text", "Step one", "Expected one");
+                hub(mc).debugSaveBugDraft();
+                hub(mc).keyPressed(new net.minecraft.client.input.KeyEvent(io.github.profetgit.profetsettings.UiKeys.ESC, 0, 0));
+                mc.gui.setScreen(null);
+                ProfetSettings.debugReloadBugState();
+            })
+            .waitTicks(5)
+            .run(mc -> mc.gui.setScreen(ConfigScreens.create(null)))
+            .waitTicks(10)
+            .run(mc -> press(mc, hub(mc).debugBugButton()))
+            .waitTicks(10)
+            .check("bug v2: the draft survives a restart (read back from disk)", mc -> {
+                String[] f = hub(mc).debugBugFields();
+                return f[0].equals("Kept") && f[1].equals("Draft text") && f[2].equals("Step one") && f[3].equals("Expected one") ? null : String.join("|", f);
+            })
+            .run(mc -> {
+                hub(mc).debugSetBugDraft("", "", "", "");
+                hub(mc).keyPressed(new net.minecraft.client.input.KeyEvent(io.github.profetgit.profetsettings.UiKeys.ESC, 0, 0));
+                opened.clear();
+            })
+            .waitTicks(5)
+            .check("bug v2: Ko-fi button sits in the footer", mc -> hub(mc).debugKofi() != null ? null : "no Ko-fi button")
+            .run(mc -> press(mc, hub(mc).debugKofi()))
+            .waitTicks(5)
+            .check("bug v2: Ko-fi opens ko-fi.com/profetgit", mc -> opened.size() == 1 && opened.get(0).toString().equals("https://ko-fi.com/profetgit") ? null : "opened=" + opened)
+            .run(mc -> {
+                mc.gui.setScreen(null);
+                ProfetSettings.debugResetBugState();
+                try {
+                    Path dir = mc.gameDirectory.toPath().resolve("crash-reports");
+                    Files.createDirectories(dir);
+                    crash[0] = dir.resolve("crash-2000-01-01_00.00.00-client.txt");
+                    Files.writeString(crash[0], "---- Minecraft Crash Report ----\n// Test fixture\n\nTime: 2000-01-01\nDescription: Rendering overlay\n\n"
+                        + "java.lang.NullPointerException: test\n\tat io.github.profetgit.snappyblocks.pop.Pops.tick(Pops.java:1)\n\n"
+                        + "A detailed walkthrough of the error, its code path and all known details is as follows:\n-- System Details --\nFabric Mods: tidypockets\n");
+                    long start = java.lang.management.ManagementFactory.getRuntimeMXBean().getStartTime();
+                    Files.setLastModifiedTime(crash[0], java.nio.file.attribute.FileTime.fromMillis(start - 60_000));
+                } catch (IOException ex) {
+                    throw new RuntimeException(ex);
+                }
+                mc.gui.setScreen(new net.minecraft.client.gui.screens.TitleScreen());
+            })
+            .waitTicks(40)
+            .check("bug v2: the title screen offers to report the crash", mc -> toast(mc) != null ? null : "no crash toast on " + mc.gui.screen());
+        capture(s, "ui-crash-toast");
+        s.run(mc -> {
+                var t = toast(mc);
+                click(mc, t.getX() + t.getWidth() / 2, t.getY() + t.getHeight() / 2);
+            })
+            .waitTicks(20)
+            .check("bug v2: the crash toast opens the report with the crash attached", mc -> {
+                if (!ProfetSettings.isScreen(mc.gui.screen()) || !hub(mc).debugBugModalOpen()) return "screen " + mc.gui.screen();
+                String[] f = hub(mc).debugBugFields();
+                if (!f[0].startsWith("Crash: Rendering overlay")) return "title " + f[0];
+                String b = hub(mc).debugBugBody();
+                return b.contains("Latest crash report") && b.contains("snappyblocks.pop.Pops.tick") ? null : "crash not attached";
+            });
+        capture(s, "ui-crash-report");
+        s.run(mc -> {
+                hub(mc).keyPressed(new net.minecraft.client.input.KeyEvent(io.github.profetgit.profetsettings.UiKeys.ESC, 0, 0));
+                mc.gui.setScreen(null);
+                io.github.profetgit.profetsettings.CrashPrompt.rescanForTest();
+            })
+            .check("bug v2: a crash report is offered only once", mc -> io.github.profetgit.profetsettings.CrashPrompt.pending() ? "offered again" : null)
+            .run(mc -> {
+                ProfetSettings.uriOpener = prevOpener[0];
+                ProfetSettings.debugResetBugState();
+                try {
+                    Files.deleteIfExists(crash[0]);
+                } catch (IOException ignored) {}
+            });
+    }
+
+    private static io.github.profetgit.profetsettings.CrashToast toast(Minecraft mc) {
+        if (mc.gui.screen() == null) return null;
+        for (var c : mc.gui.screen().children()) if (c instanceof io.github.profetgit.profetsettings.CrashToast t) return t;
+        return null;
     }
 
     // In-game send through the report Worker: a local stand-in answers like the Worker; then an unreachable one.
@@ -453,7 +600,7 @@ final class UiScenes {
                 if (!r.startsWith("ProfetSettings/")) return "user-agent: " + r.lines().findFirst().orElse("");
                 var o = JsonParser.parseString(r.substring(r.indexOf('\n') + 1)).getAsJsonObject();
                 if (!o.get("mod").getAsString().equals("snappy_blocks")) return "mod " + o.get("mod");
-                if (!o.get("title").getAsString().equals("Direct send")) return "title " + o.get("title");
+                if (!o.get("title").getAsString().matches("\\[[^\\]]+\\] Direct send")) return "title " + o.get("title");
                 if (!o.get("body").getAsString().contains("Sent from inside the game.")) return "body";
                 return opened.isEmpty() ? null : "browser opened";
             })
