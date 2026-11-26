@@ -40,7 +40,7 @@ final class UiScenes {
             })
             .waitTicks(5)
             .check("ui: fonts, sprites and language load", mc -> {
-                for (String path : new String[] {"profet_settings:font/ten.ttf", "profet_settings:textures/gui/sprites/golem.png", "snappy_blocks:icon.png"}) {
+                for (String path : new String[] {"profet_settings:font/tiny5.ttf", "profet_settings:font/tiny5_bold.ttf", "profet_settings:font/tiny5_title.ttf", "profet_settings:textures/gui/sprites/golem.png", "snappy_blocks:icon.png"}) {
                     if (mc.getResourceManager().getResource(Identifier.parse(path)).isEmpty()) return "missing " + path;
                 }
                 for (String key : new String[] {"profet_settings.ui.done", "snappy_blocks.setting.pop", "snappy_blocks.preview.off.all"}) {

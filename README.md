@@ -32,6 +32,8 @@ Install it and play. Nothing to press and nothing to learn.
 
 Open the settings screen from Mod Menu (Fabric, Quilt; Mod Menu is optional) or from the NeoForge and Forge mod list. It has a master switch, a switch for each effect (place pop, mining pulse, break burst, item drops, pickup flight), an intensity from 50 to 150%, and **Reduced motion** (smaller movement, no hit-stop, no hop). Changes show at once. The same settings live in `config/snappy_blocks.json`, where every timing is also a number you can tune.
 
+On Minecraft 26.3 the settings open in the shared **Profet Mods** screen (also from the copper golem button in the Game Menu on Fabric and Quilt) with a live preview of every effect and Quick setup presets. Its **Report bug** button sends a bug report from inside the game: what happened plus your Minecraft and loader versions, mod list, changed settings and recent errors. **Privacy:** reports go through Profet's report server (Cloudflare) and are posted as public issues on GitHub. Your player name, home folder and IP addresses are removed first, and a **View report** link shows exactly what will be sent. Nothing is sent unless you press Send.
+
 ![Compatibility](https://raw.githubusercontent.com/ProfetGit/snappy-blocks/main/docs/desc/title-compatibility.webp)
 
 - **Client-side only.** Works on any server, including vanilla servers and Realms.
