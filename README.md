@@ -5,13 +5,13 @@
 <a href="https://ko-fi.com/profetgit"><img src="https://raw.githubusercontent.com/ProfetGit/assets/main/buttons/kofi.webp" alt="Ko-fi" width="23.96%"></a>
 </p>
 
-**Nothing blinks in or out anymore.** Snappy Blocks makes blocks pop into place, burst into their drops, and lets the drops bounce, settle and fly into your hotbar. A client-side mod for Minecraft Java 26.3, 26.2, 1.21.11, 1.21.1 and 1.20.1 on Fabric, Quilt, NeoForge and Forge, so it works on any server.
+**Nothing blinks in or out anymore.** Snappy Blocks makes blocks pop into place, burst into their drops, and lets the drops bounce, settle and fly into your hotbar. A client-side mod for Minecraft Java 26.3, 26.2, 26.1.2, 1.21.11, 1.21.1 and 1.20.1 on Fabric, Quilt, NeoForge and Forge, so it works on any server.
 
 ![Features](https://raw.githubusercontent.com/ProfetGit/snappy-blocks/main/docs/desc/title-features.webp)
 
 - **Placing.** A block pops into place with a small overshoot.
-- **Mining.** The block pulses on every hit and the crack grows with it.
-- **Breaking.** The block takes a punch, shrinks away and throws chips. The drop springs out of its centre.
+- **Mining.** The block pulses, shakes or wobbles on every hit and the crack grows with it.
+- **Breaking.** The block bursts or twirls away and throws chips. The drop springs out of its centre.
 - **Drops.** They squash and hop when they land, with a soft step sound. Stacks slide together when they merge and shrink out when they despawn.
 - **Q-throw.** Thrown items start at your hand and grow out of it.
 - **Pickups.** Items arc into your chest, or fly into the hotbar slot they land in.
@@ -30,9 +30,15 @@ Install it and play. Nothing to press and nothing to learn.
 
 ![Settings](https://raw.githubusercontent.com/ProfetGit/snappy-blocks/main/docs/desc/title-settings.webp)
 
-Open the settings screen from Mod Menu (Fabric, Quilt; Mod Menu is optional) or from the NeoForge and Forge mod list. It has a master switch, a switch for each effect (place pop, mining pulse, break burst, item drops, pickup flight), an intensity from 50 to 150%, and **Reduced motion** (smaller movement, no hit-stop, no hop). Changes show at once. The same settings live in `config/snappy_blocks.json`, where every timing is also a number you can tune.
+Open the settings screen from the copper golem button in the Game Menu, from Mod Menu (Fabric, Quilt; Mod Menu is optional) or from the NeoForge and Forge mod list. It is the shared **Profet Mods** screen, with a live preview of every effect and Quick setup presets:
 
-On Minecraft 26.3 the settings open in the shared **Profet Mods** screen (also from the copper golem button in the Game Menu on Fabric and Quilt) with a live preview of every effect and Quick setup presets. Its **Report bug** button sends a bug report from inside the game: what happened plus your Minecraft and loader versions, mod list, changed settings and recent errors. **Privacy:** reports go through Profet's report server (Cloudflare) and are posted as public issues on GitHub. Your player name, home folder and IP addresses are removed first, and a **View report** link shows exactly what will be sent. Nothing is sent unless you press Send.
+- A master switch, **Intensity** (50 to 150%) and **Reduced motion** (smaller movement, no hit-stop, no hop).
+- **Mining animation** (Off, Pulse, Shake, Wobble) with its own strength, and **Break animation** (Off, Burst, Twirl) with its own strength.
+- Place pop, Snappy chips, a **Placing effect** with its strength, 3D block particles, item drops and pickup flight.
+
+Changes show at once. The same settings live in `config/snappy_blocks.json`, where every timing is also a number you can tune.
+
+The **Report bug** button sends a bug report from inside the game: what happened plus your Minecraft and loader versions, mod list, changed settings and recent errors. **Privacy:** reports go through Profet's report server (Cloudflare) and are posted as public issues on GitHub. Your player name, home folder and IP addresses are removed first, and a **View report** link shows exactly what will be sent. Nothing is sent unless you press Send.
 
 ![Compatibility](https://raw.githubusercontent.com/ProfetGit/snappy-blocks/main/docs/desc/title-compatibility.webp)
 
@@ -42,7 +48,7 @@ On Minecraft 26.3 the settings open in the shared **Profet Mods** screen (also f
 
 ![Installation](https://raw.githubusercontent.com/ProfetGit/snappy-blocks/main/docs/desc/title-installation.webp)
 
-Put the jar for your Minecraft version and loader in your `mods` folder: 26.3, 26.2, 1.21.11, 1.21.1 or 1.20.1 on Fabric, Quilt, NeoForge or Forge (the Fabric jar also loads on Quilt; on 1.20.1 NeoForge uses the Forge jar). It does not need Fabric API. Sodium is supported (0.9 on 26.3 and 26.2, 0.8 on 1.21.1, 0.5 on 1.20.1); Embeddium is supported (1.21.1 NeoForge, 1.20.1 Forge). Sodium 0.8 and Iris shaders work on 1.21.11 (Fabric); Embeddium is not tested there. Iris shaders are supported on 26.3, 26.2, 1.21.11, 1.21.1 and 1.20.1, and Oculus on 1.20.1 Forge (tested with Complementary and BSL): growing blocks are lit like placed ones and cast their shadow. Other players' mining pulses show on 26.3 only.
+Put the jar for your Minecraft version and loader in your `mods` folder: 26.3, 26.2, 26.1.2, 1.21.11, 1.21.1 or 1.20.1 on Fabric, Quilt, NeoForge or Forge (the Fabric jar also loads on Quilt; on 1.20.1 NeoForge uses the Forge jar). It does not need Fabric API. Sodium is supported (0.9 on 26.3 and 26.2, 0.8 on 1.21.1, 0.5 on 1.20.1); Embeddium is supported (1.21.1 NeoForge, 1.20.1 Forge). Sodium 0.8 and Iris shaders work on 1.21.11 (Fabric); Embeddium is not tested there. Iris shaders are supported on 26.3, 26.2, 1.21.11, 1.21.1 and 1.20.1, and Oculus on 1.20.1 Forge (tested with Complementary and BSL): growing blocks are lit like placed ones and cast their shadow. Other players' mining pulses show on 26.3 only.
 
 ![More from Profet](https://raw.githubusercontent.com/ProfetGit/snappy-blocks/main/docs/desc/title-more-from-profet.webp)
 

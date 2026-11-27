@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import org.joml.Quaternionf;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import io.github.profetgit.snappyblocks.pop.PopRenderState;
@@ -38,7 +39,8 @@ import net.minecraft.world.phys.Vec3;
  * Break burst (PRD §5.3, M1 core). A break is level event 2001 together with the spot turning to air or fluid within a
  * tick, in either order. The block holds for a beat with a short squash (the hit-stop), then shrinks away about its
  * centre while chunky chips cut from its own texture spray out (the user's pick 2026-10-29, after rejecting mini copies
- * of the block: "spawns many times the same block just smaller"). Item entities that spawn at its centre right after (the drops, one round trip later on a server) are
+ * of the block: "spawns many times the same block just smaller"). {@link Break} has the other animations the player can
+ * pick instead. Item entities that spawn at its centre right after (the drops, one round trip later on a server) are
  * claimed: hidden until the burst opens, then drawn springing out of the centre to where they really are.
  */
 public final class Bursts {
@@ -98,6 +100,10 @@ public final class Bursts {
         boolean lite;
         /** The block model is empty (a chest: all block-entity renderer): nothing to shrink, no hold. */
         boolean bare;
+        /** The break animation, as the config had it when the block broke. */
+        Break.Style style = Break.Style.BURST;
+        /** A full block stands beside the spot. */
+        boolean tight;
         /** A denied placement shrinking out from {@code from} about a pivot: no hold, no squash, no claims. */
         boolean fade;
         double from = 1;
@@ -245,8 +251,12 @@ public final class Bursts {
         b.face = Pulses.minedFace(pos);
         b.lite = !full;
         b.bare = !Pops.hasQuads(state);
+        b.style = Break.style();
+        for (Direction d : Direction.Plane.HORIZONTAL) b.tight |= level.getBlockState(pos.relative(d)).canOcclude();
 
         setup(b.whole, level, pos, state);
+        // a block that turns or spreads shows sides its neighbours hid: draw and light it as a loose one
+        b.whole.loose = b.style != Break.Style.BURST;
         BURSTS.add(b);
         started++;
         if (b.lite) lite++;
@@ -313,7 +323,7 @@ public final class Bursts {
         if (Math.abs(dx) > 0.55 || Math.abs(dy) > 0.6 || Math.abs(dz) > 0.55) return false;
         int i = b.claims++;
         maxClaimDelay = Math.max(maxClaimDelay, Clock.now() - b.born);
-        double open = revealAfter(b.bare);
+        double open = Break.revealAfter(b.style, b.bare);
         Claim c = new Claim(b, open + i * FAN_STEP);
         if (i > 0) {
             c.arc = 0.35;
@@ -352,7 +362,7 @@ public final class Bursts {
 
     /** Ticks after the burst starts at which its first drop shows. */
     public static double revealAfter(boolean bare) {
-        return bare ? 0 : Tune.get(HOLD) + 1;
+        return Break.revealAfter(Break.style(), bare);
     }
 
     /** How much of a spring's start offset is left at {@code u} (0..1): drops from the burst, thrown stacks from the hand. */
@@ -368,7 +378,7 @@ public final class Bursts {
 
     /** Ticks from the start of a burst until the block is gone. */
     public static double burstTicks() {
-        return hold(false) + Math.max(1, Tune.get(SHRINK));
+        return Break.duration(Break.style(), false);
     }
 
     /** A section mesh went live (any thread). */
@@ -402,7 +412,10 @@ public final class Bursts {
         for (Iterator<Claim> it = CLAIMS.values().iterator(); it.hasNext(); ) {
             Claim c = it.next();
             if (Double.isNaN(c.shownAt)) {
-                boolean stopped = Clock.stopped(), late = Clock.ticks() - c.hiddenTick >= HIDE_LIMIT_TICKS;
+                // the longer animations show their drop later, so their watchdog waits longer too
+                long hide = c.burst.style == Break.Style.BURST ? HIDE_LIMIT_TICKS
+                    : Math.max(HIDE_LIMIT_TICKS, (long) Math.ceil(c.revealAfter) + 4);
+                boolean stopped = Clock.stopped(), late = Clock.ticks() - c.hiddenTick >= hide;
                 boolean due = c.burst.live && now >= c.burst.t0 + c.revealAfter;
                 if (due || late || stopped) {
                     c.shownAt = now;
@@ -414,8 +427,7 @@ public final class Bursts {
                 it.remove();
             }
         }
-        double life = Tune.get(HOLD) + Tune.get(SHRINK) + 1;
-        BURSTS.removeIf(b -> b.live && now - b.t0 > (b.fade ? FADE_TICKS : life) && now > b.claimUntil);
+        BURSTS.removeIf(b -> b.live && now - b.t0 > (b.fade ? FADE_TICKS : Break.duration(b.style, b.bare) + 1) && now > b.claimUntil);
         long t = Clock.ticks();
         EVENTS.values().removeIf(e -> t - (long) e[0] > 1);
         REMOVED.values().removeIf(r -> t - (long) r[0] > 1);
@@ -441,7 +453,7 @@ public final class Bursts {
     /** Chips per full burst, after the particles video setting. */
     public static int chipCount() {
         if (!Config.get().chips) return 0;
-        int n = (int) Math.round(Tune.get(CHIPS));
+        int n = (int) Math.round(Tune.get(CHIPS) * Break.strength());
         return switch (Minecraft.getInstance().options.particles().get()) {
             case MINIMAL -> 0;
             case DECREASED -> n / 2;
@@ -451,7 +463,7 @@ public final class Bursts {
 
     /** The burst chips' base speed (blocks per tick). */
     public static double chipSpeed() {
-        return 0.2 * Tune.get(CHIP_SPEED) * Config.get().amplitude();
+        return 0.2 * Tune.get(CHIP_SPEED) * Config.get().amplitude() * (0.4 + 0.6 * Break.strength());
     }
 
     /**
@@ -493,16 +505,13 @@ public final class Bursts {
         int n = chipCount();
         Chip.Material m = Chip.Material.of(b.state);
         lastMaterial = m;
-        double speed = chipSpeed();
         for (int i = 0; i < n; i++) {
-            double ox = RANDOM.nextDouble() - 0.5, oy = RANDOM.nextDouble() - 0.5, oz = RANDOM.nextDouble() - 0.5;
+            double r = RANDOM.nextDouble(), s = RANDOM.nextDouble(), u = RANDOM.nextDouble();
             float size = (float) (chipSize() * sizeFactor(i, n) * (0.9 + 0.2 * RANDOM.nextDouble()));
-            // never starting inside the floor, or it would fall through it
-            double y = Math.max(b.pos.getY() + Chip.half(size) + 0.01, b.cy + oy * 0.7);
-            Chip c = new Chip(mc.level, b.cx + ox * 0.7, y, b.cz + oz * 0.7, 0, 0, 0, b.state, b.pos);
-            double[] v = burstSpeed(ox, oy, oz, speed * speedFactor(i, n), b.face);
+            double[] p = Break.launch(b.style, i, n, r, s, u, size, b.face);
+            Chip c = new Chip(mc.level, b.cx + p[0], b.pos.getY() + p[1], b.cz + p[2], 0, 0, 0, b.state, b.pos);
             c.sized(size);
-            c.fly(m, v[0], v[1], v[2], LIFE + RANDOM.nextInt(LIFE_SPREAD));
+            c.fly(m, p[3], p[4], p[5], LIFE + RANDOM.nextInt(LIFE_SPREAD));
             mc.particleEngine.add(c);
         }
         chipsMade += n;
@@ -514,30 +523,18 @@ public final class Bursts {
         return bare || Config.get().calm ? 0 : Tune.get(HOLD);
     }
 
-    /**
-     * {sxz, sy, s} at {@code t} ticks: during the hold the block squashes about its floor (the punch); then the squash
-     * springs back while it shrinks away about its centre, accelerating. A fade shrinks from {@code from} only.
-     */
+    /** A burst's shape at {@code t} ticks ({@link Break#shape}). A fade shrinks from {@code from} only. */
     static double[] shape(Burst b, double t) {
         if (b.fade) {
             double u = Math.min(1, t / FADE_TICKS);
-            return new double[] {1, 1, b.from * (1 - u * u)};
+            return new double[] {1, 1, b.from * (1 - u * u), 0, 0};
         }
-        return shape(b.bare, t);
+        return Break.shape(b.style, b.bare, b.tight, t);
     }
 
-    /** The break burst's shape at {@code t} ticks (see above). */
+    /** The chosen animation's shape at {@code t} ticks, with room round it. */
     public static double[] shape(boolean bare, double t) {
-        double hold = hold(bare), shrink = Math.max(1, Tune.get(SHRINK));
-        double squash = Tune.get(SQUASH) * Config.get().amplitude();
-        if (t < hold) {
-            double a = t / Math.max(0.05, hold);
-            a = 1 - (1 - a) * (1 - a);
-            return new double[] {1 + squash * 0.5 * a, 1 - squash * a, 1};
-        }
-        double u = Math.min(1, (t - hold) / shrink);
-        double back = Math.max(0, 1 - u / 0.35);
-        return new double[] {1 + squash * 0.5 * back, 1 - squash * back, 1 - u * u};
+        return Break.shape(Break.style(), bare, false, t);
     }
 
     /** With the pops, in the transient-block pass. */
@@ -549,17 +546,17 @@ public final class Bursts {
             if (BURSTS.isEmpty()) return;
             PoseStack ps = pass.ps;
             Vec3 cam = pass.cam;
-            double now = Clock.now(), shrink = Math.max(1, Tune.get(SHRINK));
+            double now = Clock.now();
             for (Burst b : BURSTS) {
                 if (!b.live) continue;
-                double t = now - b.t0, hold = hold(b.bare);
-                if (t >= hold && !b.chipped && frameChips < CHIPS_PER_FRAME) {
+                double t = now - b.t0;
+                if (t >= Break.chipsAt(b.style, b.bare) && !b.chipped && frameChips < CHIPS_PER_FRAME) {
                     b.chipped = true;
                     long c0 = System.nanoTime();
                     frameChips += chips(b);
                     chipNanos += System.nanoTime() - c0;
                 }
-                if (b.bare || t >= (b.fade ? FADE_TICKS : hold + shrink)) continue;
+                if (b.bare || t >= (b.fade ? FADE_TICKS : Break.duration(b.style, false))) continue;
                 double[] sc = shape(b, t);
                 ps.pushPose();
                 if (b.fade) {
@@ -568,9 +565,11 @@ public final class Bursts {
                     ps.scale((float) sc[2], (float) sc[2], (float) sc[2]);
                     ps.translate(-b.px, -b.py, -b.pz);
                 } else {
-                    ps.translate(b.cx - cam.x, b.pos.getY() - cam.y, b.cz - cam.z);
+                    ps.translate(b.cx - cam.x, b.pos.getY() + sc[4] - cam.y, b.cz - cam.z);
                     ps.scale((float) sc[0], (float) sc[1], (float) sc[0]);
                     ps.translate(0, 0.5, 0);
+                    // rotateAround: the one rotation every version's PoseStack names alike
+                    if (sc[3] != 0) ps.rotateAround(new Quaternionf().rotationY((float) sc[3]), 0, 0, 0);
                     ps.scale((float) sc[2], (float) sc[2], (float) sc[2]);
                     ps.translate(-0.5, -0.5, -0.5);
                 }

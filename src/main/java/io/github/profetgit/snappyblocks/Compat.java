@@ -98,6 +98,11 @@ public final class Compat {
         return true;
     }
 
+    /** Whether a block left out of the chunk mesh really leaves it: with Sodium, only once one of the hooks has run. */
+    public static boolean hideWorks() {
+        return !sodiumPresent || io.github.profetgit.snappyblocks.pop.SodiumHidden.wired;
+    }
+
     /** True while Having a Blast keeps this item hidden. */
     public static boolean blastHides(Entity e) {
         if (blastHidden == null) return false;

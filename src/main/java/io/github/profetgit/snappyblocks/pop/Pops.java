@@ -10,6 +10,7 @@ import io.github.profetgit.snappyblocks.SnappyBlocks;
 import io.github.profetgit.snappyblocks.Tune;
 import io.github.profetgit.snappyblocks.burst.Bursts;
 import io.github.profetgit.snappyblocks.burst.Puff;
+import io.github.profetgit.snappyblocks.pulse.Pulses;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Reference2BooleanOpenHashMap;
@@ -369,7 +370,10 @@ public final class Pops {
         Hidden.remove(p.pos.asLong());
         p.releaseNs = Util.getNanos();
         p.releaseWallNs = System.nanoTime();
-        BlockPos b = p.pos;
+        remesh(p.pos);
+    }
+
+    public static void remesh(BlockPos b) {
         Minecraft.getInstance().levelExtractor.setBlocksDirty(b.getX(), b.getY(), b.getZ(), b.getX(), b.getY(), b.getZ());
     }
 
@@ -381,6 +385,7 @@ public final class Pops {
     /** A section mesh went live (any thread). */
     public static void meshLive(long sectionNode, long compileStartNs) {
         if (!POPS.isEmpty()) LIVE.add(new long[] {sectionNode, compileStartNs});
+        Pulses.meshLive(sectionNode, compileStartNs);
     }
 
     /** Render thread, every frame before drawing and every client tick: curve ends, hand-offs, watchdogs. */
@@ -468,6 +473,7 @@ public final class Pops {
     /** The copies, drawn after the terrain and the entities (26.3: in the same pass as vanilla's own transient blocks). */
     /** The copies again, into Iris's shadow pass (compat.IrisShadowMixin): no bookkeeping, only the draw. */
     public static void submitShadow(RenderPass pass) {
+        Pulses.submitShadow(pass);
         if (POPS.isEmpty()) return;
         PoseStack ps = pass.ps;
         Vec3 cam = pass.cam;

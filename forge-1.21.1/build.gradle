@@ -90,3 +90,7 @@ tasks.register('publishForTests', Copy) {
 }
 jar { archiveClassifier = 'slim' }
 tasks.withType(Jar).configureEach { exclude 'net/caffeinemc/**' }  // compile-time stand-ins; the real classes come from Sodium
+
+// The shared Profet settings screen, nested in the jar (tools/ProfetSettings/STATUS.md)
+ext.profetMc = '1.21.1'
+apply from: '../../../tools/ProfetSettings/mod/consumer-fg6.gradle'

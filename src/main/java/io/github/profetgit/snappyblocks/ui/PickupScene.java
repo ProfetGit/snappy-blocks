@@ -1,12 +1,10 @@
 package io.github.profetgit.snappyblocks.ui;
 
-//? if >=26.3 {
 import io.github.profetgit.profetsettings.Ctx;
 import io.github.profetgit.profetsettings.Gfx;
 import io.github.profetgit.snappyblocks.Compat;
 import io.github.profetgit.snappyblocks.Config;
 import io.github.profetgit.snappyblocks.item.Ghosts;
-import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -27,8 +25,18 @@ final class PickupScene extends SnappyScene {
     private static final int SLOT = 5, COUNT = 3;
     // vanilla's pickup particle: its life, and where it heads, below the eye and at the player
     private static final double VANILLA_TICKS = 3, CHEST = 0.81, CHEST_DEPTH = 0.2;
-    private static final Identifier HOTBAR = Identifier.withDefaultNamespace("hud/hotbar"),
-        SELECTION = Identifier.withDefaultNamespace("hud/hotbar_selection");
+    //? if >=1.20.2 {
+    private static final Identifier HOTBAR = Identifier.tryParse("hud/hotbar"),
+        SELECTION = Identifier.tryParse("hud/hotbar_selection");
+    //?} else {
+    /*private static final Identifier WIDGETS = Identifier.tryParse("textures/gui/widgets.png");
+    *///?}
+    // the copper pickaxe exists from 1.21.9; before that the preview holds the iron one
+    //? if >=1.21.9 {
+    private static final Item PICKAXE = Items.COPPER_PICKAXE;
+    //?} else {
+    /*private static final Item PICKAXE = Items.IRON_PICKAXE;
+    *///?}
 
     @Override
     public void render(Gfx g, Ctx c, int x, int y, int w, int h) {
@@ -72,13 +80,13 @@ final class PickupScene extends SnappyScene {
             if (pop > 0) {
                 float squeeze = (float) (1 + pop / 5);
                 g.pushTranslate(ix + 8, iy + 12);
-                g.g.pose().scale(1 / squeeze, (squeeze + 1) / 2);
-                g.g.pose().translate(-(ix + 8), -(iy + 12));
+                g.scale(1 / squeeze, (squeeze + 1) / 2);
+                g.translate(-(ix + 8), -(iy + 12));
             }
             ItemStack stack = new ItemStack(Items.EMERALD, COUNT);
-            g.g.item(stack, ix, iy);
+            g.item(stack, ix, iy);
             if (pop > 0) g.pop();
-            g.g.itemDecorations(g.font(), stack, ix, iy);
+            g.itemDecorations(stack, ix, iy);
         }
         if (!mod) Diorama.note(g, x, y, w, h, off);
     }
@@ -94,9 +102,14 @@ final class PickupScene extends SnappyScene {
 
     // vanilla's hotbar with a few things already in it; the slot the pickup goes to is free
     private static void hotbar(Gfx g, int x, int y) {
-        g.g.blitSprite(RenderPipelines.GUI_TEXTURED, HOTBAR, x, y, 182, 22, g.a(0xFFFFFFFF));
-        g.g.blitSprite(RenderPipelines.GUI_TEXTURED, SELECTION, x - 1, y - 1, 24, 23, g.a(0xFFFFFFFF));
-        held(g, Items.COPPER_PICKAXE, 1, x + 3, y + 3);
+        //? if >=1.20.2 {
+        g.sprite(HOTBAR, x, y, 182, 22, 0xFFFFFFFF);
+        g.sprite(SELECTION, x - 1, y - 1, 24, 23, 0xFFFFFFFF);
+        //?} else {
+        /*g.blit(WIDGETS, x, y, 0, 0, 182, 22, 256, 256);
+        g.blit(WIDGETS, x - 1, y - 1, 0, 22, 24, 24, 256, 256);
+        *///?}
+        held(g, PICKAXE, 1, x + 3, y + 3);
         held(g, Items.BREAD, 7, x + 23, y + 3);
         held(g, Items.TORCH, 32, x + 43, y + 3);
     }
@@ -105,4 +118,3 @@ final class PickupScene extends SnappyScene {
         item(g, new ItemStack(what, count), x, y);
     }
 }
-//?}

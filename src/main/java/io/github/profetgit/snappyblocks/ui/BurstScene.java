@@ -1,6 +1,5 @@
 package io.github.profetgit.snappyblocks.ui;
 
-//? if >=26.3 {
 import io.github.profetgit.profetsettings.Ctx;
 import io.github.profetgit.profetsettings.Gfx;
 import io.github.profetgit.snappyblocks.Compat;
@@ -39,7 +38,7 @@ final class BurstScene extends SnappyScene {
         if (chips) burstChips(g, cx, floor, ore, t, gone, false);
         double[] shape = burst && t >= 0 && t < Bursts.burstTicks() ? Bursts.shape(false, t) : null;
         // the diamond stays behind the shrinking block while the block still covers it
-        boolean covered = shape != null && shape[2] > 0.35;
+        boolean covered = covers(shape);
         float a = g.alpha;
         float seen = time < LEAVE ? 1 : Math.max(0, 1 - (time - LEAVE) / (RETURN - LEAVE));
         boolean drop = t >= 0 && seen > 0;
@@ -64,4 +63,3 @@ final class BurstScene extends SnappyScene {
         key(g, c, Minecraft.getInstance().options.keyAttack, x + w / 2f, y + 120, time >= MINE && time < BREAK + 60);
     }
 }
-//?}

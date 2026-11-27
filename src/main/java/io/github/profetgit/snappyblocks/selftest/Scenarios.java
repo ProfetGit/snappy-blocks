@@ -4,6 +4,8 @@ import io.github.profetgit.snappyblocks.Clock;
 import io.github.profetgit.snappyblocks.Probe;
 import io.github.profetgit.snappyblocks.Tune;
 import io.github.profetgit.snappyblocks.SnappyBlocks;
+import io.github.profetgit.snappyblocks.Config;
+import io.github.profetgit.snappyblocks.burst.Break;
 import io.github.profetgit.snappyblocks.burst.Bursts;
 import io.github.profetgit.snappyblocks.pop.Hidden;
 import io.github.profetgit.snappyblocks.burst.Chip;
@@ -64,7 +66,7 @@ final class Scenarios {
             return true;
         }).server(srv -> platform(srv)).waitTicks(40);
         String only = System.getProperty("snappy_blocks.selftest.scenes", "all");
-        List<String> names = new ArrayList<>(List.of("smoke", "pop", "burst", "pulse", "drops", "deny", "events", "bepop", "landing", "merge", "despawn", "farm1000", "pickup", "pickupwalk", "plants", "particles"));
+        List<String> names = new ArrayList<>(List.of("smoke", "pop", "burst", "breaks", "pulse", "mining", "drops", "deny", "events", "bepop", "landing", "merge", "despawn", "farm1000", "pickup", "pickupwalk", "plants", "particles"));
         names.addAll(ScaleScenes.NAMES);
         // the settings screen scene needs a 1920x1080 window: only when named
         if (Arrays.asList(only.split(",")).contains("ui")) names.add("ui");
@@ -74,6 +76,8 @@ final class Scenarios {
                 case "smoke" -> smoke(s);
                 case "pop" -> pop(s);
                 case "burst" -> burst(s);
+                case "breaks" -> breaks(s);
+                case "mining" -> mining(s);
                 case "pulse" -> pulse(s);
                 case "drops" -> drops(s);
                 case "deny" -> deny(s);
@@ -87,11 +91,7 @@ final class Scenarios {
                 case "pickupwalk" -> pickupWalk(s);
                 case "plants" -> plants(s);
                 case "particles" -> ParticleScenes.add(s);
-                case "ui" -> {
-                    //? if >=26.3 {
-                    UiScenes.add(s);
-                    //?}
-                }
+                case "ui" -> UiScenes.add(s);
                 default -> ScaleScenes.add(s, name);
             }
         }
@@ -284,6 +284,54 @@ final class Scenarios {
             SnappyBlocks.LOG.info("[selftest] plants: {} bursts for {} plants {}", started, plants.length, Arrays.toString(plants));
             return started == plants.length ? null : "bursts " + started + " of " + plants.length;
         });
+    }
+
+    // every break animation on a free-standing block and on one set in a wall (its hidden sides come into view): the
+    // drops are claimed and shown by the animation, never by the watchdog
+    private static void breaks(Script s) {
+        int[] base = new int[3];
+        String[] was = new String[1];
+        s.server(srv -> {
+            cmd(srv, "fill -4 " + Y + " -2 4 " + (Y + 3) + " 2 minecraft:air");
+            cmd(srv, "kill @e[type=item]");
+            cmd(srv, "tp @p 1.5 " + Y + " -1.7 28 27");
+            cmd(srv, "gamemode survival @p");
+            cmd(srv, "gamerule send_command_feedback false");
+        }).waitTicks(20).run(mc -> {
+            was[0] = Config.get().breakStyle;
+            if (!TestCompat.hudHidden(mc)) TestCompat.toggleHud(mc);
+        });
+        for (String style : Break.STYLES) {
+            for (String kind : new String[] {"open", "wall", "strong"}) {
+                boolean wall = kind.equals("wall");
+                int strength = kind.equals("strong") ? 200 : 100;
+                String name = "breaks-" + style + "-" + kind;
+                s.server(srv -> {
+                    cmd(srv, "fill -2 " + Y + " 0 2 " + (Y + 2) + " 1 minecraft:" + (wall ? "stone" : "air"));
+                    cmd(srv, "setblock 0 " + Y + " 0 minecraft:bookshelf");
+                    cmd(srv, "kill @e[type=item]");
+                }).waitTicks(15).run(mc -> {
+                    Config.get().breakStyle = style;
+                    Config.get().breakStrength = strength;
+                    base[0] = Bursts.started;
+                    base[1] = Bursts.claimed;
+                    base[2] = Bursts.watchdogs;
+                    SelfTest.startCapture(name, 60);
+                }).waitTicks(3).server(srv -> cmd(srv, "setblock 0 " + Y + " 0 minecraft:air destroy")).waitTicks(40).check(name, mc -> {
+                    SelfTest.stopCapture();
+                    int started = Bursts.started - base[0], claimed = Bursts.claimed - base[1], dogs = Bursts.watchdogs - base[2];
+                    if (started != 1) return "bursts " + started + " of 1";
+                    if (claimed < 1 || dogs > 0) return "claimed " + claimed + ", " + dogs + " by watchdog";
+                    if (Bursts.hiddenDrops() > 0) return Bursts.hiddenDrops() + " drops still hidden";
+                    return null;
+                });
+            }
+        }
+        s.run(mc -> {
+            Config.get().breakStyle = was[0];
+            Config.get().breakStrength = 100;
+            if (TestCompat.hudHidden(mc)) TestCompat.toggleHud(mc);
+        }).server(srv -> platform(srv));
     }
 
     private static void burst(Script s) {
@@ -672,6 +720,56 @@ final class Scenarios {
             if (Probe.cracks == base[2]) return "the crack-overlay hook never ran while mining";
             return null;
         });
+    }
+
+    // the mining animations. First one block mined for real with Shake in a wall (the server's hit events, the crack drawn
+    // with the shaking copy, nothing left once it breaks); then every animation on a free-standing block and on one in a
+    // wall, hit by call so the camera stays put. The real one sits a block higher than other scenes mine: vanilla sends
+    // no new start (and so no hit events) for the very spot it mined last
+    private static void mining(Script s) {
+        BlockPos spot = new BlockPos(0, Y, 0), higher = spot.above();
+        int[] base = new int[3];
+        for (int round = 0; round < 1 + Pulses.STYLES.length * 2; round++) {
+            boolean real = round == 0;
+            String style = real ? "shake" : Pulses.STYLES[(round - 1) / 2];
+            boolean wall = real || round % 2 == 0;
+            String name = "mining-" + style + (wall ? "-wall" : "-open") + (real ? "-mined" : "");
+            BlockPos at = real ? higher : spot;
+            s.server(srv -> {
+                clearArea(srv);
+                cmd(srv, "fill -2 " + Y + " 0 2 " + (Y + 2) + " 1 minecraft:" + (wall ? "deepslate" : "air"));
+                cmd(srv, "setblock 0 " + at.getY() + " 0 minecraft:stone");
+                cmd(srv, "tp @p 1.5 " + Y + " -1.7 28 27");
+                cmd(srv, "gamemode survival @p");
+                cmd(srv, "clear @p");
+            }).waitTicks(20).run(mc -> {
+                Config.get().pulseStyle = style;
+                TestCompat.selectSlot(mc.player, 8);
+                base[0] = Pulses.started;
+                base[1] = Probe.cracks;
+                base[2] = Pulses.hid;
+                Pulses.watchdogs = 0;
+                if (!TestCompat.hudHidden(mc)) TestCompat.toggleHud(mc);
+                aim(mc, at);
+            }).waitTicks(4).run(mc -> SelfTest.startCapture(name, 90));
+            if (real) {
+                mine(s, at, 400);
+            } else {
+                for (int i = 0; i < 6; i++) s.run(mc -> Pulses.hit(at, net.minecraft.core.Direction.NORTH)).waitTicks(4);
+            }
+            s.waitTicks(12).check(name, mc -> {
+                SelfTest.stopCapture();
+                if (TestCompat.hudHidden(mc)) TestCompat.toggleHud(mc);
+                int pulses = Pulses.started - base[0];
+                if (pulses < (real ? 8 : 6)) return "only " + pulses + " pulses";
+                if (style.equals("shake") && Pulses.hid == base[2]) return "the shaking block was never taken out of the mesh";
+                if (Pulses.active() > 0 || !io.github.profetgit.snappyblocks.pop.Hidden.isEmpty()) return Pulses.active() + " pulses left, or a block still hidden";
+                if (Pulses.watchdogs > 0) return Pulses.watchdogs + " copies no mesh took over";
+                if (real && Probe.cracks == base[1]) return "the crack-overlay hook never ran";
+                return null;
+            });
+        }
+        s.run(mc -> Config.get().pulseStyle = "pulse").server(srv -> platform(srv));
     }
 
     /**

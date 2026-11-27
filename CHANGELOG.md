@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.61 — 2026-11-27
+
+- **New: Mining animation** setting: **Off**, **Pulse** (the bulge so far, still the default), **Shake** (the whole block twists and tips with every hit, harder as it gives way) or **Wobble** (it stretches one way and then the other, like jelly). It replaces the Mining pulse switch; your old on/off choice is kept.
+- **New: Mining strength** slider (25-200%): how far the block moves with every hit and how hard the bits fly.
+- **New: Break animation** setting: **Off**, **Burst** (the one so far, still the default) or **Twirl** (the block winds up, spins faster and faster with a little hop, flings its bits off and collapses into its drop). It replaces the Break burst switch; your old on/off choice is kept.
+- **New: Break strength** slider (25-200%): how far the block moves, how many bits fly and how far.
+- **The new settings screen is on every version now** (26.3, 26.2, 26.1.2, 1.21.11, 1.21.1, 1.20.1; Fabric, Quilt, NeoForge and Forge): live previews of every effect, Quick setup, Report bug and Ko-fi buttons. The copper golem button in the Game Menu now shows on NeoForge and Forge too.
+
 ## 0.0.53 — 2026-11-26
 
 - **New settings screen on Minecraft 26.3**: Snappy Blocks has live previews of every effect in the shared Profet Mods screen (also opened by the copper golem button in the Game Menu on Fabric and Quilt), together with the other Profet mods you have installed. Cancel puts every option back.

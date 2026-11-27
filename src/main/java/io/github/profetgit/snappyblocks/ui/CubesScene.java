@@ -1,6 +1,5 @@
 package io.github.profetgit.snappyblocks.ui;
 
-//? if >=26.3 {
 import io.github.profetgit.profetsettings.Ctx;
 import io.github.profetgit.profetsettings.Gfx;
 import io.github.profetgit.snappyblocks.Config;
@@ -48,4 +47,3 @@ final class CubesScene extends SnappyScene {
         key(g, c, Minecraft.getInstance().options.keyAttack, x + w / 2f, y + 120, time >= HIT1 && time < BREAK + 60);
     }
 }
-//?}

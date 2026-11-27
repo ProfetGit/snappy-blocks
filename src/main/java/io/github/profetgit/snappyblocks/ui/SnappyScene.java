@@ -1,10 +1,10 @@
 package io.github.profetgit.snappyblocks.ui;
 
-//? if >=26.3 {
 import io.github.profetgit.profetsettings.Ctx;
 import io.github.profetgit.profetsettings.Gfx;
 import io.github.profetgit.profetsettings.Preview;
 import io.github.profetgit.snappyblocks.Config;
+import io.github.profetgit.snappyblocks.burst.Break;
 import io.github.profetgit.snappyblocks.burst.Bursts;
 import io.github.profetgit.snappyblocks.burst.Chip;
 import io.github.profetgit.snappyblocks.burst.Dust;
@@ -28,17 +28,17 @@ abstract class SnappyScene extends Preview {
     static final float RAISE = 250;
 
     static Identifier tex(String block) {
-        return Identifier.withDefaultNamespace("textures/block/" + block + ".png");
+        return Identifier.tryParse("textures/block/" + block + ".png");
     }
 
     static Identifier itemTex(String item) {
-        return Identifier.withDefaultNamespace("textures/item/" + item + ".png");
+        return Identifier.tryParse("textures/item/" + item + ".png");
     }
 
     // restarts the loop when any option changes
     float time(Ctx c, float period) {
         Config k = Config.get();
-        return clock(c, Objects.hash(k.enabled, k.intensity, k.calm, k.pop, k.pulse, k.burst, k.chips, k.placeEffect, k.placeStrength, k.cubes, k.items, k.pickup), period);
+        return clock(c, Objects.hash(k.enabled, k.intensity, k.calm, k.pop, k.pulse, k.pulseStyle, k.pulseStrength, k.burst, k.breakStyle, k.breakStrength, k.chips, k.placeEffect, k.placeStrength, k.cubes, k.items, k.pickup), period);
     }
 
     static String t(String key, Object... args) {
@@ -70,33 +70,37 @@ abstract class SnappyScene extends Preview {
 
     // ---- chips ----
 
-    // the burst's chips {@code t} ticks after the break, thrown out of the struck (east) face with the real sizes and
-    // speeds; all gone {@code gone} ticks after they appear
+    // the break's chips {@code t} ticks after it, with the chosen animation's launch (the struck face is the east one)
+    // and the real sizes and speeds; all gone {@code gone} ticks after the break
     static void burstChips(Gfx g, float cx, float floor, Identifier tex, float t, float gone, boolean front) {
         burstChips(g, cx, floor, tex, Bursts.chipCount(), t, gone, front);
     }
 
     static void burstChips(Gfx g, float cx, float floor, Identifier tex, int n, float t, float gone, boolean front) {
-        float age = t - (float) Bursts.hold(false);
+        Break.Style style = Break.style();
+        float at = (float) Break.chipsAt(style, false), age = t - at;
         if (age < 0) return;
         Random r = new Random(41);
-        double speed = Bursts.chipSpeed();
         Chip.Material m = Chip.Material.PLAIN;
         for (int i = 0; i < n; i++) {
-            double ox = r.nextDouble() - 0.5, oy = r.nextDouble() - 0.5, oz = r.nextDouble() - 0.5;
+            double a = r.nextDouble(), b = r.nextDouble(), c = r.nextDouble();
             float size = (float) (Bursts.chipSize() * Bursts.sizeFactor(i, n) * (0.9 + 0.2 * r.nextDouble()));
-            double[] v = Bursts.burstSpeed(ox, oy, oz, speed * Bursts.speedFactor(i, n), Direction.EAST);
-            v = m.speed(v[0], v[1], v[2]);
-            double y = Math.max(Chip.half(size) + 0.01, 0.5 + oy * 0.7);
-            Diorama.chip(g, r, cx, floor, tex, age, ox * 0.7, y, oz * 0.7, v, m, size, Bursts.LIFE + r.nextInt(Bursts.LIFE_SPREAD), gone, front);
+            double[] p = Break.launch(style, i, n, a, b, c, size, Direction.EAST);
+            double[] v = m.speed(p[3], p[4], p[5]);
+            Diorama.chip(g, r, cx, floor, tex, age, p[0], p[1], p[2], v, m, size, Bursts.LIFE + r.nextInt(Bursts.LIFE_SPREAD), gone - at, front);
         }
+    }
+
+    // whether the breaking block, in its shape, still stands in front of the drop
+    static boolean covers(double[] shape) {
+        return shape != null && shape[2] * Math.min(1, shape[1]) > 0.35;
     }
 
     // the chips one mining hit knocks off the block's right-hand (east) face, where the tool strikes
     static void hitChips(Gfx g, float cx, float floor, Identifier tex, int hit, float age, float gone, boolean front) {
         if (age < 0) return;
         Random r = new Random(7 + hit * 31L);
-        double amp = Config.get().amplitude() * Pulses.hitForce(hit);
+        double amp = Pulses.amplitude() * Pulses.hitForce(hit);
         for (int n = 0; n < Pulses.hitChips(hit); n++) {
             double u = r.nextDouble() - 0.5, v = r.nextDouble() - 0.5;
             double[] speed = Pulses.chipSpeed(Direction.EAST, u, v, amp);
@@ -266,4 +270,3 @@ abstract class SnappyScene extends Preview {
         return (int) Math.round(ticks * MS);
     }
 }
-//?}

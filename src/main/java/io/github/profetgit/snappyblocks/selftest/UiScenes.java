@@ -1,9 +1,7 @@
 package io.github.profetgit.snappyblocks.selftest;
 
-//? if >=26.3 {
 import com.google.gson.Gson;
 import com.google.gson.JsonParser;
-import com.mojang.blaze3d.platform.InputConstants;
 import io.github.profetgit.profetsettings.ModDef;
 import io.github.profetgit.profetsettings.Preview;
 import io.github.profetgit.profetsettings.ProfetSettings;
@@ -21,13 +19,14 @@ import java.util.function.Function;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.PauseScreen;
-import net.minecraft.client.input.MouseButtonInfo;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 
 // Scene "ui" (only when named; run at 1920x1080): Snappy Blocks in the shared Profet settings screen, every option
 // through the real mouse, every preview at fixed moments, and, with Tidy Pockets installed too, both mods in one screen.
 final class UiScenes {
-    private static final String SWITCHES = "enabled calm pop pulse burst chips cubes items pickup";
+    private static final String SWITCHES = "enabled calm pop chips cubes items pickup";
     private static String opening, openingTidy;
     private static List<Object> openingTidyValues;
 
@@ -41,7 +40,7 @@ final class UiScenes {
             .waitTicks(5)
             .check("ui: fonts, sprites and language load", mc -> {
                 for (String path : new String[] {"profet_settings:font/tiny5.ttf", "profet_settings:font/tiny5_bold.ttf", "profet_settings:font/tiny5_title.ttf", "profet_settings:textures/gui/sprites/golem.png", "snappy_blocks:icon.png"}) {
-                    if (mc.getResourceManager().getResource(Identifier.parse(path)).isEmpty()) return "missing " + path;
+                    if (mc.getResourceManager().getResource(Identifier.tryParse(path)).isEmpty()) return "missing " + path;
                 }
                 for (String key : new String[] {"profet_settings.ui.done", "snappy_blocks.setting.pop", "snappy_blocks.preview.off.all"}) {
                     if (net.minecraft.client.resources.language.I18n.get(key).equals(key)) return "untranslated " + key;
@@ -67,7 +66,7 @@ final class UiScenes {
                     keys.add(o.key);
                     if (o.label.startsWith("snappy_blocks.") || o.desc.startsWith("snappy_blocks.")) return "untranslated " + o.key;
                 }
-                return String.join(" ", keys).equals("enabled intensity calm pop pulse burst chips placeEffect placeStrength cubes items pickup") ? null : "keys " + keys;
+                return String.join(" ", keys).equals("enabled intensity calm pop pulseStyle pulseStrength breakStyle breakStrength chips placeEffect placeStrength cubes items pickup") ? null : "keys " + keys;
             })
             .check("ui: the listed mods are the installed Profet mods", mc -> {
                 List<String> ids = hub(mc).debugMods().stream().map(m -> m.id).toList();
@@ -92,7 +91,9 @@ final class UiScenes {
             .waitTicks(30);
 
         previews(s);
+        presetPreviews(s);
         controls(s);
+        lockAndActions(s);
         cancel(s);
         bugReport(s);
         s.run(mc -> {
@@ -110,13 +111,47 @@ final class UiScenes {
     private static void previews(Script s) {
         preview(s, "enabled", "general", "", 150, 450, 900, 1180, 1580, 1780, 1850, 2150, 2600, 3200);
         preview(s, "pop", "pop", "", 150, 320, 420, 600, 1270, 1370, 2000, 2780);
-        preview(s, "pulse", "pulse", "", 150, 420, 505, 540, 740, 1130, 1710, 1800, 1900, 2300);
-        preview(s, "burst", "burst", "", 150, 500, 700, 900, 1000, 1240, 1325, 1370, 1420, 1500, 1650, 1900, 2000, 2800, 3480, 3660, 3750);
+        preview(s, "pulseStyle", "pulse", "", 150, 420, 505, 540, 740, 1130, 1710, 1800, 1900, 2300);
+        preview(s, "breakStyle", "burst", "", 150, 500, 700, 900, 1000, 1240, 1325, 1370, 1420, 1500, 1650, 1900, 2000, 2800, 3480, 3660, 3750);
         preview(s, "items", "drops", "", 100, 260, 320, 380, 500, 800, 860, 1400, 1900, 2460, 2800, 3370, 3550);
         preview(s, "pickup", "pickup", "", 100, 300, 560, 700, 1100, 1200, 1260, 1330, 1420, 1520, 2000, 2550);
+        for (String style : new String[] {"twirl"}) {
+            s.run(mc -> Config.get().breakStyle = style);
+            preview(s, "breakStyle", "burst", "-" + style, 1340, 1400, 1450, 1500, 1560, 1620, 1700, 1900);
+            preview(s, "enabled", "general", "-" + style, 1800, 1900, 2000);
+        }
+        for (String style : new String[] {"burst", "twirl"}) {
+            for (int strength : new int[] {25, 200}) {
+                s.run(mc -> {
+                    Config.get().breakStyle = style;
+                    Config.get().breakStrength = strength;
+                });
+                preview(s, "breakStrength", "burst", "-" + style + "-" + strength, 1340, 1450, 1560, 1700);
+            }
+        }
+        s.run(mc -> {
+            Config.get().breakStyle = "burst";
+            Config.get().breakStrength = 100;
+        });
+        for (String style : new String[] {"shake", "wobble"}) {
+            s.run(mc -> Config.get().pulseStyle = style);
+            preview(s, "pulseStyle", "pulse", "-" + style, 520, 560, 600, 640, 680, 1520, 1560, 1600, 1640, 1680);
+            preview(s, "enabled", "general", "-" + style, 1180, 1220, 1260);
+        }
+        for (int strength : new int[] {25, 200}) {
+            s.run(mc -> {
+                Config.get().pulseStyle = "shake";
+                Config.get().pulseStrength = strength;
+            });
+            preview(s, "pulseStrength", "pulse", "-shake-" + strength, 520, 560, 600, 640, 680);
+        }
+        s.run(mc -> {
+            Config.get().pulseStyle = "pulse";
+            Config.get().pulseStrength = 100;
+        });
         s.run(mc -> Config.get().chips = false);
         preview(s, "chips", "chips", "-nochips", 1370, 1460, 1650);
-        preview(s, "pulse", "pulse", "-nochips", 740);
+        preview(s, "pulseStyle", "pulse", "-nochips", 740);
         preview(s, "enabled", "general", "-nochips", 1850);
         s.run(mc -> Config.get().chips = true);
         preview(s, "chips", "chips", "", 1460);
@@ -145,8 +180,8 @@ final class UiScenes {
         s.run(mc -> Config.get().cubes = true);
         preview(s, "cubes", "cubes", "", 500, 760, 1000, 1100, 1250, 1500, 2100, 2800);
         preview(s, "placeEffect", "place", "-explosion-cubes", 580, 900);
-        preview(s, "burst", "burst", "-cubes", 1420, 1650);
-        preview(s, "pulse", "pulse", "-cubes", 740, 1710);
+        preview(s, "breakStyle", "burst", "-cubes", 1420, 1650);
+        preview(s, "pulseStyle", "pulse", "-cubes", 740, 1710);
         s.run(mc -> {
             Config.get().cubes = false;
             Config.get().placeEffect = "off";
@@ -155,8 +190,8 @@ final class UiScenes {
         s.run(mc -> Config.get().intensity = 150);
         preview(s, "intensity", "general", "-lively", 450, 1580, 1850);
         preview(s, "pop", "pop", "-lively", 300, 420);
-        preview(s, "pulse", "pulse", "-lively", 540);
-        preview(s, "burst", "burst", "-lively", 1325, 1420);
+        preview(s, "pulseStyle", "pulse", "-lively", 540);
+        preview(s, "breakStyle", "burst", "-lively", 1325, 1420);
         preview(s, "items", "drops", "-lively", 900, 1000);
         s.run(mc -> {
             Config.get().intensity = 100;
@@ -164,7 +199,7 @@ final class UiScenes {
         });
         preview(s, "calm", "general", "-calm", 450, 1580, 1850, 2150);
         preview(s, "pop", "pop", "-calm", 300, 420);
-        preview(s, "burst", "burst", "-calm", 1325, 1900);
+        preview(s, "breakStyle", "burst", "-calm", 1325, 1900);
         preview(s, "items", "drops", "-calm", 900, 2000);
         s.run(mc -> {
             Config.get().calm = false;
@@ -176,13 +211,13 @@ final class UiScenes {
             Config.get().pickup = false;
         });
         preview(s, "pop", "pop", "-off", 320, 1270);
-        preview(s, "pulse", "pulse", "-off", 540, 740);
-        preview(s, "burst", "burst", "-off", 1000, 1325, 1900);
+        preview(s, "pulseStyle", "pulse", "-off", 540, 740);
+        preview(s, "breakStyle", "burst", "-off", 1000, 1325, 1900);
         s.run(mc -> {
             Config.get().burst = true;
             Config.get().items = false;
         });
-        preview(s, "burst", "burst", "-itemsoff", 1370, 1650);
+        preview(s, "breakStyle", "burst", "-itemsoff", 1370, 1650);
         s.run(mc -> {
             Config.get().burst = false;
             Config.get().items = true;
@@ -201,8 +236,8 @@ final class UiScenes {
             s.run(mc -> reset());
             dense(s, "enabled", "general", 3500);
             dense(s, "pop", "pop", 3000);
-            dense(s, "pulse", "pulse", 2600);
-            dense(s, "burst", "burst", 4000);
+            dense(s, "pulseStyle", "pulse", 2600);
+            dense(s, "breakStyle", "burst", 4000);
             dense(s, "items", "drops", 3600);
             dense(s, "pickup", "pickup", 2600);
             s.run(mc -> {
@@ -223,6 +258,74 @@ final class UiScenes {
         }).waitTicks(30);
     }
 
+    private static void presetPreviews(Script s) {
+        s.run(mc -> {
+                reset();
+                Preview.debugTime = 1900;
+                mc.gui.setScreen(ConfigScreens.create(null));
+            })
+            .waitTicks(20)
+            .run(mc -> hub(mc).debugScroll(0))
+            .waitTicks(6);
+        String[] names = {"Off", "Calm", "Default", "Lively"};
+        String[] ids = {"off", "calm", "default", "lively"};
+        String[] notes = {"Vanilla blocks, nothing animated", "Smaller, softer movement, no hit-stop", "The recommended look", "Bigger, bouncier movement"};
+        for (int i = 0; i < names.length; i++) {
+            int idx = i;
+            s.run(mc -> {
+                    int[] p = hub(mc).debugPresetPoint(idx);
+                    hub(mc).debugHover(p[0], p[1]);
+                })
+                .waitTicks(12)
+                .check("ui: hovering Quick setup " + names[i] + " shows its preview", mc -> ("preset." + ids[idx]).equals(hub(mc).debugPreviewKind()) ? null : "preview " + hub(mc).debugPreviewKind())
+                .check("ui: the preview title is the preset name " + names[i], mc -> names[idx].equals(hub(mc).debugPreviewTitle()) ? null : "title " + hub(mc).debugPreviewTitle())
+                .check("ui: the preview note for " + names[i] + " is plain words, no numbers", mc -> {
+                    String n = hub(mc).debugPreviewNote();
+                    return n != null && !n.isBlank() && n.chars().noneMatch(Character::isDigit) ? null : "note '" + n + "'";
+                })
+                .check("ui: the note for " + names[i] + " is the mod's own", mc -> notes[idx].equals(hub(mc).debugPreviewNote()) ? null : "note '" + hub(mc).debugPreviewNote() + "'");
+            for (int ms : new int[] {360, 410, 1850, 1950}) {
+                s.run(mc -> Preview.debugTime = ms).waitTicks(2);
+                capture(s, "ui-pv-preset-" + ids[i] + "-" + ms);
+            }
+        }
+        // a hover restarts the scene: moving between presets, or back onto the same one after leaving, makes a new one
+        double[] mount = {0};
+        for (int i : new int[] {1, 3, 1}) {
+            int idx = i;
+            s.run(mc -> hub(mc).debugHover(-1, -1))
+                .waitTicks(4)
+                .run(mc -> {
+                    int[] p = hub(mc).debugPresetPoint(idx);
+                    hub(mc).debugHover(p[0], p[1]);
+                })
+                .waitTicks(8)
+                .check("ui: hovering " + names[i] + " again starts its scene over", mc -> {
+                    double m = hub(mc).debugSceneMount();
+                    boolean fresh = m > mount[0];
+                    mount[0] = m;
+                    return fresh ? null : "scene was not recreated";
+                })
+                .waitTicks(8)
+                .check("ui: " + names[i] + "'s scene keeps running while hovered", mc -> hub(mc).debugSceneMount() == mount[0] ? null : "scene recreated");
+        }
+        s.run(mc -> hub(mc).debugRevealRow("pop"))
+            .waitTicks(4)
+            .run(mc -> {
+                int[] p = hub(mc).debugPoint("pop", -1f);
+                hub(mc).debugHover(p[0], p[1]);
+            })
+            .waitTicks(12)
+            .check("ui: hovering a setting after a preset shows the setting's preview again", mc -> "pop".equals(hub(mc).debugPreviewKind()) ? null : "preview " + hub(mc).debugPreviewKind())
+            .run(mc -> {
+                reset();
+                Preview.debugTime = -1;
+                hub(mc).debugHover(-1, -1);
+                mc.gui.setScreen(ConfigScreens.create(null));
+            })
+            .waitTicks(20);
+    }
+
     private static void preview(Script s, String key, String kind, String suffix, int... times) {
         s.run(mc -> {
                 mc.gui.setScreen(ConfigScreens.create(null));
@@ -233,7 +336,7 @@ final class UiScenes {
             .waitTicks(4)
             .run(mc -> {
                 // a switch has one centre; a slider's point is a fraction along it
-                int[] p = hub(mc).debugPoint(key, key.equals("intensity") ? 0.5f : -1f);
+                int[] p = hub(mc).debugPoint(key, key.equals("intensity") || key.endsWith("Strength") ? 0.5f : -1f);
                 hub(mc).debugHover(p[0], p[1]);
             })
             .waitTicks(12)
@@ -268,11 +371,62 @@ final class UiScenes {
             click(s, key, -1f);
             s.check("ui: the " + key + " switch changes it back", mc -> setting(mc, SnappyBlocks.ID, key).getBool() == was[0] ? null : "stuck");
         }
+        for (String want : new String[] {"shake", "wobble", "off", "pulse"}) {
+            click(s, "pulseStyle", 1f);
+            s.check("ui: the mining-animation arrow picks " + want + " and saves it", mc -> {
+                Config k = Config.get();
+                boolean picked = want.equals("off") ? !k.pulse : k.pulse && k.pulseStyle.equals(want);
+                return picked && file().contains(want.equals("off") ? "\"pulse\":false" : "\"pulseStyle\":\"" + want + "\"") ? null
+                    : "pulse " + k.pulse + " style " + k.pulseStyle;
+            });
+        }
+        for (String want : new String[] {"twirl", "off", "burst"}) {
+            click(s, "breakStyle", 1f);
+            s.check("ui: the break-animation arrow picks " + want + " and saves it", mc -> {
+                Config k = Config.get();
+                boolean picked = want.equals("off") ? !k.burst : k.burst && k.breakStyle.equals(want);
+                return picked && file().contains(want.equals("off") ? "\"burst\":false" : "\"breakStyle\":\"" + want + "\"") ? null
+                    : "burst " + k.burst + " style " + k.breakStyle;
+            });
+        }
+        click(s, "pulseStrength", 1f);
+        s.check("ui: the mining-strength slider reaches 200% and is saved", mc -> Config.get().pulseStrength == 200 && file().contains("\"pulseStrength\":200")
+            ? null : "strength " + Config.get().pulseStrength);
+        click(s, "pulseStrength", 0f);
+        s.check("ui: and mining 25%", mc -> Config.get().pulseStrength == 25 ? null : "strength " + Config.get().pulseStrength);
+        s.run(mc -> Config.get().pulseStrength = 100);
+        click(s, "breakStrength", 1f);
+        s.check("ui: the break-strength slider reaches 200% and is saved", mc -> Config.get().breakStrength == 200 && file().contains("\"breakStrength\":200")
+            ? null : "strength " + Config.get().breakStrength);
+        click(s, "breakStrength", 0f);
+        s.check("ui: and 25%", mc -> Config.get().breakStrength == 25 ? null : "strength " + Config.get().breakStrength);
+        s.run(mc -> Config.get().breakStrength = 100);
         for (String want : new String[] {"bits", "poof", "shockwave", "explosion", "off"}) {
             click(s, "placeEffect", 1f);
             s.check("ui: the placing-effect arrow picks " + want + " and saves it", mc -> Config.get().placeEffect.equals(want)
                 && file().contains("\"placeEffect\":\"" + want + "\"") ? null : "effect " + Config.get().placeEffect);
         }
+        int[][] stale = new int[1][];
+        String[] effectWas = new String[1];
+        s.run(mc -> {
+                hub(mc).debugRevealRow("placeEffect");
+            }).waitTicks(4)
+            .run(mc -> {
+                effectWas[0] = Config.get().placeEffect;
+                stale[0] = hub(mc).debugPoint("placeEffect", 1f);
+                hub(mc).debugParkRow("placeEffect");
+                click(mc, stale[0][0], stale[0][1]);
+            })
+            .waitTicks(10)
+            .check("ui: a row scrolled out of view takes no clicks where its arrows were", mc -> Config.get().placeEffect.equals(effectWas[0]) ? null : "effect " + effectWas[0] + " -> " + Config.get().placeEffect);
+        boolean[] cubesWas = new boolean[1];
+        s.run(mc -> cubesWas[0] = setting(mc, SnappyBlocks.ID, "cubes").getBool());
+        click(s, "placeEffect", 1f);
+        click(s, "cubes", -1f);
+        s.check("ui: a switch clicked after a choice row still toggles", mc -> setting(mc, SnappyBlocks.ID, "cubes").getBool() != cubesWas[0] ? null : "cubes stuck");
+        click(s, "cubes", -1f);
+        click(s, "placeEffect", 0f);
+        s.check("ui: the choice is back to off", mc -> Config.get().placeEffect.equals("off") && setting(mc, SnappyBlocks.ID, "cubes").getBool() == cubesWas[0] ? null : "effect " + Config.get().placeEffect);
         click(s, "placeStrength", 1f);
         s.check("ui: the strength slider reaches 200% and is saved", mc -> Config.get().placeStrength == 200 && file().contains("\"placeStrength\":200")
             ? null : "strength " + Config.get().placeStrength);
@@ -297,7 +451,7 @@ final class UiScenes {
         preset(s, 1, "Calm", c -> c.enabled && c.calm && c.intensity == 100);
         preset(s, 3, "Lively", c -> c.enabled && !c.calm && c.intensity == 130);
         capture(s, "ui-d-preset-lively");
-        preset(s, 2, "Default", c -> c.enabled && !c.calm && c.intensity == 100 && c.pop && c.pulse && c.burst && c.chips && c.placeEffect.equals("off") && c.placeStrength == 100 && !c.cubes && c.items && c.pickup);
+        preset(s, 2, "Default", c -> c.enabled && !c.calm && c.intensity == 100 && c.pop && c.pulse && c.pulseStyle.equals("pulse") && c.pulseStrength == 100 && c.burst && c.breakStyle.equals("burst") && c.breakStrength == 100 && c.chips && c.placeEffect.equals("off") && c.placeStrength == 100 && !c.cubes && c.items && c.pickup);
         click(s, "pop", -1f);
         s.run(mc -> press(mc, hub(mc).debugChangedButton())).waitTicks(30)
             .check("ui: the Changed filter keeps only the changed row", mc -> hub(mc).debugItemCount() == 2 ? null : "items " + hub(mc).debugItemCount());
@@ -310,6 +464,91 @@ final class UiScenes {
             .run(mc -> press(mc, hub(mc).debugDone())).waitTicks(10)
             .check("ui: Done closes the screen", mc -> mc.gui.screen() == null ? null : "screen " + mc.gui.screen())
             .check("ui: the feel numbers stay in the file", mc -> file().contains("\"tune\":{") && file().contains("\"pop.start\":") ? null : file());
+    }
+
+    // ---- read-only (locked) mode and action rows, through test hooks of the library ----
+
+    private static final Screen[] seen = new Screen[1];
+    private static final int[] pressed = new int[1];
+
+    private static Setting act1() {
+        return Setting.action("act1", "Test action", "A row with a button that opens a child screen.", "Open", scr -> {
+            pressed[0]++;
+            seen[0] = scr;
+            ProfetSettings.debugExtra(SnappyBlocks.ID, act1(), act2());
+            Minecraft.getInstance().gui.setScreen(new Screen(Component.literal("child")) {});
+        });
+    }
+
+    private static Setting act2() {
+        return Setting.action("act2", "Second action", "Appears after the child screen returned.", "Go", scr -> {});
+    }
+
+    private static void lockAndActions(Script s) {
+        String[] before = new String[1];
+        s.run(mc -> {
+                Config.get().intensity = 150;
+                pressed[0] = 0;
+                ProfetSettings.debugExtra(SnappyBlocks.ID, act1());
+                mc.gui.setScreen(ConfigScreens.create(null));
+            })
+            .waitTicks(30)
+            .check("lock: an action row is listed with its button and is never a changed or listed value", mc -> {
+                Setting a = hub(mc).debugSelected().find("act1");
+                boolean listed = false;
+                for (Setting o : hub(mc).debugSelected().all()) listed |= o.key.equals("act1");
+                return hub(mc).debugPoint("act1", -1f) != null && !listed && a == null ? null : "point " + hub(mc).debugPoint("act1", -1f) + " listed " + listed;
+            })
+            .check("lock: an unlocked mod has no lock note", mc -> hub(mc).debugHasLockNote() ? "note shown" : null)
+            .run(mc -> {
+                before[0] = new Gson().toJson(Config.get());
+                ProfetSettings.debugLockAll("Set by the server: you can look, not change.");
+            })
+            .waitTicks(15)
+            .check("lock: the note shows once at the top of the list", mc -> hub(mc).debugHasLockNote() ? null : "no note");
+        capture(s, "ui-lock-a-top");
+        s.run(mc -> hub(mc).debugRevealRow("intensity")).waitTicks(6);
+        capture(s, "ui-lock-b-rows");
+        s.check("lock: a changed locked row has no reset arrow", mc -> hub(mc).debugReset("intensity") == null ? null : "reset arrow shown");
+        click(s, "pop", -1f);
+        click(s, "intensity", 0f);
+        click(s, "placeEffect", 1f);
+        s.check("lock: clicks on locked controls change nothing", mc -> before[0].equals(new Gson().toJson(Config.get())) ? null : "config " + new Gson().toJson(Config.get()))
+            .run(mc -> hub(mc).debugScroll(0)).waitTicks(6)
+            .run(mc -> hub(mc).debugHover(hub(mc).debugPresetPoint(1)[0], hub(mc).debugPresetPoint(1)[1])).waitTicks(12)
+            .check("lock: hovering a locked Quick setup button still shows its preview", mc -> "preset.calm".equals(hub(mc).debugPreviewKind()) && "Calm".equals(hub(mc).debugPreviewTitle()) ? null : "preview " + hub(mc).debugPreviewKind() + " / " + hub(mc).debugPreviewTitle())
+            .run(mc -> press(mc, hub(mc).debugPreset(0))).waitTicks(15)
+            .check("lock: the Quick setup buttons do nothing", mc -> before[0].equals(new Gson().toJson(Config.get())) ? null : "config " + new Gson().toJson(Config.get()))
+            .run(mc -> press(mc, hub(mc).debugMenu())).waitTicks(10)
+            .run(mc -> press(mc, hub(mc).debugMenuItem(0))).waitTicks(10)
+            .check("lock: Reset this mod does nothing", mc -> before[0].equals(new Gson().toJson(Config.get())) ? null : "config " + new Gson().toJson(Config.get()))
+            .run(mc -> hub(mc).debugRevealRow("act1")).waitTicks(6)
+            .run(mc -> press(mc, hub(mc).debugPoint("act1", -1f))).waitTicks(10)
+            .check("lock: a locked action button does nothing", mc -> pressed[0] == 0 && ProfetSettings.isScreen(mc.gui.screen()) ? null : "pressed " + pressed[0]);
+        s.run(mc -> ProfetSettings.debugLockAll(null)).waitTicks(15)
+            .check("lock: unlocking removes the note", mc -> hub(mc).debugHasLockNote() ? "note still shown" : null)
+            .check("lock: unlocking brings the reset arrow back", mc -> {
+                hub(mc).debugRevealRow("intensity");
+                return null;
+            })
+            .waitTicks(4)
+            .check("lock: reset arrow is back", mc -> hub(mc).debugReset("intensity") != null ? null : "no reset arrow");
+        click(s, "pop", -1f);
+        s.check("lock: a click works again after unlocking", mc -> Config.get().pop != Boolean.parseBoolean(before[0].replaceAll(".*\"pop\":(true|false).*", "$1")) ? null : "pop did not change");
+        click(s, "pop", -1f);
+        s.run(mc -> hub(mc).debugRevealRow("act1")).waitTicks(6)
+            .run(mc -> press(mc, hub(mc).debugPoint("act1", -1f))).waitTicks(15)
+            .check("action: the button calls onPress with the hub screen and the child opens", mc -> pressed[0] == 1 && seen[0] != null && ProfetSettings.isScreen(seen[0]) && mc.gui.screen() != seen[0] ? null : "pressed " + pressed[0] + " screen " + mc.gui.screen())
+            .run(mc -> mc.gui.setScreen(seen[0]))
+            .waitTicks(20)
+            .run(mc -> hub(mc).debugRevealRow("act2")).waitTicks(6)
+            .check("action: returning from the child rebuilds the mod's rows (a row added meanwhile appears)", mc -> hub(mc).debugPoint("act2", -1f) != null ? null : "no act2 row")
+            .check("action: the same mod stays selected after the return", mc -> hub(mc).debugSelected().id.equals(SnappyBlocks.ID) ? null : "selected " + hub(mc).debugSelected().id)
+            .run(mc -> {
+                ProfetSettings.debugExtra(SnappyBlocks.ID);
+                reset();
+                mc.gui.setScreen(null);
+            });
     }
 
     private static void preset(Script s, int index, String name, Function<Config, Boolean> want) {
@@ -328,6 +567,10 @@ final class UiScenes {
             })
             .waitTicks(30);
         for (String key : SWITCHES.split(" ")) click(s, key, -1f);
+        click(s, "pulseStyle", 1f);
+        click(s, "breakStyle", 1f);
+        click(s, "breakStrength", 1f);
+        click(s, "pulseStrength", 1f);
         click(s, "intensity", 1f);
         s.check("ui: options changed before Cancel", mc -> !opening.equals(new Gson().toJson(Config.get())) ? null : "nothing changed")
             .run(mc -> press(mc, hub(mc).debugCancel())).waitTicks(10)
@@ -363,29 +606,23 @@ final class UiScenes {
                 int[] tp = hub(mc).debugBugTitle();
                 click(mc, tp[0], tp[1]);
                 for (char ch : "Pop glitch".toCharArray()) {
-                    mc.keyboardHandler.charTyped(mc.getWindow().handle(), new net.minecraft.client.input.CharacterEvent(ch));
+                    UiInput.type(mc, ch);
                 }
                 int[] dp = hub(mc).debugBugDesc();
                 click(mc, dp[0], dp[1]);
                 for (char ch : "Block blinks once.".toCharArray()) {
-                    mc.keyboardHandler.charTyped(mc.getWindow().handle(), new net.minecraft.client.input.CharacterEvent(ch));
+                    UiInput.type(mc, ch);
                 }
             })
             .waitTicks(10)
             .check("bug: focused text box turns on the game's text input (SDL)", mc -> {
                 if (!hub(mc).debugTextInputOn()) return "screen did not claim text input";
-                try {
-                    var f = com.mojang.blaze3d.platform.TextInputManager.class.getDeclaredField("textInputEnabled");
-                    f.setAccessible(true);
-                    return (boolean) f.get(mc.textInputManager()) ? null : "TextInputManager.textInputEnabled=false";
-                } catch (ReflectiveOperationException ex) {
-                    return "reflect: " + ex;
-                }
+                return UiInput.textInput(mc, "textInputEnabled", "TextInputManager.textInputEnabled=false");
             })
             .check("bug: diagnostic body has mod, MC version, loader, and mods", mc -> {
                 String body = hub(mc).debugBugBody();
                 if (!body.contains("Snappy Blocks")) return "missing mod name";
-                if (!body.contains(net.minecraft.SharedConstants.getCurrentVersion().name())) return "missing MC version";
+                if (!body.contains(UiInput.versionName())) return "missing MC version";
                 if (!body.contains("Installed mods")) return "missing mods section";
                 if (!body.contains("Block blinks once.")) return "missing typed description";
                 if (!body.contains("## Settings")) return "missing settings section";
@@ -412,7 +649,7 @@ final class UiScenes {
                 if (!u.contains("labels=bug")) return "missing bug label in url: " + u;
                 return null;
             })
-            .run(mc -> hub(mc).keyPressed(new net.minecraft.client.input.KeyEvent(io.github.profetgit.profetsettings.UiKeys.ESC, 0, 0)))
+            .run(mc -> UiInput.escape(hub(mc)))
             .waitTicks(10)
             .check("bug: Escape closes modal and returns to settings", mc -> !hub(mc).debugBugModalOpen() && ProfetSettings.isScreen(mc.gui.screen()) ? null : "modal=" + hub(mc).debugBugModalOpen());
         bugDirect(s);
@@ -460,13 +697,7 @@ final class UiScenes {
             })
             .waitTicks(5)
             .check("bug v2: the IME popup area follows the caret", mc -> {
-                try {
-                    var f = com.mojang.blaze3d.platform.TextInputManager.class.getDeclaredField("hasTextInputArea");
-                    f.setAccessible(true);
-                    return (boolean) f.get(mc.textInputManager()) ? null : "no text input area set";
-                } catch (ReflectiveOperationException ex) {
-                    return "reflect: " + ex;
-                }
+                return UiInput.textInput(mc, "hasTextInputArea", "no text input area set");
             })
             .run(mc -> hub(mc).debugSetBugDraft("Guided", "It blinks. " + "x".repeat(1250), "1. Place stone\n2. Look at it", "No blink"));
         capture(s, "ui-bug-fields");
@@ -481,13 +712,13 @@ final class UiScenes {
                 return null;
             });
         capture(s, "ui-bug-view");
-        s.run(mc -> hub(mc).keyPressed(new net.minecraft.client.input.KeyEvent(io.github.profetgit.profetsettings.UiKeys.ESC, 0, 0)))
+        s.run(mc -> UiInput.escape(hub(mc)))
             .waitTicks(5)
             .check("bug v2: Escape in the view goes back to editing", mc -> !hub(mc).debugBugViewing() && hub(mc).debugBugModalOpen() ? null : "viewing=" + hub(mc).debugBugViewing())
             .run(mc -> {
                 hub(mc).debugSetBugDraft("Kept", "Draft text", "Step one", "Expected one");
                 hub(mc).debugSaveBugDraft();
-                hub(mc).keyPressed(new net.minecraft.client.input.KeyEvent(io.github.profetgit.profetsettings.UiKeys.ESC, 0, 0));
+                UiInput.escape(hub(mc));
                 mc.gui.setScreen(null);
                 ProfetSettings.debugReloadBugState();
             })
@@ -502,7 +733,7 @@ final class UiScenes {
             })
             .run(mc -> {
                 hub(mc).debugSetBugDraft("", "", "", "");
-                hub(mc).keyPressed(new net.minecraft.client.input.KeyEvent(io.github.profetgit.profetsettings.UiKeys.ESC, 0, 0));
+                UiInput.escape(hub(mc));
                 opened.clear();
             })
             .waitTicks(5)
@@ -544,7 +775,7 @@ final class UiScenes {
             });
         capture(s, "ui-crash-report");
         s.run(mc -> {
-                hub(mc).keyPressed(new net.minecraft.client.input.KeyEvent(io.github.profetgit.profetsettings.UiKeys.ESC, 0, 0));
+                UiInput.escape(hub(mc));
                 mc.gui.setScreen(null);
                 io.github.profetgit.profetsettings.CrashPrompt.rescanForTest();
             })
@@ -610,7 +841,7 @@ final class UiScenes {
             .waitTicks(20)
             .check("bug: a second press does not send again", mc -> got.size() == 1 ? null : "requests=" + got.size())
             .run(mc -> {
-                hub(mc).keyPressed(new net.minecraft.client.input.KeyEvent(io.github.profetgit.profetsettings.UiKeys.ESC, 0, 0));
+                UiInput.escape(hub(mc));
                 srv[0].stop(0);
                 ProfetSettings.reportEndpoint = "http://127.0.0.1:1/v1/report";
                 mc.keyboardHandler.setClipboard("");
@@ -631,7 +862,7 @@ final class UiScenes {
                 ProfetSettings.reportEndpoint = "";
                 return opened.size() == 1 && opened.get(0).toString().contains("/issues/new?") ? null : "opened=" + opened;
             })
-            .run(mc -> hub(mc).keyPressed(new net.minecraft.client.input.KeyEvent(io.github.profetgit.profetsettings.UiKeys.ESC, 0, 0)));
+            .run(mc -> UiInput.escape(hub(mc)));
     }
 
     // ---- both mods in one screen (only with Tidy Pockets installed) ----
@@ -717,7 +948,11 @@ final class UiScenes {
         c.enabled = d.enabled;
         c.pop = d.pop;
         c.pulse = d.pulse;
+        c.pulseStyle = d.pulseStyle;
+        c.pulseStrength = d.pulseStrength;
         c.burst = d.burst;
+        c.breakStyle = d.breakStyle;
+        c.breakStrength = d.breakStrength;
         c.chips = d.chips;
         c.placeEffect = d.placeEffect;
         c.placeStrength = d.placeStrength;
@@ -752,7 +987,7 @@ final class UiScenes {
 
     private static void gui(Minecraft mc, int scale) {
         mc.options.guiScale().set(scale);
-        mc.resizeGui();
+        UiInput.resize(mc);
     }
 
     private static void capture(Script s, String name) {
@@ -780,13 +1015,8 @@ final class UiScenes {
         return out;
     }
 
-    // the real input path: MouseHandler.onMove / onButton, as the OS delivers it
     private static void click(Minecraft mc, int guiX, int guiY) {
-        var w = mc.getWindow();
-        double px = guiX * (double) w.getScreenWidth() / w.getGuiScaledWidth(), py = guiY * (double) w.getScreenHeight() / w.getGuiScaledHeight();
-        mc.mouseHandler.onMove(w.handle(), px, py, 0, 0);
-        mc.mouseHandler.onButton(w.handle(), new MouseButtonInfo(InputConstants.MOUSE_BUTTON_LEFT, 0), 1);
-        mc.mouseHandler.onButton(w.handle(), new MouseButtonInfo(InputConstants.MOUSE_BUTTON_LEFT, 0), 0);
+        UiInput.click(mc, guiX, guiY);
     }
 
     private static void click(Script s, String key, float frac) {
@@ -806,4 +1036,3 @@ final class UiScenes {
         hub(mc).debugRelease(p[0], p[1]);
     }
 }
-//?}

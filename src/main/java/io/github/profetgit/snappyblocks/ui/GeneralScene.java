@@ -1,6 +1,5 @@
 package io.github.profetgit.snappyblocks.ui;
 
-//? if >=26.3 {
 import io.github.profetgit.profetsettings.Ctx;
 import io.github.profetgit.profetsettings.Gfx;
 import io.github.profetgit.snappyblocks.Compat;
@@ -10,6 +9,7 @@ import io.github.profetgit.snappyblocks.item.Ghosts;
 import io.github.profetgit.snappyblocks.pop.Pops;
 import io.github.profetgit.snappyblocks.pulse.Pulses;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
 
 // The whole mod (on/off, intensity, reduced motion): a bookshelf is placed, chopped with the axe and broken, and its
@@ -40,7 +40,7 @@ final class GeneralScene extends SnappyScene {
         float gone = (PERIOD - BREAK) / MS;
         chips(g, cx, floor, side, time, pulse, burst, gone, false);
         double[] shape = burst && t >= 0 && t < Bursts.burstTicks() ? Bursts.shape(false, t) : null;
-        boolean covered = shape != null && shape[2] > 0.35;
+        boolean covered = covers(shape);
         // the books: vanilla's despawn is a blink, the mod's a short shrink
         double size = time < DESPAWN ? 1 : items ? 1 - Ghosts.smooth(Math.min(1, (time - DESPAWN) / MS / Ghosts.despawnTicks())) : 0;
         boolean drop = t >= 0 && size > 0.001;
@@ -48,12 +48,10 @@ final class GeneralScene extends SnappyScene {
         if (time >= PLACE && t < 0) {
             int hit = time < HIT1 ? -1 : Math.min(HITS - 1, (int) ((time - HIT1) / EVERY));
             double s = pop ? Pops.scale((time - PLACE) / MS) : 1;
-            double bulge = hit >= 0 && pulse ? Pulses.scale((time - HIT1 - hit * EVERY) / MS) : 1;
+            double[] moved = hit >= 0 && pulse ? Pulses.shape(Pulses.style(), (time - HIT1 - hit * EVERY) / MS, Direction.EAST, hit) : null;
             Diorama.shadow(g, cx, floor, (float) s);
             g.pushScale(cx, floor, (float) s, (float) s);
-            g.pushScale(cx, floor - Diorama.TALL / 2, (float) bulge, (float) bulge);
-            Diorama.body(g, cx, floor, look, whole, hit < 0 ? -1 : 2 + hit * 3);
-            g.pop();
+            Diorama.mined(g, cx, floor, look, moved, hit < 0 ? -1 : 2 + hit * 3);
             g.pop();
         } else if (shape != null) {
             Diorama.block(g, cx, floor, look, shape, -1);
@@ -77,4 +75,3 @@ final class GeneralScene extends SnappyScene {
         if (burst) burstChips(g, cx, floor, tex, (time - BREAK) / MS, gone, front);
     }
 }
-//?}

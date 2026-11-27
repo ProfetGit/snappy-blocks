@@ -79,5 +79,5 @@ if (mc.startsWith("26.1")) {
     apply(from = rootProject.file("../../tools/Backport/renames.gradle.kts"))
 }
 
-// 26.3 has the shared Profet settings screen, nested in the jar (tools/ProfetSettings/STATUS.md)
-if (mc == "26.3") apply(from = rootProject.file("../../tools/ProfetSettings/mod/consumer.gradle.kts"))
+// The shared Profet settings screen, nested in the jar (tools/ProfetSettings/STATUS.md)
+apply(from = rootProject.file("../../tools/ProfetSettings/mod/consumer.gradle.kts"))

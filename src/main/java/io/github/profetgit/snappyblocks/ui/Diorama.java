@@ -1,6 +1,5 @@
 package io.github.profetgit.snappyblocks.ui;
 
-//? if >=26.3 {
 import io.github.profetgit.profetsettings.Gfx;
 import io.github.profetgit.profetsettings.Skin;
 import io.github.profetgit.snappyblocks.burst.Chip;
@@ -8,7 +7,7 @@ import io.github.profetgit.snappyblocks.burst.Cubes;
 import io.github.profetgit.snappyblocks.burst.Dust;
 import io.github.profetgit.snappyblocks.burst.DustArt;
 import java.util.Random;
-import net.minecraft.client.renderer.RenderPipelines;
+import io.github.profetgit.snappyblocks.pulse.Pulses;
 import net.minecraft.resources.Identifier;
 import org.joml.Matrix3x2f;
 import org.joml.Quaternionf;
@@ -55,14 +54,14 @@ final class Diorama {
     }
 
     private static Identifier art(String name) {
-        return Identifier.fromNamespaceAndPath("snappy_blocks", "textures/gui/preview/" + name + ".png");
+        return Identifier.tryParse("snappy_blocks:" + "textures/gui/preview/" + name + ".png");
     }
 
     // a piece of art (given in its own pixels) at half size, its top-left corner at (x, y)
     private static void art(Gfx g, Identifier tex, float x, float y, int u, int v, int w, int h, int tw, int th) {
         g.pushTranslate(x, y);
-        g.g.pose().scale(0.5f, 0.5f);
-        g.g.blit(RenderPipelines.GUI_TEXTURED, tex, 0, 0, u, v, w, h, tw, th, g.a(0xFFFFFFFF));
+        g.scale(0.5f, 0.5f);
+        g.blit(tex, 0, 0, u, v, w, h, tw, th, 0xFFFFFFFF);
         g.pop();
     }
 
@@ -91,11 +90,37 @@ final class Diorama {
 
     // ---- the block ----
 
-    // the block under the break burst's transform: {@code shape} is Bursts.shape's {width, height, size}, applied in three
-    // dimensions as the real renderer does (width and height about the floor, size about the centre)
+    // the block under a break animation's transform: {@code shape} is Bursts.shape's {width, height, size} and, for the
+    // ones that move, {turn, rise}, applied in three dimensions as the real renderer does (width and height about the
+    // floor, size and turn about the centre)
     static void block(Gfx g, float cx, float floor, Look look, double[] shape, int crack) {
         shadow(g, cx, floor, (float) (shape[0] * shape[2]));
         body(g, cx, floor, look, shape, crack);
+    }
+
+    // the block under a mining hit: {@code p} is Pulses.shape's size, move and turn about its centre, or null
+    static void mined(Gfx g, float cx, float floor, Look look, double[] p, int crack) {
+        if (p == null) p = new double[] {1, 1, 1, 0, 0, 0};
+        Quaternionf turn = p.length > 6 ? Pulses.turn(p) : null;
+        float[] back = corner(cx, floor, p, turn, -1, 1, -1), right = corner(cx, floor, p, turn, 1, 1, -1),
+            left = corner(cx, floor, p, turn, -1, 1, 1), front = corner(cx, floor, p, turn, 1, 1, 1),
+            leftFoot = corner(cx, floor, p, turn, -1, -1, 1), frontFoot = corner(cx, floor, p, turn, 1, -1, 1);
+        Identifier cracks = crack < 0 ? null : SnappyScene.tex("destroy_stage_" + Math.min(9, crack));
+        side(g, look.top(), cracks, SHADE_TOP, 64, LIT_TOP, back, right, left);
+        side(g, look.left(), cracks, SHADE_LEFT, 80, LIT_LEFT, left, front, leftFoot);
+        side(g, look.right(), cracks, SHADE_RIGHT, 80, LIT_RIGHT, front, right, frontFoot);
+    }
+
+    // a corner of the mined block on screen
+    private static float[] corner(float cx, float floor, double[] p, Quaternionf turn, int x, int y, int z) {
+        Vector3f v = new Vector3f((float) (x * p[0] / 2), (float) (y * p[1] / 2), (float) (z * p[2] / 2));
+        if (turn != null) turn.transform(v);
+        double wx = p[3] + v.x, wz = p[5] + v.z;
+        return new float[] {sx(cx, wx, wz), sy(floor, wx, 0.5 + p[4] + v.y, wz)};
+    }
+
+    private static void side(Gfx g, Identifier tex, Identifier cracks, Identifier shade, int sh, int tint, float[] o, float[] u, float[] v) {
+        face(g, tex, cracks, shade, 64, sh, tint, o[0], o[1], u[0] - o[0], u[1] - o[1], v[0] - o[0], v[1] - o[1]);
     }
 
     // the same without its ground shadow
@@ -103,6 +128,11 @@ final class Diorama {
         double wide = shape[0] * shape[2], size = shape[2];
         if (size <= 0.001) return;
         double h = 0.5 * wide, lo = shape[1] * 0.5 * (1 - size), hi = shape[1] * 0.5 * (1 + size);
+        if (shape.length > 3) floor -= (float) (shape[4] * TALL);
+        if (shape.length > 3 && shape[3] != 0) {
+            turned(g, cx, floor, look, h, lo, hi, shape[3], crack);
+            return;
+        }
         float backX = sx(cx, -h, -h), backY = sy(floor, -h, hi, -h);
         float rightX = sx(cx, h, -h), rightY = sy(floor, h, hi, -h);
         float leftX = sx(cx, -h, h), leftY = sy(floor, -h, hi, h);
@@ -114,27 +144,61 @@ final class Diorama {
         face(g, look.right(), cracks, SHADE_RIGHT, 64, 80, LIT_RIGHT, frontX, frontY, rightX - frontX, rightY - frontY, 0, drop);
     }
 
+    // the block turned {@code yaw} radians about its upright axis: the top and the sides that face the camera, each side
+    // lit between the left and the right face's light by where it points
+    private static void turned(Gfx g, float cx, float floor, Look look, double h, double lo, double hi, double yaw, int crack) {
+        double cos = Math.cos(yaw), sin = Math.sin(yaw);
+        Identifier cracks = crack < 0 ? null : SnappyScene.tex("destroy_stage_" + Math.min(9, crack));
+        // the corners, going round: back, right, front, left before the turn; screen x and y at the top and bottom
+        double[][] at = {{-h, -h}, {h, -h}, {h, h}, {-h, h}};
+        float[][] p = new float[4][];
+        for (int i = 0; i < 4; i++) {
+            double x = at[i][0] * cos + at[i][1] * sin, z = at[i][1] * cos - at[i][0] * sin;
+            p[i] = new float[] {sx(cx, x, z), sy(floor, x, hi, z)};
+        }
+        float drop = (float) ((hi - lo) * TALL);
+        face(g, look.top(), cracks, SHADE_TOP, 64, 64, LIT_TOP, p[0][0], p[0][1], p[1][0] - p[0][0], p[1][1] - p[0][1],
+            p[3][0] - p[0][0], p[3][1] - p[0][1]);
+        // each side from its first corner to its second as seen from outside, and its outward direction
+        int[][] sides = {{3, 2}, {2, 1}, {1, 0}, {0, 3}};
+        double[][] out = {{0, 1}, {1, 0}, {0, -1}, {-1, 0}};
+        for (int i = 0; i < 4; i++) {
+            double x = out[i][0] * cos + out[i][1] * sin, z = out[i][1] * cos - out[i][0] * sin;
+            if (x + z <= 0.01) continue;
+            float k = (float) Math.max(0, Math.min(1, (x - z + 1) / 2));
+            float[] a = p[sides[i][0]], b = p[sides[i][1]];
+            Identifier tex = i % 2 == 0 ? look.left() : look.right();
+            face(g, tex, cracks, k < 0.5f ? SHADE_LEFT : SHADE_RIGHT, 64, 80, mix(LIT_LEFT, LIT_RIGHT, k), a[0], a[1], b[0] - a[0], b[1] - a[1], 0, drop);
+        }
+    }
+
+    private static int mix(int a, int b, float k) {
+        int out = 0xFF000000;
+        for (int shift = 0; shift < 24; shift += 8) out |= Math.round((a >> shift & 255) * (1 - k) + (b >> shift & 255) * k) << shift;
+        return out;
+    }
+
     // one textured parallelogram from (ox, oy): the texture's u axis (ux, uy) and v axis (vx, vy), then its light
     private static void face(Gfx g, Identifier tex, Identifier cracks, Identifier shade, int sw, int sh, int tint,
         float ox, float oy, float ux, float uy, float vx, float vy) {
-        g.g.pose().pushMatrix();
-        g.g.pose().mul(new Matrix3x2f(ux / 16, uy / 16, vx / 16, vy / 16, ox, oy));
-        g.g.blit(RenderPipelines.GUI_TEXTURED, tex, 0, 0, 0, 0, 16, 16, 16, 16, g.a(tint));
-        if (cracks != null) g.g.blit(RenderPipelines.GUI_TEXTURED, cracks, 0, 0, 0, 0, 16, 16, 16, 16, g.a(0x70000000));
-        g.g.pose().popMatrix();
-        g.g.pose().pushMatrix();
-        g.g.pose().mul(new Matrix3x2f(ux / sw, uy / sw, vx / sh, vy / sh, ox, oy));
-        g.g.blit(RenderPipelines.GUI_TEXTURED, shade, 0, 0, 0, 0, sw, sh, sw, sh, g.a(0xFFFFFFFF));
-        g.g.pose().popMatrix();
+        g.push();
+        g.mul(new Matrix3x2f(ux / 16, uy / 16, vx / 16, vy / 16, ox, oy));
+        g.blit(tex, 0, 0, 0, 0, 16, 16, 16, 16, tint);
+        if (cracks != null) g.blit(cracks, 0, 0, 0, 0, 16, 16, 16, 16, 0x70000000);
+        g.pop();
+        g.push();
+        g.mul(new Matrix3x2f(ux / sw, uy / sw, vx / sh, vy / sh, ox, oy));
+        g.blit(shade, 0, 0, 0, 0, sw, sh, sw, sh, 0xFFFFFFFF);
+        g.pop();
     }
 
     static void shadow(Gfx g, float cx, float floor, float size) {
         if (size <= 0.01f) return;
         g.pushTranslate(cx, floor);
-        g.g.pose().scale(size / 2, size / 2);
+        g.scale(size / 2, size / 2);
         float a = g.alpha;
         g.alpha *= Math.min(1, size);
-        g.g.blit(RenderPipelines.GUI_TEXTURED, SHADOW, -96, -56, 0, 0, 192, 112, 192, 112, g.a(0xFFFFFFFF));
+        g.blit(SHADOW, -96, -56, 0, 0, 192, 112, 192, 112, 0xFFFFFFFF);
         g.alpha = a;
         g.pop();
     }
@@ -202,10 +266,10 @@ final class Diorama {
             return;
         }
         g.pushTranslate(sx(cx, rx, rz), sy(floor, rx, ry, rz));
-        g.g.pose().rotate(oldRoll + (roll - oldRoll) * (float) a);
-        g.g.pose().translate(-s / 2, -s / 2);
-        g.g.pose().scale(s / 8, s / 8);
-        g.g.blit(RenderPipelines.GUI_TEXTURED, tex, 0, 0, u0, v0, 8, 8, 4, 4, 16, 16, g.a(LIT_CHIP));
+        g.rotate(oldRoll + (roll - oldRoll) * (float) a);
+        g.translate(-s / 2, -s / 2);
+        g.scale(s / 8, s / 8);
+        g.blit(tex, 0, 0, u0, v0, 8, 8, 4, 4, 16, 16, LIT_CHIP);
         g.pop();
     }
 
@@ -223,10 +287,10 @@ final class Diorama {
             float vx = -(w.x - w.z) * HX * 2 * h, vy = -((w.x + w.z) * HZ - w.y * TALL) * 2 * h;
             float lit = Math.min(1, 0.66f * Cubes.shade(n));
             int tint = 0xFF000000 | Math.round(255 * lit) << 16 | Math.round(246 * lit) << 8 | Math.round(238 * lit);
-            g.g.pose().pushMatrix();
-            g.g.pose().mul(new Matrix3x2f(ux / 8, uy / 8, vx / 8, vy / 8, sx(cx, ox, oz), sy(floor, ox, oy, oz)));
-            g.g.blit(RenderPipelines.GUI_TEXTURED, tex, 0, 0, u0, v0, 8, 8, 4, 4, 16, 16, g.a(tint));
-            g.g.pose().popMatrix();
+            g.push();
+            g.mul(new Matrix3x2f(ux / 8, uy / 8, vx / 8, vy / 8, sx(cx, ox, oz), sy(floor, ox, oy, oz)));
+            g.blit(tex, 0, 0, u0, v0, 8, 8, 4, 4, 16, 16, tint);
+            g.pop();
         }
     }
 
@@ -237,11 +301,11 @@ final class Diorama {
         if ((0.61 * (x + z) + 0.5 * (y - 0.5) >= 0) != front) return;
         float s = (float) (half * 2 * UNIT);
         g.pushTranslate(sx(cx, x, z), sy(floor, x, y, z));
-        g.g.pose().scale(s / 16, s / 16);
+        g.scale(s / 16, s / 16);
         // a mirrored quad is culled in GUI drawing, so a mirrored cloud reads its frame backwards instead
         int px = sheet == DustArt.Sheet.POOF ? 12 : 6, frame = sheet.frame(u);
-        g.g.blit(RenderPipelines.GUI_TEXTURED, art(sheet), -8, -8, mirrored ? (frame + 1) * px : frame * px, 0, 16, 16, mirrored ? -px : px, px,
-            sheet.frames * px, px, g.a(Math.round(Dust.alpha(sheet, u) * 255) << 24 | color));
+        g.blit(art(sheet), -8, -8, mirrored ? (frame + 1) * px : frame * px, 0, 16, 16, mirrored ? -px : px, px,
+            sheet.frames * px, px, Math.round(Dust.alpha(sheet, u) * 255) << 24 | color);
         g.pop();
     }
 
@@ -249,15 +313,15 @@ final class Diorama {
     static void ring(Gfx g, float cx, float floor, double u, double half, int color) {
         float h = (float) half, side = 2 * h;
         int frame = DustArt.Sheet.RING.frame(u);
-        g.g.pose().pushMatrix();
-        g.g.pose().mul(new Matrix3x2f(side * HX / 48, side * HZ / 48, -side * HX / 48, side * HZ / 48, sx(cx, -h, -h), sy(floor, -h, 0, -h)));
-        g.g.blit(RenderPipelines.GUI_TEXTURED, art(DustArt.Sheet.RING), 0, 0, frame * 48, 0, 48, 48, 8 * 48, 48,
-            g.a(Math.round(Dust.alpha(DustArt.Sheet.RING, u) * 255) << 24 | color));
-        g.g.pose().popMatrix();
+        g.push();
+        g.mul(new Matrix3x2f(side * HX / 48, side * HZ / 48, -side * HX / 48, side * HZ / 48, sx(cx, -h, -h), sy(floor, -h, 0, -h)));
+        g.blit(art(DustArt.Sheet.RING), 0, 0, frame * 48, 0, 48, 48, 8 * 48, 48,
+            Math.round(Dust.alpha(DustArt.Sheet.RING, u) * 255) << 24 | color);
+        g.pop();
     }
 
     private static Identifier art(DustArt.Sheet sheet) {
-        return Identifier.fromNamespaceAndPath("snappy_blocks", sheet.file);
+        return Identifier.tryParse("snappy_blocks:" + sheet.file);
     }
 
     // ---- items ----
@@ -272,13 +336,13 @@ final class Diorama {
         if (wide <= 0.001 || tall <= 0.001) return;
         int copies = count <= 1 ? 1 : count <= 16 ? 2 : count <= 32 ? 3 : count <= 48 ? 4 : 5;
         g.pushTranslate(x, bottom);
-        g.g.pose().scale((float) (wide * 1.5), (float) (tall * 1.5));
+        g.scale((float) (wide * 1.5), (float) (tall * 1.5));
         for (int i = copies - 2; i >= 0; i--) {
             g.pushTranslate(COPIES[i][0] / 1.5f, COPIES[i][1] / 1.5f);
-            g.g.blit(RenderPipelines.GUI_TEXTURED, tex, -8, -16, 0, 0, 16, 16, 16, 16, g.a(0xFFB4ACB4));
+            g.blit(tex, -8, -16, 0, 0, 16, 16, 16, 16, 0xFFB4ACB4);
             g.pop();
         }
-        g.g.blit(RenderPipelines.GUI_TEXTURED, tex, -8, -16, 0, 0, 16, 16, 16, 16, g.a(0xFFFFFFFF));
+        g.blit(tex, -8, -16, 0, 0, 16, 16, 16, 16, 0xFFFFFFFF);
         g.pop();
     }
 
@@ -287,8 +351,8 @@ final class Diorama {
         float a = g.alpha;
         g.alpha *= (float) Math.max(0, Math.min(1, 1 - height * 0.7));
         g.pushTranslate(x, y);
-        g.g.pose().scale(size / 2, size / 2);
-        g.g.blit(RenderPipelines.GUI_TEXTURED, ITEM_SHADOW, -32, -16, 0, 0, 64, 32, 64, 32, g.a(0xFFFFFFFF));
+        g.scale(size / 2, size / 2);
+        g.blit(ITEM_SHADOW, -32, -16, 0, 0, 64, 32, 64, 32, 0xFFFFFFFF);
         g.pop();
         g.alpha = a;
     }
@@ -304,4 +368,3 @@ final class Diorama {
     }
 
 }
-//?}

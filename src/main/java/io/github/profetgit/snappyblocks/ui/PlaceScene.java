@@ -1,6 +1,5 @@
 package io.github.profetgit.snappyblocks.ui;
 
-//? if >=26.3 {
 import io.github.profetgit.profetsettings.Ctx;
 import io.github.profetgit.profetsettings.Gfx;
 import io.github.profetgit.snappyblocks.Compat;
@@ -62,4 +61,3 @@ final class PlaceScene extends SnappyScene {
         }
     }
 }
-//?}

@@ -1,6 +1,5 @@
 package io.github.profetgit.snappyblocks.ui;
 
-//? if >=26.3 {
 import com.google.gson.JsonArray;
 import com.google.gson.JsonParser;
 import com.mojang.blaze3d.platform.NativeImage;
@@ -15,7 +14,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
 import org.joml.Matrix3x2f;
 
@@ -42,12 +40,19 @@ final class Tool {
         this.turned = turned;
     }
 
+    // the player's copper tools exist from 1.21.9; before that the preview swings the iron ones
+    //? if >=1.21.9 {
+    private static final String METAL = "copper";
+    //?} else {
+    /*private static final String METAL = "iron";
+    *///?}
+
     static Tool pickaxe() {
-        return new Tool("copper_pickaxe", false);
+        return new Tool(METAL + "_pickaxe", false);
     }
 
     static Tool axe() {
-        return new Tool("copper_axe", true);
+        return new Tool(METAL + "_axe", true);
     }
 
     // read once per scene, so a changed resource pack shows the next time the preview opens
@@ -58,7 +63,7 @@ final class Tool {
             // an animated texture's first frame
             size = Math.min(image.getWidth(), image.getHeight());
             solid = new boolean[size * size];
-            for (int v = 0; v < size; v++) for (int u = 0; u < size; u++) solid[v * size + u] = (image.getPixel(u, v) >>> 24) > 127;
+            for (int v = 0; v < size; v++) for (int u = 0; u < size; u++) solid[v * size + u] = (pixel(image, u, v) >>> 24) > 127;
         } catch (IOException e) {
             SnappyBlocks.LOG.warn("Preview tool {} not read: {}", texture, e.toString());
             solid = null;
@@ -66,8 +71,16 @@ final class Tool {
         if (motion == null) motion = motion();
     }
 
+    private static int pixel(NativeImage image, int u, int v) {
+        //? if >=1.21.2 {
+        return image.getPixel(u, v);
+        //?} else {
+        /*return image.getPixelRGBA(u, v);
+        *///?}
+    }
+
     private static float[][] motion() {
-        Identifier id = Identifier.fromNamespaceAndPath("snappy_blocks", "preview/swing.json");
+        Identifier id = Identifier.tryParse("snappy_blocks:" + "preview/swing.json");
         try (Reader in = new InputStreamReader(Minecraft.getInstance().getResourceManager().getResourceOrThrow(id).open(), StandardCharsets.UTF_8)) {
             JsonArray frames = JsonParser.parseReader(in).getAsJsonObject().getAsJsonArray("frames");
             float[][] out = new float[frames.size()][12];
@@ -150,17 +163,16 @@ final class Tool {
     }
 
     private void blit(Gfx g, Face f) {
-        g.g.pose().pushMatrix();
-        g.g.pose().mul(f.pose());
+        g.push();
+        g.mul(f.pose());
         // the GUI pipeline drops mirrored quads: draw those from the far end with the texture reversed
         boolean mirrored = f.pose().determinant() < 0;
         if (mirrored) {
-            g.g.pose().translate(f.w(), 0);
-            g.g.pose().scale(-1, 1);
+            g.translate(f.w(), 0);
+            g.scale(-1, 1);
         }
-        g.g.blit(RenderPipelines.GUI_TEXTURED, texture, 0, 0, mirrored ? f.u() + f.w() : f.u(), f.v(), f.w(), f.h(),
-            mirrored ? -f.w() : f.w(), f.h(), size, size, g.a(f.tint()));
-        g.g.pose().popMatrix();
+        g.blit(texture, 0, 0, mirrored ? f.u() + f.w() : f.u(), f.v(), f.w(), f.h(),
+            mirrored ? -f.w() : f.w(), f.h(), size, size, f.tint());
+        g.pop();
     }
 }
-//?}

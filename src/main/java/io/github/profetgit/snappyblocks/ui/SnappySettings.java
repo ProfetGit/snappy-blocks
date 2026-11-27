@@ -1,12 +1,13 @@
 package io.github.profetgit.snappyblocks.ui;
 
-//? if >=26.3 {
 import io.github.profetgit.profetsettings.ModDef;
 import io.github.profetgit.profetsettings.ProfetSettings;
 import io.github.profetgit.profetsettings.Setting;
 import io.github.profetgit.snappyblocks.Config;
 import io.github.profetgit.snappyblocks.SnappyBlocks;
+import io.github.profetgit.snappyblocks.burst.Break;
 import io.github.profetgit.snappyblocks.burst.Puff;
+import io.github.profetgit.snappyblocks.pulse.Pulses;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import net.minecraft.client.resources.language.I18n;
@@ -25,6 +26,12 @@ public final class SnappySettings {
         return Setting.bool(k, t("setting." + k), t("setting." + k + ".desc"), () -> get.apply(Config.get()), v -> set.accept(Config.get(), v), def);
     }
 
+    // one row for a feature's switch and its animations: Off is the switch false, so older config files keep working
+    private static String[] choices(String key, String[] styles) {
+        return java.util.stream.Stream.concat(java.util.stream.Stream.of("off"), java.util.Arrays.stream(styles))
+            .map(e -> t(key + e)).toArray(String[]::new);
+    }
+
     public static ModDef create() {
         ModDef m = new ModDef(SnappyBlocks.ID, "Snappy Blocks", "Snappy", ProfetSettings.modVersion(SnappyBlocks.ID), t("tagline"), "snappy_blocks:icon.png")
             .issues("ProfetGit/snappy-blocks")
@@ -38,8 +45,22 @@ public final class SnappySettings {
             bool("calm", c -> c.calm, (c, v) -> c.calm = v).preview("general"));
         m.group(t("group.blocks"),
             bool("pop", c -> c.pop, (c, v) -> c.pop = v).preview("pop"),
-            bool("pulse", c -> c.pulse, (c, v) -> c.pulse = v).preview("pulse"),
-            bool("burst", c -> c.burst, (c, v) -> c.burst = v).preview("burst"));
+            Setting.choice("pulseStyle", t("setting.pulseStyle"), t("setting.pulseStyle.desc"), choices("mine.", Pulses.STYLES),
+                () -> Config.get().pulse ? 1 + Pulses.style().ordinal() : 0,
+                i -> {
+                    Config.get().pulse = i > 0;
+                    if (i > 0) Config.get().pulseStyle = Pulses.STYLES[i - 1];
+                }, 1).preview("pulse"),
+            Setting.range("pulseStrength", t("setting.pulseStrength"), t("setting.pulseStrength.desc"), 25, 200,
+                () -> Config.get().pulseStrength, v -> Config.get().pulseStrength = v, new Config().pulseStrength).format(v -> v + "%").preview("pulse"),
+            Setting.choice("breakStyle", t("setting.breakStyle"), t("setting.breakStyle.desc"), choices("break.", Break.STYLES),
+                () -> Config.get().burst ? 1 + Break.style().ordinal() : 0,
+                i -> {
+                    Config.get().burst = i > 0;
+                    if (i > 0) Config.get().breakStyle = Break.STYLES[i - 1];
+                }, 1).preview("burst"),
+            Setting.range("breakStrength", t("setting.breakStrength"), t("setting.breakStrength.desc"), 25, 200,
+                () -> Config.get().breakStrength, v -> Config.get().breakStrength = v, new Config().breakStrength).format(v -> v + "%").preview("burst"));
         m.group(t("group.particles"),
             bool("chips", c -> c.chips, (c, v) -> c.chips = v).preview("chips"),
             Setting.choice("placeEffect", t("setting.placeEffect"), t("setting.placeEffect.desc"),
@@ -59,7 +80,12 @@ public final class SnappySettings {
         m.preset(t("preset.calm"), "calm", true);
         m.preset(t("preset.default"));
         m.preset(t("preset.lively"), "intensity", 130);
+        String[] ids = {"off", "calm", "default", "lively"};
+        for (int i = 0; i < ids.length; i++) {
+            java.util.Map<String, Object> values = m.presets.get(i).values();
+            m.presetPreview(t("preset." + ids[i]), "preset." + ids[i], t("preset." + ids[i] + ".note"));
+            m.scene("preset." + ids[i], d -> new PresetScene(new GeneralScene(), values));
+        }
         return m;
     }
 }
-//?}

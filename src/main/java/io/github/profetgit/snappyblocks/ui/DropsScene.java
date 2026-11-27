@@ -1,6 +1,5 @@
 package io.github.profetgit.snappyblocks.ui;
 
-//? if >=26.3 {
 import io.github.profetgit.profetsettings.Ctx;
 import io.github.profetgit.profetsettings.Gfx;
 import io.github.profetgit.snappyblocks.Compat;
@@ -94,4 +93,3 @@ final class DropsScene extends SnappyScene {
         Diorama.item(g, tex, (float) f[0], (float) (f[1] + Diorama.ITEM_HALF * tall), wide, tall, count);
     }
 }
-//?}
