@@ -139,6 +139,8 @@ public final class Pops {
 
     /** ClientLevel.playSeededSound: a sound at a block centre may be another player's placement. */
     public static void sound(double x, double y, double z, SoundEvent sound) {
+        // mods that tick entities on worker threads (Async) play sounds from there; SOUNDS is for the client thread only
+        if (!Minecraft.getInstance().isSameThread()) return;
         SOUNDS.removeIf(e -> Clock.ticks() - (long) e[3] > 2);
         SOUNDS.add(new Object[] {x, y, z, Clock.ticks(), sound});
         if (UNSOUNDED.isEmpty()) return;
