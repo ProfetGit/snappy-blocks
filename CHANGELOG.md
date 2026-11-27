@@ -8,6 +8,7 @@ Every animation now has its own speed, so blocks can move as slowly and smoothly
 - **New: Break animation speed** (50-150%). Lower, the burst or twirl takes longer and looks smoother; the first beat stays quick and the drop still shows before you can pick it up.
 - **New: Place animation speed** (40-150%): how fast a placed block grows into place.
 - A block placed where one is still breaking now hides the old animation.
+- The settings screen uses Minecraft's own title and button lettering.
 
 ## 0.0.61 — 2026-11-27
 
