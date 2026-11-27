@@ -7,6 +7,7 @@
 - **New: Break animation** setting: **Off**, **Burst** (the one so far, still the default) or **Twirl** (the block winds up, spins faster and faster with a little hop, flings its bits off and collapses into its drop). It replaces the Break burst switch; your old on/off choice is kept.
 - **New: Break strength** slider (25-200%): how far the block moves, how many bits fly and how far.
 - **The new settings screen is on every version now** (26.3, 26.2, 26.1.2, 1.21.11, 1.21.1, 1.20.1; Fabric, Quilt, NeoForge and Forge): live previews of every effect, Quick setup, Report bug and Ko-fi buttons. The copper golem button in the Game Menu now shows on NeoForge and Forge too.
+- **Tidier mod list** on the left of the settings screen: smaller rows with room for the full mod name, and the scrollbar sits flush.
 
 ## 0.0.53 — 2026-11-26
 

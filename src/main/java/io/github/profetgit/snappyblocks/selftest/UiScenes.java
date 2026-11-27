@@ -334,17 +334,22 @@ final class UiScenes {
             .waitTicks(20)
             .run(mc -> hub(mc).debugRevealRow(key))
             .waitTicks(4)
-            .run(mc -> {
-                // a switch has one centre; a slider's point is a fraction along it
-                int[] p = hub(mc).debugPoint(key, key.equals("intensity") || key.endsWith("Strength") ? 0.5f : -1f);
-                hub(mc).debugHover(p[0], p[1]);
-            })
+            .run(mc -> hover(mc, key))
+            .waitTicks(6)
+            // again: under load several ticks run before one frame, and the first point can predate the scroll
+            .run(mc -> hover(mc, key))
             .waitTicks(12)
             .check("ui: " + key + " shows the " + kind + " preview" + suffix, mc -> kind.equals(hub(mc).debugPreviewKind()) ? null : "preview " + hub(mc).debugPreviewKind());
         for (int t : times) {
             s.run(mc -> Preview.debugTime = t).waitTicks(3);
             capture(s, "ui-pv-" + kind + suffix + "-" + t);
         }
+    }
+
+    private static void hover(Minecraft mc, String key) {
+        // a switch has one centre; a slider's point is a fraction along it
+        int[] p = hub(mc).debugPoint(key, key.equals("intensity") || key.endsWith("Strength") ? 0.5f : -1f);
+        hub(mc).debugHover(p[0], p[1]);
     }
 
     private static void dense(Script s, String key, String kind, int period) {
