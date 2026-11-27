@@ -30,7 +30,8 @@ Install it and play. Nothing to press and nothing to learn.
 Open the settings screen from the copper golem button in the Game Menu, from Mod Menu (Fabric, Quilt; Mod Menu is optional) or from the NeoForge and Forge mod list. It is the shared **Profet Mods** screen, with a live preview of every effect and Quick setup presets:
 
 - A master switch, **Intensity** (50 to 150%) and **Reduced motion** (smaller movement, no hit-stop, no hop).
-- **Mining animation** (Off, Pulse, Shake, Wobble) with its own strength, and **Break animation** (Off, Burst, Twirl) with its own strength.
+- **Mining animation** (Off, Pulse, Shake, Wobble) and **Break animation** (Off, Burst, Twirl), each with its own speed and strength.
+- **Speed** sliders for mining, breaking and placing: turn them down for slow, smooth movement.
 - Place pop, Snappy chips, a **Placing effect** with its strength, 3D block particles, item drops and pickup flight.
 
 Changes show at once. The same settings live in `config/snappy_blocks.json`, where every timing is also a number you can tune.

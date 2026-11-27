@@ -31,6 +31,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LevelEvent;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
@@ -106,6 +107,8 @@ public final class Bursts {
         boolean tight;
         /** A denied placement shrinking out from {@code from} about a pivot: no hold, no squash, no claims. */
         boolean fade;
+        /** A new block took the spot: the animation isn't drawn through it. */
+        boolean covered;
         double from = 1;
         float px = 0.5f, py = 0.5f, pz = 0.5f;
         final double claimUntil;
@@ -163,7 +166,9 @@ public final class Bursts {
     private static long budgetTick = -1;
     private static int budgetUsed;
 
-    public static int started, claimed, revealed, watchdogs, overBudget, lite, fades, denied, meshWaits, stopReveals;
+    public static int started, claimed, revealed, watchdogs, overBudget, lite, fades, denied, meshWaits, stopReveals, covered;
+    /** The latest planned reveal of a claimed drop, ticks after its burst starts (test hook; reset by the tests). */
+    public static double latestReveal;
     public static Chip.Material lastMaterial;
     /** Chips made by bursts (test hook). */
     public static int chipsMade;
@@ -214,6 +219,8 @@ public final class Bursts {
             deny(pos, now);
             return;
         }
+        // a piston's head moving into the spot it just broke is part of the break
+        if (Probe.empty(old) && !Probe.empty(now) && !now.is(Blocks.MOVING_PISTON)) cover(pos);
         if (!on() || Probe.empty(old) || !Probe.empty(now)) return;
         long key = pos.asLong();
         double[] ev = EVENTS.remove(key);
@@ -222,6 +229,14 @@ public final class Bursts {
             start(pos.immutable(), state.isAir() ? old : state);
         } else {
             REMOVED.put(key, new Object[] {Clock.ticks(), old});
+        }
+    }
+
+    private static void cover(BlockPos pos) {
+        for (Burst b : BURSTS) {
+            if (b.covered || !b.pos.equals(pos)) continue;
+            b.covered = true;
+            covered++;
         }
     }
 
@@ -324,7 +339,11 @@ public final class Bursts {
         int i = b.claims++;
         maxClaimDelay = Math.max(maxClaimDelay, Clock.now() - b.born);
         double open = Break.revealAfter(b.style, b.bare);
-        Claim c = new Claim(b, open + i * FAN_STEP);
+        double after = open + i * FAN_STEP;
+        // a slowed break still shows every drop before it can be picked up
+        if (Break.speed() < 1) after = Math.min(after, Break.REVEAL_LATEST);
+        latestReveal = Math.max(latestReveal, after);
+        Claim c = new Claim(b, after);
         if (i > 0) {
             c.arc = 0.35;
             Claim first = CLAIMS.get(b.first);
@@ -413,7 +432,7 @@ public final class Bursts {
             Claim c = it.next();
             if (Double.isNaN(c.shownAt)) {
                 // the longer animations show their drop later, so their watchdog waits longer too
-                long hide = c.burst.style == Break.Style.BURST ? HIDE_LIMIT_TICKS
+                long hide = c.burst.style == Break.Style.BURST && Break.speed() >= 1 ? HIDE_LIMIT_TICKS
                     : Math.max(HIDE_LIMIT_TICKS, (long) Math.ceil(c.revealAfter) + 4);
                 boolean stopped = Clock.stopped(), late = Clock.ticks() - c.hiddenTick >= hide;
                 boolean due = c.burst.live && now >= c.burst.t0 + c.revealAfter;
@@ -556,7 +575,7 @@ public final class Bursts {
                     frameChips += chips(b);
                     chipNanos += System.nanoTime() - c0;
                 }
-                if (b.bare || t >= (b.fade ? FADE_TICKS : Break.duration(b.style, false))) continue;
+                if (b.bare || b.covered || t >= (b.fade ? FADE_TICKS : Break.duration(b.style, false))) continue;
                 double[] sc = shape(b, t);
                 ps.pushPose();
                 if (b.fade) {

@@ -48,7 +48,8 @@ final class GeneralScene extends SnappyScene {
         if (time >= PLACE && t < 0) {
             int hit = time < HIT1 ? -1 : Math.min(HITS - 1, (int) ((time - HIT1) / EVERY));
             double s = pop ? Pops.scale((time - PLACE) / MS) : 1;
-            double[] moved = hit >= 0 && pulse ? Pulses.shape(Pulses.style(), (time - HIT1 - hit * EVERY) / MS, Direction.EAST, hit) : null;
+            double[] moved = hit >= 0 && pulse ? Pulses.mined(Pulses.style(), Direction.EAST, (time - HIT1) / MS,
+                (time - HIT1 - hit * EVERY) / MS, hit) : null;
             Diorama.shadow(g, cx, floor, (float) s);
             g.pushScale(cx, floor, (float) s, (float) s);
             Diorama.mined(g, cx, floor, look, moved, hit < 0 ? -1 : 2 + hit * 3);

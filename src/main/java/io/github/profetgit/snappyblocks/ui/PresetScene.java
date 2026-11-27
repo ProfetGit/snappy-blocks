@@ -26,6 +26,9 @@ final class PresetScene extends Preview {
                 case "cubes" -> values.cubes = (Boolean) v;
                 case "items" -> values.items = (Boolean) v;
                 case "pickup" -> values.pickup = (Boolean) v;
+                case "popSpeed" -> values.popSpeed = ((Number) v).intValue();
+                case "breakSpeed" -> values.breakSpeed = ((Number) v).intValue();
+                case "pulseSpeed" -> values.pulseSpeed = ((Number) v).intValue();
                 case "pulseStrength" -> values.pulseStrength = ((Number) v).intValue();
                 case "breakStrength" -> values.breakStrength = ((Number) v).intValue();
                 case "placeStrength" -> values.placeStrength = ((Number) v).intValue();
@@ -52,6 +55,9 @@ final class PresetScene extends Preview {
         to.pop = from.pop;
         to.pulse = from.pulse;
         to.pulseStyle = from.pulseStyle;
+        to.pulseSpeed = from.pulseSpeed;
+        to.popSpeed = from.popSpeed;
+        to.breakSpeed = from.breakSpeed;
         to.pulseStrength = from.pulseStrength;
         to.burst = from.burst;
         to.breakStyle = from.breakStyle;

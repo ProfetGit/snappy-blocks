@@ -6,6 +6,7 @@ import io.github.profetgit.snappyblocks.Compat;
 import io.github.profetgit.snappyblocks.Config;
 import io.github.profetgit.snappyblocks.Probe;
 import io.github.profetgit.snappyblocks.RenderPass;
+import io.github.profetgit.snappyblocks.Rtt;
 import io.github.profetgit.snappyblocks.Tune;
 import io.github.profetgit.snappyblocks.burst.Chip;
 import io.github.profetgit.snappyblocks.pop.Hidden;
@@ -37,6 +38,10 @@ import org.joml.Quaternionf;
  * can't, so Shake leaves the block out of the mesh ({@link Hidden}) from the first hit until the hits stop, and draws
  * every side of the copy. Then the block is meshed again and the copy stays until a mesh whose compile started after
  * that is live (the rule of {@link Pops}).
+ *
+ * <p>That is mining at speed 100 or more (config `pulseSpeed`), one movement per hit, played that much faster. Below it a block has one movement for as
+ * long as it is mined ({@link #flow}): its swing runs at its own pace, hits only keep it going, and it eases out once
+ * they stop. Nothing restarts, so nothing snaps.
  */
 public final class Pulses {
     static final String PEAK = Tune.def("pulse.peak", 1.03);
@@ -64,6 +69,18 @@ public final class Pulses {
         final int hits;
         final Style style = style() == Style.SHAKE && !Compat.hideWorks() ? Style.PULSE : style();
         final PopRenderState render = new PopRenderState();
+        /** The mining animation speed, as the config had it. Below 1 the movement flows through the hits; above, each is quicker. */
+        final double speed = speed();
+        /** Flowing: when the last hit came, and when the ease-in began (moved by a hit during the ease-out). */
+        double fed, rise;
+        /**
+         * Flowing: extra hold until the second hit. The server counts from when it hears of the mining, so on a server the
+         * second hit is a round trip further behind the first.
+         */
+        double grace;
+        /** Flowing: the shape last drawn and when (test hook, {@link #fastestStep}). */
+        double[] drawn;
+        double drawnAt;
         /** Shake: the real block is out of the chunk mesh; then, from release on, the copy covers the remesh. */
         boolean hidden;
         /** Util.getNanos() when meshed again (the compile-start clock); 0 until then. */
@@ -75,10 +92,39 @@ public final class Pulses {
             this.t0 = t0;
             this.face = face;
             this.hits = hits;
+            this.fed = this.rise = t0;
+            if (flows()) grace = Math.min(FLOW_GRACE, Rtt.ticks());
+        }
+
+        /** Flowing: ticks since the last hit, as the ease-out counts them. */
+        double quiet(double now) {
+            return now - fed - grace;
+        }
+
+        boolean flows() {
+            return speed < 1;
         }
 
         double[] shape(double now) {
-            return Pulses.shape(style, now - t0, face, hits);
+            return flows() ? flow(style, speed, now - t0, now - rise, quiet(now), face) : Pulses.shape(style, (now - t0) * speed, face, hits);
+        }
+
+        /** Flowing: another hit. One that comes during the ease-out picks the ease-in up at the same strength. */
+        void feed(double now) {
+            double left = release(quiet(now));
+            if (left < ease((now - rise) / attackTicks(speed))) rise = now - attackTicks(speed) * (0.5 - Math.sin(Math.asin(1 - 2 * left) / 3));
+            fed = now;
+            grace = 0;
+        }
+
+        /** The movement is over: the block is at rest. */
+        boolean settled(double now) {
+            return flows() ? quiet(now) >= FLOW_HOLD + FLOW_RELEASE : (now - t0) * speed >= duration(style);
+        }
+
+        /** Shake: time to put the block back in the mesh. */
+        boolean letGo(double now) {
+            return flows() ? settled(now) : now - t0 >= HOLD_TICKS;
         }
     }
 
@@ -96,6 +142,12 @@ public final class Pulses {
     static final String WOBBLE_REACH = Tune.def("wobble.reach", 0.1);
     static final String WOBBLE_TICKS = Tune.def("wobble.ticks", 3);
     static final String WOBBLE_PERIOD = Tune.def("wobble.period", 2);
+    /** Ticks between two hits: at speed s a flowing swing takes this long divided by s. */
+    static final double HIT_EVERY = 4;
+    /** A flowing movement holds this long after the last hit (late packets), then eases out over {@link #FLOW_RELEASE}. */
+    static final double FLOW_HOLD = 5, FLOW_RELEASE = 4, FLOW_GRACE = 8;
+    /** A flowing swing against a hit's own, which only peaks this high; and the ticks over which it grows harder. */
+    static final double FLOW_SWING = 0.85, FLOW_RAMP = 36;
 
     public enum Style { PULSE, SHAKE, WOBBLE }
 
@@ -111,6 +163,11 @@ public final class Pulses {
     /** The mining animation's own strength (config `pulseStrength`) as a factor. */
     public static double strength() {
         return Math.max(25, Math.min(200, Config.get().pulseStrength)) / 100.0;
+    }
+
+    /** The mining animation speed (config `pulseSpeed`) as a factor: from 1 up a movement per hit. */
+    public static double speed() {
+        return Math.max(25, Math.min(150, Config.get().pulseSpeed)) / 100.0;
     }
 
     /** Intensity, Calm and the mining strength together. */
@@ -134,6 +191,8 @@ public final class Pulses {
     private static final ConcurrentLinkedQueue<long[]> LIVE = new ConcurrentLinkedQueue<>();
 
     public static int started;
+    /** The fastest a flowing movement's shape changed, per tick (test hook; reset by the tests). */
+    public static double fastestStep;
     /** Shakes that took their block out of the mesh, and released copies no mesh took over in time (test hooks). */
     public static int hid, watchdogs;
     /** Chips made by mining hits (test hook). */
@@ -178,14 +237,14 @@ public final class Pulses {
     }
 
     /**
-     * ClientLevel.addBreakingBlockEffects with the hit sound. The server sends the miner's first hit back one round trip
-     * later: a hit on a block that is still pulsing is the same hit and is skipped.
+     * ClientLevel.addBreakingBlockEffects with the hit sound: the miner's own first hit, then (26.3) the server's, every 4
+     * ticks from the fourth. A hit hard on another's heels is skipped.
      */
     public static void hit(BlockPos pos, Direction face) {
         if (!Config.get().enabled || !Config.get().pulse || Compat.pulseAside) return;
-        Pulse running = PULSES.get(pos.asLong());
-        if (running != null && Clock.now() - running.t0 < Math.max(0.5, Tune.get(TICKS))) return;
         Minecraft mc = Minecraft.getInstance();
+        Pulse running = PULSES.get(pos.asLong());
+        if (running != null && Clock.now() - (running.flows() ? running.fed : running.t0) < Math.max(0.5, Tune.get(TICKS))) return;
         ClientLevel level = mc.level;
         if (level == null || mc.player == null) return;
         if (mc.player.distanceToSqr(Vec3.atCenterOf(pos)) > RANGE * RANGE) return;
@@ -193,7 +252,9 @@ public final class Pulses {
         if (Probe.empty(state)) return;
         BlockPos at = pos.immutable();
         int hits = count(at, face);
-        if (eligible(state) && !Pops.popping(at) && (Tune.get(SHADED) > 0.5 || !ShaderPack.active())) {
+        if (running != null && running.flows() && running.releasedNs == 0 && running.state == state) {
+            running.feed(Clock.now());
+        } else if (eligible(state) && !Pops.popping(at) && (Tune.get(SHADED) > 0.5 || !ShaderPack.active())) {
             Pulse p = new Pulse(at, state, Clock.now(), face, hits);
             p.render.init(level, at, state);
             if (p.style == Style.SHAKE) {
@@ -316,23 +377,73 @@ public final class Pulses {
         // quick in, easing out to the next hit; later hits are harder
         double fade = Math.min(1, t / 0.4) * (1 - t / ticks), amp = amplitude() * hitForce(hits);
         for (int i = 0; i < 3; i++) p[i] = FLOOR + 0.004;
+        // every other hit twists the other way
+        move(p, style, face, amp * fade, Math.PI * 2 * t / Math.max(0.5, Tune.get(SHAKE_PERIOD)),
+            Math.PI * 2 * t / Math.max(0.5, Tune.get(WOBBLE_PERIOD)), (hits & 1) == 0 ? 1 : -1);
+        return p;
+    }
+
+    /** Ticks a flowing movement takes to ease in. */
+    static double attackTicks(double speed) {
+        return Math.min(6, HIT_EVERY / speed / 2);
+    }
+
+    private static double ease(double x) {
+        x = Math.min(1, Math.max(0, x));
+        return x * x * (3 - 2 * x);
+    }
+
+    // the share of a flowing movement left {@code quiet} ticks after the last hit
+    private static double release(double quiet) {
+        return ease(1 - (quiet - FLOW_HOLD) / FLOW_RELEASE);
+    }
+
+    /**
+     * A flowing movement ({@link #shape}'s layout): {@code age} ticks since the first hit (the swing's phase, and how
+     * hard the block has become), {@code risen} since its ease-in began, {@code quiet} since the last hit. Pulse
+     * breathes out and in once per swing; Shake and Wobble swing as a hit does, only slower and without stopping.
+     */
+    public static double[] flow(Style style, double speed, double age, double risen, double quiet, Direction face) {
+        double[] p = style == Style.PULSE ? new double[] {1, 1, 1, 0, 0, 0} : new double[] {1, 1, 1, 0, 0, 0, 0, 0, 0};
+        double env = Math.min(ease(risen / attackTicks(speed)), release(quiet));
+        if (age <= 0 || env <= 0) return p;
+        double angle = Math.PI * 2 * age * speed / HIT_EVERY;
+        if (style == Style.PULSE) {
+            double s = 1 + (Tune.get(PEAK) - 1) * amplitude() * env * (1 - Math.cos(angle)) / 2;
+            p[0] = p[1] = p[2] = s;
+            return p;
+        }
+        for (int i = 0; i < 3; i++) p[i] = FLOOR + 0.004 * env;
+        double hard = 1 + 0.5 * Math.min(1, age / FLOW_RAMP);
+        move(p, style, face, amplitude() * hard * env * FLOW_SWING, angle, angle, 1);
+        return p;
+    }
+
+    /**
+     * The block's mining shape for the settings previews, with the config's animation speed: {@code first} ticks after
+     * the first hit and {@code last} after the latest one, which had {@code hits} before it.
+     */
+    public static double[] mined(Style style, Direction face, double first, double last, int hits) {
+        double speed = speed();
+        return speed < 1 ? flow(style, speed, first, first, last, face) : shape(style, last * speed, face, hits);
+    }
+
+    // Shake's twist or Wobble's stretch, {@code kick} strong, at the swing angles {@code shake} or {@code wobble}
+    private static void move(double[] p, Style style, Direction face, double kick, double shake, double wobble, double side) {
         // the two axes in the plane of the struck face
         int u = face.getAxis() == Direction.Axis.X ? 2 : 0, v = face.getAxis() == Direction.Axis.Y ? 2 : 1;
         if (style == Style.SHAKE) {
-            // every other hit twists the other way
-            double reach = Tune.get(SHAKE_REACH) * amp * fade, turn = Math.PI * 2 * t / Math.max(0.5, Tune.get(SHAKE_PERIOD));
-            double side = (hits & 1) == 0 ? 1 : -1, kick = amp * fade;
-            p[3 + u] = side * reach * Math.sin(turn);
-            p[3 + v] = 0.7 * reach * Math.sin(turn * 1.37);
-            p[7] = side * Math.toRadians(Tune.get(SHAKE_YAW)) * kick * Math.sin(turn);
+            double reach = Tune.get(SHAKE_REACH) * kick;
+            p[3 + u] = side * reach * Math.sin(shake);
+            p[3 + v] = 0.7 * reach * Math.sin(shake * 1.37);
+            p[7] = side * Math.toRadians(Tune.get(SHAKE_YAW)) * kick * Math.sin(shake);
             // tip about the level axis that lies in the struck face
-            p[face.getAxis() == Direction.Axis.X ? 8 : 6] = Math.toRadians(Tune.get(SHAKE_PITCH)) * kick * Math.sin(turn * 0.8 + side * 0.6);
+            p[face.getAxis() == Direction.Axis.X ? 8 : 6] = Math.toRadians(Tune.get(SHAKE_PITCH)) * kick * Math.sin(shake * 0.8 + side * 0.6);
         } else {
-            double reach = Tune.get(WOBBLE_REACH) * amp * fade, swing = Math.sin(Math.PI * 2 * t / Math.max(0.5, Tune.get(WOBBLE_PERIOD)));
+            double reach = Tune.get(WOBBLE_REACH) * kick, swing = Math.sin(wobble);
             p[u] += reach * (1 + swing) / 2;
             p[v] += reach * (1 - swing) / 2;
         }
-        return p;
     }
 
     /**
@@ -393,6 +504,15 @@ public final class Pulses {
         }
     }
 
+    private static void measure(Pulse p, double[] shape, double now) {
+        if (p.drawn != null) {
+            if (now - p.drawnAt < 0.05) return;
+            for (int i = 0; i < shape.length; i++) fastestStep = Math.max(fastestStep, Math.abs(shape[i] - p.drawn[i]) / (now - p.drawnAt));
+        }
+        p.drawn = shape;
+        p.drawnAt = now;
+    }
+
     // the shape about the point (x, y, z) of the pose
     private static void pose(PoseStack ps, double[] sc, double x, double y, double z, double out) {
         ps.translate(x + sc[3], y + sc[4], z + sc[5]);
@@ -416,17 +536,19 @@ public final class Pulses {
             for (Iterator<Pulse> it = PULSES.values().iterator(); it.hasNext(); ) {
                 Pulse p = it.next();
                 boolean gone = level == null || level.getBlockState(p.pos) != p.state;
-                if (!gone && p.hidden && now - p.t0 >= HOLD_TICKS) unhide(p);
+                if (!gone && p.hidden && p.letGo(now)) unhide(p);
                 boolean late = p.releasedNs != 0 && System.nanoTime() - p.releasedWallNs > COVER_LIMIT_NS;
                 if (late) watchdogs++;
-                boolean done = p.releasedNs == 0 && !p.hidden && now - p.t0 >= duration(p.style);
+                boolean done = p.releasedNs == 0 && !p.hidden && p.settled(now);
                 if (gone || late || done) {
                     unhide(p);
                     it.remove();
                     continue;
                 }
+                double[] shape = p.shape(now);
+                if (p.flows()) measure(p, shape, now);
                 ps.pushPose();
-                pose(ps, p.shape(now), p.pos.getX() + 0.5 - cam.x, p.pos.getY() + 0.5 - cam.y, p.pos.getZ() + 0.5 - cam.z, 1);
+                pose(ps, shape, p.pos.getX() + 0.5 - cam.x, p.pos.getY() + 0.5 - cam.y, p.pos.getZ() + 0.5 - cam.z, 1);
                 p.render.draw(pass);
                 ps.popPose();
             }

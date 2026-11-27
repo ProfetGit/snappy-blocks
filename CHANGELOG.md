@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.62 — 2026-11-27
+
+Every animation now has its own speed, so blocks can move as slowly and smoothly as you like. All three default to 100%, the look you already have.
+
+- **New: Mining animation speed** (25-150%). Below 100% the block makes one slow, unbroken movement for as long as you mine and settles when you stop, instead of jolting on every hit. Above 100% the jolt is quicker.
+- **New: Break animation speed** (50-150%). Lower, the burst or twirl takes longer and looks smoother; the first beat stays quick and the drop still shows before you can pick it up.
+- **New: Place animation speed** (40-150%): how fast a placed block grows into place.
+- A block placed where one is still breaking now hides the old animation.
+
 ## 0.0.61 — 2026-11-27
 
 - **New: Mining animation** setting: **Off**, **Pulse** (the bulge so far, still the default), **Shake** (the whole block twists and tips with every hit, harder as it gives way) or **Wobble** (it stretches one way and then the other, like jelly). It replaces the Mining pulse switch; your old on/off choice is kept.

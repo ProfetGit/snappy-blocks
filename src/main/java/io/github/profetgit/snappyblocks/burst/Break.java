@@ -8,7 +8,8 @@ import net.minecraft.core.Direction;
  * The break animations (config `breakStyle`, one at a time; `burst` is the master switch) as curves, shared by
  * {@link Bursts} and the settings previews. Burst: a hit-stop squash, then the block shrinks away. Twirl: it winds up,
  * spins faster and faster while hopping, flinging its chips off, and collapses into its drop. Times are ticks from the
- * start of the burst.
+ * start of the burst. Config `breakSpeed` stretches the animation: below 100 the beat that answers the hit (hold,
+ * wind-up) stays as it is and the rest takes longer; above, everything is quicker.
  */
 public final class Break {
     static final String WINDUP = Tune.def("twirl.windup", 1.5);
@@ -18,6 +19,12 @@ public final class Break {
     static final String LIFT = Tune.def("twirl.lift", 0.28);
     /** Beside a full block, the size it draws in to before it turns far: at 0.7 its corners stay inside its own spot. */
     static final String GATHER = Tune.def("twirl.gather", 0.72);
+
+    /**
+     * Ticks after the burst starts by which a slowed animation shows its drops anyway: vanilla lets them be picked up
+     * after 10, and nobody should pick up what they never saw.
+     */
+    static final double REVEAL_LATEST = 8;
 
     public enum Style { BURST, TWIRL }
 
@@ -29,6 +36,11 @@ public final class Break {
     /** The break animation's own strength (config `breakStrength`) as a factor. */
     public static double strength() {
         return Math.max(25, Math.min(200, Config.get().breakStrength)) / 100.0;
+    }
+
+    /** The break animation speed (config `breakSpeed`) as a factor. */
+    public static double speed() {
+        return Math.max(50, Math.min(150, Config.get().breakSpeed)) / 100.0;
     }
 
     // how big the animation's movements are: the mod's intensity (and Calm) times the animation's strength
@@ -49,14 +61,18 @@ public final class Break {
 
     // the anticipation before the main move: none for a bare burst or in Calm mode (PRD §5.6)
     private static double ready(Style style, boolean bare) {
-        if (style == Style.BURST) return Bursts.hold(bare);
-        return bare || Config.get().calm ? 0 : Math.max(0, Tune.get(WINDUP));
+        double beat = style == Style.BURST ? Bursts.hold(bare) : bare || Config.get().calm ? 0 : Math.max(0, Tune.get(WINDUP));
+        return beat / Math.max(1, speed());
+    }
+
+    private static double shrink() {
+        return Math.max(1, Tune.get(Bursts.SHRINK)) / speed();
     }
 
     /** Ticks until the block is gone. */
     public static double duration(Style style, boolean bare) {
         return ready(style, bare) + switch (style) {
-            case BURST -> Math.max(1, Tune.get(Bursts.SHRINK));
+            case BURST -> shrink();
             case TWIRL -> spin();
         };
     }
@@ -72,15 +88,16 @@ public final class Break {
     /** Ticks at which the first drop shows. */
     public static double revealAfter(Style style, boolean bare) {
         if (bare) return 0;
-        return switch (style) {
-            case BURST -> ready(style, false) + 1;
-            case TWIRL -> duration(style, false) - 0.75;
+        double at = switch (style) {
+            case BURST -> ready(style, false) + 1 / speed();
+            case TWIRL -> duration(style, false) - 0.75 / speed();
         };
+        return speed() < 1 ? Math.min(at, REVEAL_LATEST) : at;
     }
 
     // a longer turn takes a little longer, so its fastest frame stays one the eye can follow
     private static double spin() {
-        return Math.max(2, Tune.get(SPIN)) * Math.sqrt(Math.max(1, turning()));
+        return Math.max(2, Tune.get(SPIN)) * Math.sqrt(Math.max(1, turning())) / speed();
     }
 
     /**
@@ -103,7 +120,7 @@ public final class Break {
             double a = out(t / Math.max(0.05, hold));
             return new double[] {1 + squash * 0.5 * a, 1 - squash * a, 1, 0, 0};
         }
-        double u = Math.min(1, (t - hold) / Math.max(1, Tune.get(Bursts.SHRINK)));
+        double u = Math.min(1, (t - hold) / shrink());
         double back = Math.max(0, 1 - u / 0.35);
         return new double[] {1 + squash * 0.5 * back, 1 - squash * back, 1 - u * u, 0, 0};
     }
@@ -124,7 +141,8 @@ public final class Break {
         // without a wind-up (Calm) it draws in as the spin starts
         double size = windup > 0 ? gather : 1 + (gather - 1) * out(u / 0.2);
         double stretch = Math.sin(Math.PI * Math.min(1, Math.max(0, (u - 0.1) / 0.75))) * Math.min(2, amp);
-        double turn = Math.toRadians(Tune.get(TURN) * turning());
+        // a quicker twirl turns less far: turning faster, a cube starts to look as if it spun backwards
+        double turn = Math.toRadians(Tune.get(TURN) * turning() / Math.max(1, speed()));
         double yaw = -back + (back + turn) * Math.pow(u, 1.7);
         double wide = 1 + broad * release - 0.08 * stretch;
         double tall = 1 - crouch * release + 0.14 * stretch;

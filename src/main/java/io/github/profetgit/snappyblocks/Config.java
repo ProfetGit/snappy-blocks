@@ -21,14 +21,20 @@ public final class Config {
 
     public boolean enabled = true;
     public boolean pop = true;
+    /** 40-150 (%): how fast a placed block grows into place ({@code pop/Pops}). */
+    public int popSpeed = 100;
     public boolean pulse = true;
     /** The mining animation while `pulse` is on: "pulse", "shake" or "wobble" ({@code pulse/Pulses}). */
     public String pulseStyle = "pulse";
+    /** 25-150 (%): 100 moves the block once per hit, higher does that quicker; lower is one slow, unbroken movement. */
+    public int pulseSpeed = 100;
     /** 25-200 (%): how strong the mining animation is: how far the block moves and how hard hit chips fly. */
     public int pulseStrength = 100;
     public boolean burst = true;
     /** The break animation while `burst` is on: "burst" or "twirl" ({@code burst/Break}). */
     public String breakStyle = "burst";
+    /** 50-150 (%): how fast the break animation plays; slower leaves its first beat as quick ({@code burst/Break}). */
+    public int breakSpeed = 100;
     /** 25-200 (%): how strong the break animation is: how far the block moves, how many chips fly and how far. */
     public int breakStrength = 100;
     /** The mod's own chips of a break and of mining hits ("Snappy chips"). Off leaves vanilla's and other mods'. */
@@ -77,6 +83,9 @@ public final class Config {
         c.placeStrength = Math.clamp(c.placeStrength, 25, 200);
         c.breakStrength = Math.clamp(c.breakStrength, 25, 200);
         c.pulseStrength = Math.clamp(c.pulseStrength, 25, 200);
+        c.pulseSpeed = Math.clamp(c.pulseSpeed, 25, 150);
+        c.popSpeed = Math.clamp(c.popSpeed, 40, 150);
+        c.breakSpeed = Math.clamp(c.breakSpeed, 50, 150);
         if (c.tune == null) c.tune = new LinkedHashMap<>();
         for (var e : Tune.DEFAULTS.entrySet()) c.tune.putIfAbsent(e.getKey(), e.getValue());
         current = c;
@@ -97,6 +106,9 @@ public final class Config {
         current.placeStrength = Math.clamp(current.placeStrength, 25, 200);
         current.breakStrength = Math.clamp(current.breakStrength, 25, 200);
         current.pulseStrength = Math.clamp(current.pulseStrength, 25, 200);
+        current.pulseSpeed = Math.clamp(current.pulseSpeed, 25, 150);
+        current.popSpeed = Math.clamp(current.popSpeed, 40, 150);
+        current.breakSpeed = Math.clamp(current.breakSpeed, 50, 150);
         write(current, raw);
     }
 

@@ -100,6 +100,7 @@ Hide path:
   Having a Blast's hand-off.
 - Under Iris, the copy is also drawn in the shadow pass.
 - Watchdog: a forced remesh after 20 ticks.
+- The place animation speed (40-150 %, 2026-11-27) stretches the pop; the slowest is 12.5 ticks, inside the watchdog.
 - The copy reads the real level around it, and the mesher keeps the hidden block for ambient occlusion and skips only
   its own geometry and the culling against it. So the copy is lit exactly like the mesh that replaces it, and the
   contact shadow appears when the block is placed, not at the hand-off (without this the hand-off stepped by 41).
@@ -132,8 +133,8 @@ Edge cases:
 
 ### 5.2 Mining pulse
 - Follows every hit with a sound (`ClientLevel.addBreakingBlockEffects`): the miner's own first hit, then the
-  server's level event 2020 every 4 ticks. Remote miners pulse the same way. The server echoes the first hit back
-  one round trip later; a hit on a block that is still pulsing is skipped.
+  server's level event 2020 every 4 ticks. Remote miners pulse the same way. A hit on a block that is still
+  pulsing is skipped.
 - Look: an outward pulse to 103% for 2 ticks (the bulge path: a copy never below 1.004 over the real block, within
   24 blocks), and chips cut from the block's own texture, flung out of the hit face: 2, one more every third hit up to
   4, thrown up to 1.5x harder as the block gives way (0.0.33).
@@ -154,6 +155,8 @@ What counts as a break:
 Frame 0, punch and shrink (the user's pick 2026-10-29; mini copies of the block were rejected as "the same block
 spawned smaller"):
 - The block holds for 1 tick where it stood (the hit-stop), squashing about its floor by 12%.
+- The break animation speed (50-150 %, 2026-11-27) stretches what follows the first beat; a slowed break shows its
+  drops by tick 8 at the latest, so a drop can be hidden longer than pillar 4's 6 ticks there (watchdog: reveal + 4).
 - Then it shrinks away about its centre in 4 ticks, accelerating, while the squash springs back.
 - As the shrink starts, 12 chips cut from its own texture spray outward and out of the mined face: a sixth big and
   slow, the last half small and fast (0.0.33). They spin, bounce twice by material (glass skitters, wool hops softly,

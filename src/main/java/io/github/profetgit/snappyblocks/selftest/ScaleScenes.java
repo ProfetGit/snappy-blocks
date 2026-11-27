@@ -565,7 +565,7 @@ final class ScaleScenes {
         s.waitTicks(15).check("ctm_pop", mc -> {
             int started = Pops.started - base[0], handed = Pops.handedOff - base[1], dogs = Pops.watchdogs - base[2];
             // the pop's curve plus its hand-off to the remeshed section (a few frames; more under load)
-            double limit = io.github.profetgit.snappyblocks.Tune.get(io.github.profetgit.snappyblocks.Tune.POP_TICKS) + 1.5;
+            double limit = Pops.popTicks() + 1.5;
             SnappyBlocks.LOG.info("[selftest] ctm: {} popped, {} handed off, longest copy {} ticks (Continuity {})", started, handed,
                 String.format("%.2f", Pops.maxLife), SnappyBlocks.platform().isModLoaded("continuity") ? "installed" : "absent");
             if (started != 5 || handed != 5 || dogs > 0) return started + " popped, " + handed + " handed off, " + dogs + " watchdog";

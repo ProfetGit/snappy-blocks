@@ -45,12 +45,16 @@ public final class SnappySettings {
             bool("calm", c -> c.calm, (c, v) -> c.calm = v).preview("general"));
         m.group(t("group.blocks"),
             bool("pop", c -> c.pop, (c, v) -> c.pop = v).preview("pop"),
+            Setting.range("popSpeed", t("setting.popSpeed"), t("setting.popSpeed.desc"), 40, 150,
+                () -> Config.get().popSpeed, v -> Config.get().popSpeed = v, new Config().popSpeed).format(v -> v + "%").preview("pop"),
             Setting.choice("pulseStyle", t("setting.pulseStyle"), t("setting.pulseStyle.desc"), choices("mine.", Pulses.STYLES),
                 () -> Config.get().pulse ? 1 + Pulses.style().ordinal() : 0,
                 i -> {
                     Config.get().pulse = i > 0;
                     if (i > 0) Config.get().pulseStyle = Pulses.STYLES[i - 1];
                 }, 1).preview("pulse"),
+            Setting.range("pulseSpeed", t("setting.pulseSpeed"), t("setting.pulseSpeed.desc"), 25, 150,
+                () -> Config.get().pulseSpeed, v -> Config.get().pulseSpeed = v, new Config().pulseSpeed).format(v -> v + "%").preview("pulse"),
             Setting.range("pulseStrength", t("setting.pulseStrength"), t("setting.pulseStrength.desc"), 25, 200,
                 () -> Config.get().pulseStrength, v -> Config.get().pulseStrength = v, new Config().pulseStrength).format(v -> v + "%").preview("pulse"),
             Setting.choice("breakStyle", t("setting.breakStyle"), t("setting.breakStyle.desc"), choices("break.", Break.STYLES),
@@ -59,6 +63,8 @@ public final class SnappySettings {
                     Config.get().burst = i > 0;
                     if (i > 0) Config.get().breakStyle = Break.STYLES[i - 1];
                 }, 1).preview("burst"),
+            Setting.range("breakSpeed", t("setting.breakSpeed"), t("setting.breakSpeed.desc"), 50, 150,
+                () -> Config.get().breakSpeed, v -> Config.get().breakSpeed = v, new Config().breakSpeed).format(v -> v + "%").preview("burst"),
             Setting.range("breakStrength", t("setting.breakStrength"), t("setting.breakStrength.desc"), 25, 200,
                 () -> Config.get().breakStrength, v -> Config.get().breakStrength = v, new Config().breakStrength).format(v -> v + "%").preview("burst"));
         m.group(t("group.particles"),

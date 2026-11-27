@@ -33,8 +33,10 @@ final class PulseScene extends SnappyScene {
         // switched off, the same mining without the movement and its chips, as in vanilla
         boolean pulse = off == null;
         boolean mining = time >= HIT1 && time < LET_GO;
-        int hit = mining ? Math.min(HITS - 1, (int) ((time - HIT1) / EVERY)) : -1;
-        double[] p = mining && pulse ? Pulses.shape(Pulses.style(), (time - HIT1 - hit * EVERY) / MS, Direction.EAST, hit) : null;
+        int hit = time < HIT1 ? -1 : Math.min(HITS - 1, (int) ((time - HIT1) / EVERY));
+        // a flowing movement eases out after the key is let go
+        double[] p = hit >= 0 && pulse && (mining || Pulses.speed() < 1)
+            ? Pulses.mined(Pulses.style(), Direction.EAST, (time - HIT1) / MS, (time - HIT1 - hit * EVERY) / MS, hit) : null;
         if (pulse) chips(g, cx, floor, ore, time, false);
         Diorama.shadow(g, cx, floor, p == null ? 1 : (float) p[0]);
         Diorama.mined(g, cx, floor, look, p, mining ? hit + 1 : -1);

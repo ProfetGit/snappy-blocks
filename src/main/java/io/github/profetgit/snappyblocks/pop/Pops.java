@@ -426,7 +426,17 @@ public final class Pops {
     }
 
     static double ticks(Pop p) {
-        return p.regrow ? Math.max(1, Tune.get(REGROW_TICKS)) : Tune.get(Tune.POP_TICKS);
+        return p.regrow ? Math.max(1, Tune.get(REGROW_TICKS)) : popTicks();
+    }
+
+    /** The place animation speed (config `popSpeed`) as a factor. */
+    public static double speed() {
+        return Math.max(40, Math.min(150, Config.get().popSpeed)) / 100.0;
+    }
+
+    /** Ticks a place pop lasts, at the chosen speed. */
+    public static double popTicks() {
+        return Tune.get(Tune.POP_TICKS) / speed();
     }
 
     static double scale(Pop p, double t) {
@@ -455,7 +465,7 @@ public final class Pops {
 
     /** Scale at {@code t} ticks into the pop: grows from pop.start past pop.peak, then settles to 1. */
     public static double scale(double t) {
-        double ticks = Tune.get(Tune.POP_TICKS), peakAt = Math.max(0.05, Tune.get(Tune.POP_PEAK_AT)) * ticks;
+        double ticks = popTicks(), peakAt = Math.max(0.05, Tune.get(Tune.POP_PEAK_AT)) * ticks;
         double start = 1 - (1 - Tune.get(Tune.POP_START)) * Config.get().amplitude();
         double peak = 1 + (Tune.get(Tune.POP_PEAK) - 1) * Config.get().amplitude();
         if (t <= 0) return start;

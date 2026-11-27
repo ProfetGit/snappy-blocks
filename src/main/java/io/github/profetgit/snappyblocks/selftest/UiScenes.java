@@ -10,6 +10,7 @@ import io.github.profetgit.profetsettings.Setting;
 import io.github.profetgit.snappyblocks.Config;
 import io.github.profetgit.snappyblocks.ConfigScreens;
 import io.github.profetgit.snappyblocks.SnappyBlocks;
+import io.github.profetgit.snappyblocks.pulse.Pulses;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -65,8 +66,9 @@ final class UiScenes {
                 for (Setting o : hub(mc).debugSelected().all()) {
                     keys.add(o.key);
                     if (o.label.startsWith("snappy_blocks.") || o.desc.startsWith("snappy_blocks.")) return "untranslated " + o.key;
+                    if (o.desc.startsWith("Format error")) return "bad format in " + o.key;
                 }
-                return String.join(" ", keys).equals("enabled intensity calm pop pulseStyle pulseStrength breakStyle breakStrength chips placeEffect placeStrength cubes items pickup") ? null : "keys " + keys;
+                return String.join(" ", keys).equals("enabled intensity calm pop popSpeed pulseStyle pulseSpeed pulseStrength breakStyle breakSpeed breakStrength chips placeEffect placeStrength cubes items pickup") ? null : "keys " + keys;
             })
             .check("ui: the listed mods are the installed Profet mods", mc -> {
                 List<String> ids = hub(mc).debugMods().stream().map(m -> m.id).toList();
@@ -138,6 +140,30 @@ final class UiScenes {
             preview(s, "pulseStyle", "pulse", "-" + style, 520, 560, 600, 640, 680, 1520, 1560, 1600, 1640, 1680);
             preview(s, "enabled", "general", "-" + style, 1180, 1220, 1260);
         }
+        for (String style : Pulses.STYLES) {
+            for (int speed : new int[] {25, 50, 150}) {
+                s.run(mc -> {
+                    Config.get().pulseStyle = style;
+                    Config.get().pulseSpeed = speed;
+                });
+                preview(s, "pulseSpeed", "pulse", "-" + style + "-speed" + speed, 600, 800, 1000, 1200, 1400, 1600, 1800, 1950, 2200);
+            }
+        }
+        s.run(mc -> Config.get().pulseSpeed = 100);
+        s.run(mc -> Config.get().popSpeed = 40);
+        preview(s, "popSpeed", "pop", "-speed40", 320, 420, 600, 800, 1270, 1500);
+        s.run(mc -> Config.get().popSpeed = 100);
+        for (String style : new String[] {"burst", "twirl"}) {
+            s.run(mc -> {
+                Config.get().breakStyle = style;
+                Config.get().breakSpeed = 50;
+            });
+            preview(s, "breakSpeed", "burst", "-" + style + "-speed50", 1340, 1500, 1650, 1800, 1950, 2100);
+        }
+        s.run(mc -> {
+            Config.get().breakStyle = "burst";
+            Config.get().breakSpeed = 100;
+        });
         for (int strength : new int[] {25, 200}) {
             s.run(mc -> {
                 Config.get().pulseStyle = "shake";
@@ -348,7 +374,7 @@ final class UiScenes {
 
     private static void hover(Minecraft mc, String key) {
         // a switch has one centre; a slider's point is a fraction along it
-        int[] p = hub(mc).debugPoint(key, key.equals("intensity") || key.endsWith("Strength") ? 0.5f : -1f);
+        int[] p = hub(mc).debugPoint(key, key.equals("intensity") || key.endsWith("Strength") || key.endsWith("Speed") ? 0.5f : -1f);
         hub(mc).debugHover(p[0], p[1]);
     }
 
@@ -394,6 +420,22 @@ final class UiScenes {
                     : "burst " + k.burst + " style " + k.breakStyle;
             });
         }
+        click(s, "pulseSpeed", 0f);
+        s.check("ui: the mining-speed slider reaches 25% and is saved", mc -> Config.get().pulseSpeed == 25 && file().contains("\"pulseSpeed\":25")
+            ? null : "speed " + Config.get().pulseSpeed);
+        click(s, "pulseSpeed", 1f);
+        s.check("ui: and reaches 150%", mc -> Config.get().pulseSpeed == 150 ? null : "speed " + Config.get().pulseSpeed);
+        s.run(mc -> Config.get().pulseSpeed = 100);
+        for (String key : new String[] {"popSpeed", "breakSpeed"}) {
+            int low = key.equals("popSpeed") ? 40 : 50;
+            Function<Config, Integer> value = key.equals("popSpeed") ? k -> k.popSpeed : k -> k.breakSpeed;
+            click(s, key, 0f);
+            s.check("ui: the " + key + " slider reaches " + low + "% and is saved", mc -> value.apply(Config.get()) == low && file().contains("\"" + key + "\":" + low)
+                ? null : "speed " + value.apply(Config.get()));
+            click(s, key, 1f);
+            s.check("ui: the " + key + " slider reaches 150%", mc -> value.apply(Config.get()) == 150 ? null : "speed " + value.apply(Config.get()));
+        }
+        s.run(mc -> Config.get().popSpeed = Config.get().breakSpeed = 100);
         click(s, "pulseStrength", 1f);
         s.check("ui: the mining-strength slider reaches 200% and is saved", mc -> Config.get().pulseStrength == 200 && file().contains("\"pulseStrength\":200")
             ? null : "strength " + Config.get().pulseStrength);
@@ -456,7 +498,7 @@ final class UiScenes {
         preset(s, 1, "Calm", c -> c.enabled && c.calm && c.intensity == 100);
         preset(s, 3, "Lively", c -> c.enabled && !c.calm && c.intensity == 130);
         capture(s, "ui-d-preset-lively");
-        preset(s, 2, "Default", c -> c.enabled && !c.calm && c.intensity == 100 && c.pop && c.pulse && c.pulseStyle.equals("pulse") && c.pulseStrength == 100 && c.burst && c.breakStyle.equals("burst") && c.breakStrength == 100 && c.chips && c.placeEffect.equals("off") && c.placeStrength == 100 && !c.cubes && c.items && c.pickup);
+        preset(s, 2, "Default", c -> c.enabled && !c.calm && c.intensity == 100 && c.pop && c.popSpeed == 100 && c.breakSpeed == 100 && c.pulse && c.pulseStyle.equals("pulse") && c.pulseSpeed == 100 && c.pulseStrength == 100 && c.burst && c.breakStyle.equals("burst") && c.breakStrength == 100 && c.chips && c.placeEffect.equals("off") && c.placeStrength == 100 && !c.cubes && c.items && c.pickup);
         click(s, "pop", -1f);
         s.run(mc -> press(mc, hub(mc).debugChangedButton())).waitTicks(30)
             .check("ui: the Changed filter keeps only the changed row", mc -> hub(mc).debugItemCount() == 2 ? null : "items " + hub(mc).debugItemCount());

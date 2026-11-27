@@ -38,7 +38,7 @@ abstract class SnappyScene extends Preview {
     // restarts the loop when any option changes
     float time(Ctx c, float period) {
         Config k = Config.get();
-        return clock(c, Objects.hash(k.enabled, k.intensity, k.calm, k.pop, k.pulse, k.pulseStyle, k.pulseStrength, k.burst, k.breakStyle, k.breakStrength, k.chips, k.placeEffect, k.placeStrength, k.cubes, k.items, k.pickup), period);
+        return clock(c, Objects.hash(k.enabled, k.intensity, k.calm, k.pop, k.popSpeed, k.breakSpeed, k.pulse, k.pulseStyle, k.pulseSpeed, k.pulseStrength, k.burst, k.breakStyle, k.breakStrength, k.chips, k.placeEffect, k.placeStrength, k.cubes, k.items, k.pickup), period);
     }
 
     static String t(String key, Object... args) {

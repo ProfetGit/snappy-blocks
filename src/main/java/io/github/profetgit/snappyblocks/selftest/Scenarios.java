@@ -249,6 +249,7 @@ final class Scenarios {
                 return null;
             });
         }
+        popSpeeds(s);
     }
 
     /**
@@ -327,11 +328,87 @@ final class Scenarios {
                 });
             }
         }
+        breakSpeeds(s);
         s.run(mc -> {
             Config.get().breakStyle = was[0];
             Config.get().breakStrength = 100;
+            Config.get().breakSpeed = 100;
             if (TestCompat.hudHidden(mc)) TestCompat.toggleHud(mc);
         }).server(srv -> platform(srv));
+    }
+
+    // every break animation slowed and sped up: the drops show (by themselves, and by tick 8 when slowed) and nothing
+    // stays; then a block put back into the spot while it still animates stops the animation being drawn
+    private static void breakSpeeds(Script s) {
+        int[] base = new int[4];
+        for (String style : Break.STYLES) {
+            for (int speed : new int[] {50, 150}) {
+                String name = "breaks-" + style + "-speed" + speed;
+                s.server(srv -> {
+                    cmd(srv, "fill -2 " + Y + " 0 2 " + (Y + 2) + " 1 minecraft:air");
+                    cmd(srv, "setblock 0 " + Y + " 0 minecraft:bookshelf");
+                    cmd(srv, "kill @e[type=item]");
+                }).waitTicks(15).run(mc -> {
+                    Config.get().breakStyle = style;
+                    Config.get().breakStrength = 100;
+                    Config.get().breakSpeed = speed;
+                    base[0] = Bursts.started;
+                    base[1] = Bursts.claimed;
+                    base[2] = Bursts.watchdogs;
+                    Bursts.latestReveal = 0;
+                    SelfTest.startCapture(name, 90);
+                }).waitTicks(3).server(srv -> cmd(srv, "setblock 0 " + Y + " 0 minecraft:air destroy")).waitTicks(45).check(name, mc -> {
+                    SelfTest.stopCapture();
+                    int started = Bursts.started - base[0], claimed = Bursts.claimed - base[1], dogs = Bursts.watchdogs - base[2];
+                    SnappyBlocks.LOG.info("[selftest] {}: latest reveal {} ticks, {} claimed", name, r2(Bursts.latestReveal), claimed);
+                    if (started != 1) return "bursts " + started + " of 1";
+                    if (claimed < 1 || dogs > 0) return "claimed " + claimed + ", " + dogs + " by watchdog";
+                    if (speed < 100 && Bursts.latestReveal > 8) return "a drop planned for tick " + Bursts.latestReveal;
+                    return Bursts.hiddenDrops() > 0 || Bursts.active() > 0 ? Bursts.hiddenDrops() + " drops hidden, " + Bursts.active() + " bursts left" : null;
+                });
+            }
+        }
+        s.server(srv -> {
+            cmd(srv, "setblock 0 " + Y + " 0 minecraft:bookshelf");
+            cmd(srv, "kill @e[type=item]");
+        }).waitTicks(15).run(mc -> {
+            Config.get().breakSpeed = 50;
+            base[3] = Bursts.covered;
+        }).server(srv -> cmd(srv, "setblock 0 " + Y + " 0 minecraft:air destroy")).waitTicks(3)
+            .server(srv -> cmd(srv, "setblock 0 " + Y + " 0 minecraft:stone")).waitTicks(4)
+            .check("breaks-replaced", mc -> Bursts.covered - base[3] == 1 ? null : (Bursts.covered - base[3]) + " bursts covered by the new block")
+            .waitTicks(30);
+    }
+
+    // a placement slowed and sped up pops for that long, hands off to the mesh and never needs the watchdog
+    private static void popSpeeds(Script s) {
+        int[] base = new int[3];
+        BlockPos under = new BlockPos(0, Y - 1, 0);
+        for (int speed : new int[] {40, 150}) {
+            String name = "pop-speed" + speed;
+            s.server(srv -> {
+                cmd(srv, "fill -4 " + Y + " -2 4 " + (Y + 3) + " 2 minecraft:air");
+                cmd(srv, "tp @p 0.5 " + Y + " -2.5 0 35");
+                cmd(srv, "gamemode creative @p");
+                cmd(srv, "item replace entity @p weapon.mainhand with minecraft:bricks 64");
+            }).waitTicks(20).run(mc -> {
+                Config.get().popSpeed = speed;
+                base[0] = Pops.started;
+                base[1] = Pops.handedOff;
+                base[2] = Pops.watchdogs;
+                Pops.maxLife = 0;
+                SelfTest.startCapture(name, 60);
+                ScaleScenes.place(mc, under, Direction.UP);
+            }).waitTicks(30).check(name, mc -> {
+                SelfTest.stopCapture();
+                int started = Pops.started - base[0], handed = Pops.handedOff - base[1], dogs = Pops.watchdogs - base[2];
+                double want = 5 * 100.0 / speed;
+                SnappyBlocks.LOG.info("[selftest] {}: copy stood in for {} ticks (pop {})", name, r2(Pops.maxLife), r2(want));
+                if (started != 1 || handed != 1 || dogs > 0) return started + " popped, " + handed + " handed off, " + dogs + " watchdog";
+                return Pops.maxLife >= want - 0.01 && Pops.maxLife <= want + 5 ? null : "a pop of " + want + " ticks lasted " + Pops.maxLife;
+            });
+        }
+        s.run(mc -> Config.get().popSpeed = 100).server(srv -> cmd(srv, "fill -4 " + Y + " -2 4 " + (Y + 3) + " 2 minecraft:air"));
     }
 
     private static void burst(Script s) {
@@ -769,7 +846,71 @@ final class Scenarios {
                 return null;
             });
         }
-        s.run(mc -> Config.get().pulseStyle = "pulse").server(srv -> platform(srv));
+        flowing(s, spot);
+        quicker(s, spot);
+        s.run(mc -> {
+            Config.get().pulseStyle = "pulse";
+            Config.get().pulseSpeed = 100;
+        }).server(srv -> platform(srv));
+    }
+
+    // above speed 100 every hit still has its own movement, over sooner, and the block is put back as before
+    private static void quicker(Script s, BlockPos at) {
+        int[] base = new int[1];
+        s.server(srv -> {
+            clearArea(srv);
+            cmd(srv, "setblock 0 " + at.getY() + " 0 minecraft:stone");
+            cmd(srv, "tp @p 1.5 " + Y + " -1.7 28 27");
+        }).waitTicks(20).run(mc -> {
+            Config.get().pulseStyle = "shake";
+            Config.get().pulseSpeed = 150;
+            base[0] = Pulses.started;
+            Pulses.watchdogs = 0;
+            aim(mc, at);
+        }).waitTicks(4);
+        for (int i = 0; i < 6; i++) s.run(mc -> Pulses.hit(at, net.minecraft.core.Direction.NORTH)).waitTicks(4);
+        s.waitTicks(12).check("mining-shake-quick", mc -> {
+            int pulses = Pulses.started - base[0];
+            if (pulses != 6) return pulses + " movements for 6 hits";
+            return Pulses.active() > 0 || !io.github.profetgit.snappyblocks.pop.Hidden.isEmpty() ? Pulses.active() + " pulses left, or a block still hidden"
+                : Pulses.watchdogs > 0 ? Pulses.watchdogs + " copies no mesh took over" : null;
+        });
+    }
+
+    // below speed 100 a block has one movement for all its hits, early or late ones too: it never restarts or snaps
+    // (the fastest its shape changes per tick stays low), and it comes to rest after the last one
+    private static void flowing(Script s, BlockPos at) {
+        int[] gaps = {4, 4, 3, 7, 4, 4, 5, 4};
+        double[] most = {0.01, 0.15, 0.1};
+        int[] base = new int[1];
+        for (int i = 0; i < Pulses.STYLES.length; i++) {
+            String style = Pulses.STYLES[i], name = "mining-" + style + "-slow";
+            double limit = most[i];
+            s.server(srv -> {
+                clearArea(srv);
+                cmd(srv, "setblock 0 " + at.getY() + " 0 minecraft:stone");
+                cmd(srv, "tp @p 1.5 " + Y + " -1.7 28 27");
+            }).waitTicks(20).run(mc -> {
+                Config.get().pulseStyle = style;
+                Config.get().pulseSpeed = 25;
+                base[0] = Pulses.started;
+                Pulses.watchdogs = 0;
+                Pulses.fastestStep = 0;
+                if (!TestCompat.hudHidden(mc)) TestCompat.toggleHud(mc);
+                aim(mc, at);
+            }).waitTicks(4).run(mc -> SelfTest.startCapture(name, 150));
+            for (int gap : gaps) s.run(mc -> Pulses.hit(at, net.minecraft.core.Direction.NORTH)).waitTicks(gap);
+            s.waitTicks(14).check(name, mc -> {
+                SelfTest.stopCapture();
+                if (TestCompat.hudHidden(mc)) TestCompat.toggleHud(mc);
+                SnappyBlocks.LOG.info("[selftest] {}: fastest step {} per tick", name, r2(Pulses.fastestStep));
+                int pulses = Pulses.started - base[0];
+                if (pulses != 1) return pulses + " movements for one block";
+                if (Pulses.fastestStep <= 0 || Pulses.fastestStep > limit) return "fastest step " + Pulses.fastestStep + " per tick (limit " + limit + ")";
+                if (Pulses.active() > 0 || !io.github.profetgit.snappyblocks.pop.Hidden.isEmpty()) return Pulses.active() + " pulses left, or a block still hidden";
+                return Pulses.watchdogs > 0 ? Pulses.watchdogs + " copies no mesh took over" : null;
+            });
+        }
     }
 
     /**

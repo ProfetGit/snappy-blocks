@@ -3,6 +3,7 @@ package io.github.profetgit.snappyblocks.burst;
 import io.github.profetgit.snappyblocks.Clock;
 import io.github.profetgit.snappyblocks.Config;
 import io.github.profetgit.snappyblocks.Tune;
+import io.github.profetgit.snappyblocks.pop.Pops;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -72,7 +73,8 @@ public final class Puff {
 
     /** Ticks from the placement to the puff: the pop's peak. */
     public static double delay() {
-        return Math.max(0.05, Tune.get(Tune.POP_PEAK_AT)) * Tune.get(Tune.POP_TICKS);
+        double pop = Config.get().pop ? Pops.popTicks() : Tune.get(Tune.POP_TICKS);
+        return Math.max(0.05, Tune.get(Tune.POP_PEAK_AT)) * pop;
     }
 
     /** The placing effect's own strength (config `placeStrength`) as a factor. */
