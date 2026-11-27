@@ -17,18 +17,15 @@
 - **Pickups.** Items arc into your chest, or fly into the hotbar slot they land in.
 - **Denied actions.** A placement or break the server refuses regrows or shrinks back instead of snapping.
 
-<p align="center">
-<img src="https://raw.githubusercontent.com/ProfetGit/snappy-blocks/main/docs/clips/ore-crack-open.webp" alt="Mining an ore: the block pulses, bursts and the drops spring out" width="49%">
-<img src="https://raw.githubusercontent.com/ProfetGit/snappy-blocks/main/docs/clips/bridging-run.webp" alt="Bridging across a river: every block pops into place" width="49%">
-<img src="https://raw.githubusercontent.com/ProfetGit/snappy-blocks/main/docs/clips/chest-break-fan.webp" alt="Breaking a chest: the contents fan out" width="49%">
-<img src="https://raw.githubusercontent.com/ProfetGit/snappy-blocks/main/docs/clips/pickup-hotbar.webp" alt="Picking up items: they fly into the hotbar" width="49%">
-</p>
+![Snappy Blocks in game: blocks pop into place, shake with every mining hit, twirl away when broken, and a chest's loot springs out and flies into the hotbar](https://raw.githubusercontent.com/ProfetGit/snappy-blocks/main/docs/clips/showcase.webp)
 
 ![How to use](https://raw.githubusercontent.com/ProfetGit/snappy-blocks/main/docs/desc/title-how-to-use.webp)
 
 Install it and play. Nothing to press and nothing to learn.
 
 ![Settings](https://raw.githubusercontent.com/ProfetGit/snappy-blocks/main/docs/desc/title-settings.webp)
+
+![The settings screen: picking the Shake mining animation and the Twirl break animation, each playing in the live preview](https://raw.githubusercontent.com/ProfetGit/snappy-blocks/main/docs/desc/settings.webp)
 
 Open the settings screen from the copper golem button in the Game Menu, from Mod Menu (Fabric, Quilt; Mod Menu is optional) or from the NeoForge and Forge mod list. It is the shared **Profet Mods** screen, with a live preview of every effect and Quick setup presets:
 

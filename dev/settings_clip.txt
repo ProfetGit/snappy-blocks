@@ -1,0 +1,18 @@
+# the settings clip of the description: python3 tools/Description-Kit/dev/settings_clip.py SnappyBlocks
+world new flat mode=creative
+wait 20
+hud off
+ui open snappy_blocks
+wait 5
+ui film pre 800
+ui scroll 7
+# the loop starts with the pointer already on the mining arrow
+ui film pre 900 to=pulseStyle:0.9 move=300
+ui film settings 1600
+ui click
+ui film settings 2700
+ui film settings 800 to=breakStyle:0.9 move=600
+ui film settings 500
+ui click
+ui film settings 4000
+end
