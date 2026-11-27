@@ -25,7 +25,7 @@ Install it and play. Nothing to press and nothing to learn.
 
 ![Settings](https://raw.githubusercontent.com/ProfetGit/snappy-blocks/main/docs/desc/title-settings.webp)
 
-![The settings screen: picking the Shake mining animation and the Twirl break animation, each playing in the live preview](https://raw.githubusercontent.com/ProfetGit/snappy-blocks/main/docs/desc/settings.webp)
+![The settings screen: picking the Shake mining animation, slowing it down, then picking the Twirl break animation, each playing in the live preview](https://raw.githubusercontent.com/ProfetGit/snappy-blocks/main/docs/desc/settings.webp)
 
 Open the settings screen from the copper golem button in the Game Menu, from Mod Menu (Fabric, Quilt; Mod Menu is optional) or from the NeoForge and Forge mod list. It is the shared **Profet Mods** screen, with a live preview of every effect and Quick setup presets:
 
