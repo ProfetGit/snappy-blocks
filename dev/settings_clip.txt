@@ -6,13 +6,20 @@ ui open snappy_blocks
 wait 5
 ui film pre 800
 ui scroll 7
+# the scroll glides only while frames are filmed: let it settle before pointing at a row
+ui film pre 600
 # the loop starts with the pointer already on the mining arrow
 ui film pre 900 to=pulseStyle:0.9 move=300
-ui film settings 1600
+ui film settings 1200
 ui click
-ui film settings 2700
+ui film settings 2200
+ui film settings 600 to=pulseSpeed:0.02 move=500
+ui click
+ui film settings 3000
+ui scroll 4
+ui film settings 700
 ui film settings 800 to=breakStyle:0.9 move=600
-ui film settings 500
+ui film settings 400
 ui click
-ui film settings 4000
+ui film settings 3600
 end
