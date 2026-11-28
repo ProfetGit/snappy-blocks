@@ -30,6 +30,7 @@
     "SectionMeshLiveMixin",
     "SingleQuadParticleMixin",
     "compat.IrisShadowMixin",
+    "compat.MoreCullingMixin",
     "compat.EmbeddiumMeshLiveMixin",
     "compat.EmbeddiumMeshingTaskMixin",
     "compat.EmbeddiumOcclusionMixin",

@@ -44,6 +44,10 @@ public final class MixinPlugin implements IMixinConfigPlugin {
             + "Lnet/minecraft/core/BlockPos;Lnet/minecraft/core/Direction;)Z"
             + "~shouldDrawSide(Lnet/minecraft/class_2680;Lnet/minecraft/class_1922;Lnet/minecraft/class_2338;Lnet/minecraft/class_2350;)Z",
         "IrisShadowMixin", IRIS_SHADOWS,
+        "MoreCullingMixin", "shouldDrawSideCulling(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/block/state/BlockState;"
+            + "Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/core/Direction;Lnet/minecraft/core/BlockPos;)Z"
+            + "~shouldDrawSideCulling(Lnet/minecraft/class_2680;Lnet/minecraft/class_2680;Lnet/minecraft/class_1922;Lnet/minecraft/class_2338;"
+            + "Lnet/minecraft/class_2350;Lnet/minecraft/class_2338;)Z",
         "SodiumBlockRenderContextMixin", "shouldDrawSide(Lnet/minecraft/core/Direction;)Z~shouldDrawSide(Lnet/minecraft/class_2350;)Z",
         "SodiumNonTerrainAoMixin", "shadeQuad(Lnet/caffeinemc/mods/sodium/client/render/model/MutableQuadViewImpl;"
             + "Lnet/caffeinemc/mods/sodium/client/model/light/LightMode;ZLnet/caffeinemc/mods/sodium/client/render/model/SodiumShadeMode;)V",

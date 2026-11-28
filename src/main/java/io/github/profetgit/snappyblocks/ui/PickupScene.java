@@ -34,8 +34,10 @@ final class PickupScene extends SnappyScene {
     // the copper pickaxe exists from 1.21.9; before that the preview holds the iron one
     //? if >=1.21.9 {
     private static final Item PICKAXE = Items.COPPER_PICKAXE;
+    private static final String PICKAXE_TEX = "textures/item/copper_pickaxe.png";
     //?} else {
     /*private static final Item PICKAXE = Items.IRON_PICKAXE;
+    private static final String PICKAXE_TEX = "textures/item/iron_pickaxe.png";
     *///?}
 
     @Override
@@ -83,10 +85,15 @@ final class PickupScene extends SnappyScene {
                 g.scale(1 / squeeze, (squeeze + 1) / 2);
                 g.translate(-(ix + 8), -(iy + 12));
             }
-            ItemStack stack = new ItemStack(Items.EMERALD, COUNT);
-            g.item(stack, ix, iy);
-            if (pop > 0) g.pop();
-            g.itemDecorations(stack, ix, iy);
+            if (stacksReady()) {
+                ItemStack stack = new ItemStack(Items.EMERALD, COUNT);
+                g.item(stack, ix, iy);
+                if (pop > 0) g.pop();
+                g.itemDecorations(stack, ix, iy);
+            } else {
+                g.blit(emerald, ix, iy, 0, 0, 16, 16, 16, 16, 0xFFFFFFFF);
+                if (pop > 0) g.pop();
+            }
         }
         if (!mod) Diorama.note(g, x, y, w, h, off);
     }
@@ -109,12 +116,23 @@ final class PickupScene extends SnappyScene {
         /*g.blit(WIDGETS, x, y, 0, 0, 182, 22, 256, 256);
         g.blit(WIDGETS, x - 1, y - 1, 0, 22, 24, 24, 256, 256);
         *///?}
-        held(g, PICKAXE, 1, x + 3, y + 3);
-        held(g, Items.BREAD, 7, x + 23, y + 3);
-        held(g, Items.TORCH, 32, x + 43, y + 3);
+        held(g, PICKAXE, PICKAXE_TEX, 1, x + 3, y + 3);
+        held(g, Items.BREAD, "textures/item/bread.png", 7, x + 23, y + 3);
+        held(g, Items.TORCH, "textures/block/torch.png", 32, x + 43, y + 3);
     }
 
-    private static void held(Gfx g, Item what, int count, int x, int y) {
-        item(g, new ItemStack(what, count), x, y);
+    private static void held(Gfx g, Item what, String tex, int count, int x, int y) {
+        if (stacksReady()) item(g, new ItemStack(what, count), x, y);
+        else g.blit(Identifier.tryParse(tex), x, y, 0, 0, 16, 16, 16, 16, 0xFFFFFFFF);
+    }
+
+    // 26.x binds item components when a world's data loads: before that (the title screen) no ItemStack can be made,
+    // so the slots show the item textures alone
+    private static boolean stacksReady() {
+        //? if >=26.1 {
+        return Items.EMERALD.builtInRegistryHolder().areComponentsBound();
+        //?} else {
+        /*return true;
+        *///?}
     }
 }

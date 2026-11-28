@@ -6,6 +6,7 @@ import io.github.profetgit.snappyblocks.burst.Bursts;
 import io.github.profetgit.snappyblocks.pop.Pops;
 import io.github.profetgit.snappyblocks.pulse.Pulses;
 import java.util.ArrayDeque;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.prediction.BlockStatePredictionHandler;
 import net.minecraft.core.BlockPos;
@@ -43,11 +44,13 @@ public abstract class ClientLevelMixin {
 
     @Inject(method = "setBlock", at = @At("HEAD"))
     private void snappy_blocks$before(BlockPos pos, BlockState state, int flags, int limit, CallbackInfoReturnable<Boolean> cir) {
+        if (!Minecraft.getInstance().isSameThread()) return;
         snappy_blocks$old.push(((ClientLevel) (Object) this).getBlockState(pos));
     }
 
     @Inject(method = "setBlock", at = @At("RETURN"))
     private void snappy_blocks$after(BlockPos pos, BlockState state, int flags, int limit, CallbackInfoReturnable<Boolean> cir) {
+        if (!Minecraft.getInstance().isSameThread()) return;
         BlockState old = snappy_blocks$old.poll();
         if (old != null && cir.getReturnValueZ() && old != state) {
             boolean predicted = blockStatePredictionHandler.isPredicting();

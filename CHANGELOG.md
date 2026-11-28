@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.63 — 2026-11-28
+
+Bug fixes from your in-game reports. Thank you for sending them!
+
+- Fixed a crash when the settings screen opened on the title screen (Minecraft 26.x), for example from the crash report prompt. ([#7](https://github.com/ProfetGit/snappy-blocks/issues/7), [#8](https://github.com/ProfetGit/snappy-blocks/issues/8), [#11](https://github.com/ProfetGit/snappy-blocks/issues/11), [#13](https://github.com/ProfetGit/snappy-blocks/issues/13))
+- Fixed a crash with mods that tick entities on several threads at once. ([#9](https://github.com/ProfetGit/snappy-blocks/issues/9))
+- Fixed a see-through flash around a newly placed block with Sodium and More Culling. ([#12](https://github.com/ProfetGit/snappy-blocks/issues/12))
+- The crash report prompt no longer blames Snappy Blocks for crashes caused by other mods on Forge and NeoForge. ([#14](https://github.com/ProfetGit/snappy-blocks/issues/14), [#15](https://github.com/ProfetGit/snappy-blocks/issues/15), [#16](https://github.com/ProfetGit/snappy-blocks/issues/16))
+
 ## 0.0.62 — 2026-11-27
 
 Every animation now has its own speed, so blocks can move as slowly and smoothly as you like. All three default to 100%, the look you already have.

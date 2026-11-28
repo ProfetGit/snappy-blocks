@@ -140,6 +140,8 @@ public final class Pops {
 
     /** ClientLevel.playSeededSound: a sound at a block centre may be another player's placement. */
     public static void sound(double x, double y, double z, SoundEvent sound) {
+        // mods that tick entities on worker threads play their sounds there; a placement's sound comes on the game thread
+        if (!Minecraft.getInstance().isSameThread()) return;
         SOUNDS.removeIf(e -> Clock.ticks() - (long) e[3] > 2);
         SOUNDS.add(new Object[] {x, y, z, Clock.ticks(), sound});
         if (UNSOUNDED.isEmpty()) return;

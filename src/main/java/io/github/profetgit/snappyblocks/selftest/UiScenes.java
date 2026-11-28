@@ -58,6 +58,7 @@ final class UiScenes {
             })
             .waitTicks(30)
             .check("ui: the golem button opens the hub", mc -> ProfetSettings.isScreen(mc.gui.screen()) ? null : "screen " + mc.gui.screen());
+        capture(s, "ui-0-hub-from-pause");
         //?}
         s.run(mc -> mc.gui.setScreen(ConfigScreens.create(null))).waitTicks(30)
             .check("ui: the config button opens the hub on Snappy Blocks", mc -> hub(mc).debugSelected().id.equals(SnappyBlocks.ID) ? null : "selected " + hub(mc).debugSelected().id)
@@ -827,6 +828,25 @@ final class UiScenes {
                 io.github.profetgit.profetsettings.CrashPrompt.rescanForTest();
             })
             .check("bug v2: a crash report is offered only once", mc -> io.github.profetgit.profetsettings.CrashPrompt.pending() ? "offered again" : null)
+            .run(mc -> {
+                // Forge and NeoForge list the mixins applied to each frame's class: another mod's crash in a class we mix into
+                try {
+                    Files.delete(crash[0]);
+                    crash[0] = crash[0].resolveSibling("crash-2000-01-01_00.00.01-client.txt");
+                    Files.writeString(crash[0], "---- Minecraft Crash Report ----\n// Test fixture\n\nTime: 2000-01-01\nDescription: Unexpected error\n\n"
+                        + "java.lang.IllegalStateException: Missing registry\n"
+                        + "\tat net.minecraft.client.renderer.LevelRenderer.m_109599_(LevelRenderer.java:1228) ~[client-1.20.1-srg.jar%23543!/:?] "
+                        + "{re:mixin,pl:mixin:APP:snappy_blocks.mixins.json:LevelRendererMixin from mod snappy_blocks,pl:mi...\n"
+                        + "\tat net.minecraft.client.main.Main.main(Main.java:218) [forge-47.4.28.jar:?] {re:classloading}\n\n"
+                        + "A detailed walkthrough of the error, its code path and all known details is as follows:\n-- System Details --\n");
+                    long start = java.lang.management.ManagementFactory.getRuntimeMXBean().getStartTime();
+                    Files.setLastModifiedTime(crash[0], java.nio.file.attribute.FileTime.fromMillis(start - 30_000));
+                } catch (IOException ex) {
+                    throw new RuntimeException(ex);
+                }
+                io.github.profetgit.profetsettings.CrashPrompt.rescanForTest();
+            })
+            .check("bug v2: another mod's crash that only lists our mixins is not offered", mc -> io.github.profetgit.profetsettings.CrashPrompt.pending() ? "offered" : null)
             .run(mc -> {
                 ProfetSettings.uriOpener = prevOpener[0];
                 ProfetSettings.debugResetBugState();
