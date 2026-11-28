@@ -70,6 +70,8 @@ final class Scenarios {
         names.addAll(ScaleScenes.NAMES);
         // the settings screen scene needs a 1920x1080 window: only when named
         if (Arrays.asList(only.split(",")).contains("ui")) names.add("ui");
+        // needs a connected-texture addon and pack (ct-forge): only when named
+        if (Arrays.asList(only.split(",")).contains("ctlook")) names.add("ctlook");
         for (String name : names) {
             if (!only.equals("all") && !Arrays.asList(only.split(",")).contains(name)) continue;
             switch (name) {
@@ -92,10 +94,44 @@ final class Scenarios {
                 case "plants" -> plants(s);
                 case "particles" -> ParticleScenes.add(s);
                 case "ui" -> UiScenes.add(s);
+                case "ctlook" -> ctLook(s);
                 default -> ScaleScenes.add(s, name);
             }
         }
         return s;
+    }
+
+    /**
+     * GitHub issue 18: blocks a connected-texture mod retextures (stone: full method; dirt between deepslate: overlay),
+     * drawn by our copies while they pulse and pop. Frames go to out/frames/ctlook-*, to be looked at.
+     */
+    private static void ctLook(Script s) {
+        for (String[] round : new String[][] {{"stone", "stone"}, {"overlay", "dirt"}}) {
+            String name = "ctlook-" + round[0], block = round[1];
+            BlockPos at = new BlockPos(0, Y, 0);
+            s.server(srv -> {
+                clearArea(srv);
+                String side = block.equals("stone") ? "stone" : "deepslate";
+                cmd(srv, "setblock -1 " + Y + " 0 minecraft:" + side);
+                cmd(srv, "setblock 1 " + Y + " 0 minecraft:" + side);
+                cmd(srv, "setblock 0 " + Y + " 0 minecraft:" + block);
+                cmd(srv, "tp @p 1.2 " + Y + " -1.8 24 28");
+                cmd(srv, "gamemode survival @p");
+                cmd(srv, "clear @p");
+                cmd(srv, "item replace entity @p weapon.mainhand with minecraft:" + block + " 8");
+            }).waitTicks(30).run(mc -> {
+                if (!TestCompat.hudHidden(mc)) TestCompat.toggleHud(mc);
+                aim(mc, at);
+            }).waitTicks(4).run(mc -> SelfTest.startCapture(name, 150));
+            for (int i = 0; i < 4; i++) s.run(mc -> Pulses.hit(at, net.minecraft.core.Direction.NORTH)).waitTicks(6);
+            s.run(mc -> mc.gameMode.useItemOn(mc.player, InteractionHand.MAIN_HAND,
+                new BlockHitResult(Vec3.atCenterOf(at).add(0, 0.5, 0), Direction.UP, at, false))).waitTicks(30).check(name, mc -> {
+                    SelfTest.stopCapture();
+                    if (TestCompat.hudHidden(mc)) TestCompat.toggleHud(mc);
+                    return mc.level.getBlockState(at.above()).isAir() ? "nothing was placed" : null;
+                });
+        }
+        s.server(srv -> platform(srv));
     }
 
     private static void platform(MinecraftServer srv) {
@@ -757,6 +793,7 @@ final class Scenarios {
             cmd(srv, "gamemode survival @p");
             cmd(srv, "clear @p");
         }).waitTicks(20).run(mc -> {
+            Config.get().pulseStyle = System.getProperty("snappy_blocks.selftest.style", "pulse");
             TestCompat.selectSlot(mc.player, 8);
             base[0] = Pulses.started;
             base[1] = Probe.hitEvents;

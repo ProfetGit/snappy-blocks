@@ -120,8 +120,15 @@ public final class ShaderPack {
             // Oculus (Iris for Embeddium, 1.20.1 Forge) keeps Iris's classes under its own mod id
             if (SnappyBlocks.platform().isModLoaded("iris") || SnappyBlocks.platform().isModLoaded("oculus")) {
                 try {
-                    inUse = MethodHandles.publicLookup().findStatic(Class.forName("net.irisshaders.iris.Iris"), "isPackInUseQuick",
-                        MethodType.methodType(boolean.class));
+                    try {
+                        inUse = MethodHandles.publicLookup().findStatic(Class.forName("net.irisshaders.iris.Iris"), "isPackInUseQuick",
+                            MethodType.methodType(boolean.class));
+                    } catch (NoSuchMethodException old) {
+                        // older Oculus builds (1.7.0) only answer through the public API
+                        Class<?> api = Class.forName("net.irisshaders.iris.api.v0.IrisApi");
+                        inUse = MethodHandles.publicLookup().findVirtual(api, "isShaderPackInUse", MethodType.methodType(boolean.class))
+                            .bindTo(api.getMethod("getInstance").invoke(null));
+                    }
                 } catch (Throwable t) {
                     SnappyBlocks.LOG.warn("Snappy Blocks: can't ask Iris whether a shader pack is on ({})", t.toString());
                 }

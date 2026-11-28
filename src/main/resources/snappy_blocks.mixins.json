@@ -31,6 +31,7 @@
     "SingleQuadParticleMixin",
     "compat.IrisShadowMixin",
     "compat.MoreCullingMixin",
+    "compat.FleroviumCrackMixin",
     "compat.EmbeddiumMeshLiveMixin",
     "compat.EmbeddiumMeshingTaskMixin",
     "compat.EmbeddiumOcclusionMixin",

@@ -5,6 +5,7 @@
   "scenes_prop": "snappy_blocks.selftest.scenes",
   "props": {
     "snappy_blocks.selftest.mode": "{mode}",
+    "snappy_blocks.selftest.style": "{style}",
     "snappy_blocks.selftest.pvdense": "{pvdense}",
     "snappy_blocks.trace": "{trace}",
     "snappy_blocks.tune.pop.ticks": "{popticks}",
@@ -35,6 +36,7 @@
     "plants": "minecraft:short_grass+minecraft:poppy+minecraft:fern+minecraft:dandelion",
     "time": "6000",
     "block": "minecraft:stone",
+    "style": "pulse",
     "peak": "",
     "cave": "false",
     "shaded": "",
@@ -527,6 +529,10 @@
       "packs": [],
       "shaders": true
     },
+    "ct-forge-vanilla": {"profile": {"1.20.1": "/home/emppu/.cache/studio/addons/ct-forge-1.20.1"}, "mods": ["Connector-*.jar", "fabric-api-*.jar", "continuity-*.jar"], "packs": ["sbct-test.zip"]},
+    "ct-fabric": {"profile": {"1.20.1": "/home/emppu/.cache/studio/addons/ct-fabric-1.20.1", "1.21.1": "/home/emppu/.cache/studio/addons/ct-fabric-1.21.1", "1.21.11": "/home/emppu/.cache/studio/addons/ct-fabric-1.21.11", "26.2": "/home/emppu/.cache/studio/addons/ct-fabric-26.2", "26.3": "/home/emppu/.cache/studio/addons/ct-fabric-26.3"}, "mods": ["fabric-api-*.jar", "continuity-*.jar"], "packs": ["sbct-test.zip"]},
+    "flerovium": {"profile": {"1.20.1": "/home/emppu/.cache/studio/addons/ct-forge-1.20.1"}, "mods": ["embeddium-*.jar", "flerovium-*.jar"], "packs": []},
+    "oculus-old": {"profile": {"1.20.1": "/home/emppu/.cache/studio/addons/oculus-old-1.20.1"}, "mods": ["embeddium-*.jar", "oculus-*.jar"], "packs": [], "shaders": true},
     "oculus": {
       "profile": {
         "1.20.1": "/home/emppu/.cache/studio/addons/oculus-1.20.1"

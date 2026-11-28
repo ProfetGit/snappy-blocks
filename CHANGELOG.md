@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.0.64 — 2026-11-28
+
+More fixes from your in-game reports.
+
+- Fixed blocks turning black while they pop in or move with Continuity connected textures (Minecraft 1.20.1 and 1.21.1). ([#18](https://github.com/ProfetGit/snappy-blocks/issues/18))
+- Fixed the crack overlay disappearing behind a moving block with Flerovium. ([#17](https://github.com/ProfetGit/snappy-blocks/issues/17))
+- Fixed 3D block particles staying flat with Flerovium, and with Sodium on Minecraft 1.21.1.
+- Shader packs are now noticed with older Oculus versions, so animated blocks are lit like the real ones under them.
+- The crash report prompt no longer blames Snappy Blocks for another mod's crash on Forge just because the report lists Snappy Blocks among the game's code changes.
+- A saved bug report about another mod's crash is no longer kept.
+
 ## 0.0.63 — 2026-11-28
 
 Bug fixes from your in-game reports. Thank you for sending them!

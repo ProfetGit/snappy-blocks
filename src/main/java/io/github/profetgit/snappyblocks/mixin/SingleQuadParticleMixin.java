@@ -26,13 +26,14 @@ import net.minecraft.client.renderer.state.level.QuadParticleRenderState;
 
 /**
  * 3D block particles ({@link Cubes}): a terrain particle's one camera-facing quad becomes the sides of a cube that face
- * the camera. Priority: from 1.21 after Sodium, so the injection survives its replacement of the quad writer; on 1.20.1
- * before it, since Sodium 0.5 cancels the same method from its own HEAD injection and the first one applied runs first.
+ * the camera. Priority: from 1.21.2 after Sodium, so the injection survives its replacement of the quad writer; before
+ * that ahead of everything, since Sodium (0.5, and 0.8 on 1.21.1) and Flerovium (priority 100) cancel the same method
+ * from their own HEAD injection and the first one applied runs first.
  */
-//? if >=1.21 {
+//? if >=1.21.2 {
 @Mixin(value = SingleQuadParticle.class, priority = 1500)
 //?} else {
-/*@Mixin(value = SingleQuadParticle.class, priority = 500)
+/*@Mixin(value = SingleQuadParticle.class, priority = 50)
 *///?}
 public abstract class SingleQuadParticleMixin extends Particle {
     @Shadow protected float quadSize;

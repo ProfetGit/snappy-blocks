@@ -138,6 +138,9 @@ public final class PopRenderState extends MovingBlockRenderState {
     public void draw(RenderPass pass) {
         RANDOM.setSeed(blockState.getSeed(pos));
         RenderType type = layer(blockState, RANDOM);
+        // every quad goes into this one buffer, also the see-through overlays a connected-texture model keeps in a
+        // layer of their own: the solid shader would show their empty pixels black
+        if (type == RenderType.solid() && composed(blockState)) type = RenderType.cutoutMipped();
         if (type == RenderType.translucent()) type = RenderType.translucentMovingBlock();
         RANDOM.setSeed(blockState.getSeed(pos));
         VertexConsumer out = AoConsumer.wrap(pass.buffers.getBuffer(type));
@@ -181,6 +184,34 @@ public final class PopRenderState extends MovingBlockRenderState {
 
         public int getMinBuildHeight() {
             return level.getMinBuildHeight();
+        }
+    }
+
+    private static Class<?> fabricModel;
+    private static MethodHandle vanillaAdapter;
+    private static boolean fabricTried;
+
+    // whether the model composes its own quads through the Fabric rendering API (Continuity, also under Sinytra Connector)
+    private static boolean composed(BlockState state) {
+        if (!fabricTried) {
+            fabricTried = true;
+            try {
+                fabricModel = Class.forName("net.fabricmc.fabric.api.renderer.v1.model.FabricBakedModel");
+                vanillaAdapter = MethodHandles.publicLookup().findVirtual(fabricModel, "isVanillaAdapter", MethodType.methodType(boolean.class));
+            } catch (ClassNotFoundException absent) {
+                // no Fabric rendering API
+            } catch (Throwable t) {
+                SnappyBlocks.LOG.warn("Snappy Blocks: can't ask the Fabric rendering API about block models ({})", t.toString());
+            }
+        }
+        if (vanillaAdapter == null) return false;
+        try {
+            Object model = Minecraft.getInstance().getBlockRenderer().getBlockModel(state);
+            return fabricModel.isInstance(model) && !(boolean) vanillaAdapter.invoke(model);
+        } catch (Throwable t) {
+            vanillaAdapter = null;
+            SnappyBlocks.LOG.warn("Snappy Blocks: can't ask the Fabric rendering API about block models ({})", t.toString());
+            return false;
         }
     }
 

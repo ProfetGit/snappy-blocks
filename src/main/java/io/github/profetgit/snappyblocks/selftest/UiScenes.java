@@ -847,6 +847,31 @@ final class UiScenes {
                 io.github.profetgit.profetsettings.CrashPrompt.rescanForTest();
             })
             .check("bug v2: another mod's crash that only lists our mixins is not offered", mc -> io.github.profetgit.profetsettings.CrashPrompt.pending() ? "offered" : null)
+            .run(mc -> mc.gui.setScreen(ConfigScreens.create(null)))
+            .waitTicks(10)
+            .run(mc -> press(mc, hub(mc).debugBugButton()))
+            .waitTicks(10)
+            // what an older version's prompt left saved after offering that crash as ours
+            .run(mc -> {
+                hub(mc).debugSetBugDraft("Crash: Unexpected error", "The game crashed.", "", "");
+                hub(mc).debugSaveBugDraft();
+                UiInput.escape(hub(mc));
+                mc.gui.setScreen(null);
+                ProfetSettings.debugReloadBugState();
+            })
+            .waitTicks(5)
+            .run(mc -> mc.gui.setScreen(ConfigScreens.create(null)))
+            .waitTicks(10)
+            .run(mc -> press(mc, hub(mc).debugBugButton()))
+            .waitTicks(10)
+            .check("bug v2: an untouched crash draft about another mod's crash is dropped", mc -> {
+                String[] f = hub(mc).debugBugFields();
+                return String.join("", f).isEmpty() ? null : "kept " + String.join("|", f);
+            })
+            .run(mc -> {
+                UiInput.escape(hub(mc));
+                mc.gui.setScreen(null);
+            })
             .run(mc -> {
                 ProfetSettings.uriOpener = prevOpener[0];
                 ProfetSettings.debugResetBugState();
